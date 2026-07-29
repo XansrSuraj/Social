@@ -436,6 +436,15 @@ async function pull(){
   }
 }
 
+/* GET /api/data is public, so the row must never carry the local password hash —
+   an exposed hash of a reused password is brute-forceable offline. In cloud mode the
+   password lives only in the ADMIN_PASSWORD env var, so the hash is dead weight anyway. */
+function cloudPayload(){
+  const copy = { ...state, settings:{ ...state.settings } };
+  delete copy.settings.passHash;
+  return copy;
+}
+
 async function persist(){
   if(cloud.mode !== "cloud"){ writeLocal(); return true; }
   cloud.saving = true; cloud.error = null; paintSync();
@@ -443,7 +452,7 @@ async function persist(){
     const r = await fetch("api/data", {
       method:"PUT",
       headers:{ "Content-Type":"application/json", "x-admin-key":adminKey() },
-      body:JSON.stringify({ data:state, baseUpdatedAt:cloud.updatedAt })
+      body:JSON.stringify({ data:cloudPayload(), baseUpdatedAt:cloud.updatedAt })
     });
     const j = await r.json().catch(() => ({}));
     if(r.status === 409){
