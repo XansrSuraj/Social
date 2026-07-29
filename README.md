@@ -1,73 +1,141 @@
-# Org Hub
+# Aiko Org Hub
 
-One clean home for every organization's **websites** and **social media channels**.
+Internal directory of every **official website** and **social media channel**, in one place.
 
-Add an organization → attach unlimited websites and unlimited social channels to it → search
-everything instantly. Editing is protected by a password, so visitors get a strictly read-only page.
-
-**Live demo:** _(add your Vercel URL here after deploying)_
+Anyone on the team can open the URL and see everything. Only the admin — with the password stored
+on the server — can add, edit or delete. Data lives in a shared database, so a phone, a laptop and
+a teammate's browser all show the same thing.
 
 ---
 
 ## Features
 
-- **Unlimited per org** — any number of websites and any number of social channels per organization,
-  including several pages on the same platform
-- **Password-protected admin** — locked by default; without the password nothing can be added,
-  edited or deleted. The password is stored only as a SHA-256 hash, never in plain text
-- **Fully customizable** — site name, colour theme, light/dark mode, and your own social platforms
-  with your own brand colours
-- **Private by design** — all data lives in the visitor's own browser (`localStorage`). No account,
-  no server, no tracking
-- **JSON backup** — export and import everything with one click
-- **Instant search** across org names, tags, notes, website labels, URLs, platforms and handles
-- **Zero build step** — one `index.html` file. Open it locally or drop it on any static host
+- **Unlimited per organization** — any number of websites and social channels, including several
+  pages on the same platform
+- **Shared cloud storage** — one Supabase row holds the whole directory; every device sees the same data
+- **Server-verified admin password** — the password is a Vercel environment variable, never in the
+  browser and never in the repo. Writes are rejected without it
+- **Link health checker** — server-side HEAD/GET probe of every URL, with green / amber / red status
+  dots, response time and reason. Auto-runs on stale results (1 h cache)
+- **Logo auto-fetch** — the organization's logo is pulled from its website's domain automatically;
+  override with a manual URL any time
+- **QR code per organization** — scan to open that org's page, download as PNG for print
+- **Embed widget** — one `<script>` tag renders a live, read-only list of an org's channels on any
+  other website. Updates itself whenever the directory changes
+- **Deep links** — `#/<org-id>` opens a specific organization
+- **Customizable** — site name, 7 accent themes + custom colour, light/dark, and your own social
+  platforms with your own brand colours
+- **JSON export / import** for backups
 
-## Tech
+## Stack
 
-Plain HTML, CSS and JavaScript — no framework, no bundler.
+Static HTML + CSS + vanilla JS, plus three tiny Vercel serverless functions.
+**No npm dependencies** — the API talks to Supabase over plain REST.
 
-| Library | Use | Loaded from |
-|---|---|---|
-| [Lucide](https://lucide.dev) | UI icons | jsDelivr CDN |
-| [Simple Icons](https://simpleicons.org) | brand logos (Facebook, Instagram, X…) | jsDelivr CDN |
-| [GSAP](https://gsap.com) | entrance & micro animations | jsDelivr CDN |
+| | |
+|---|---|
+| `index.html` | the whole app |
+| `api/data.js` | `GET` read state · `PUT` write state (needs `x-admin-key`) |
+| `api/auth.js` | `POST` verify the admin password (constant-time compare) |
+| `api/check.js` | `POST` link health probe |
+| `embed.js` | the embeddable widget |
 
-Every library is optional — if a CDN is blocked the app still works, with text fallbacks
-and no animations. `prefers-reduced-motion` is respected.
+Front-end libraries load from a CDN and are all **optional** — if they're blocked the app still
+works with text fallbacks: [Lucide](https://lucide.dev) (icons),
+[Simple Icons](https://simpleicons.org) (brand logos), [GSAP](https://gsap.com) (animation),
+[qrcodejs](https://github.com/davidshimjs/qrcodejs) (QR). `prefers-reduced-motion` is respected.
 
-## Run locally
-
-Just open `index.html` in a browser. No install, no server.
+---
 
 ## Deploy
 
-Any static host works. For Vercel:
+### 1 · Push to GitHub
 
-1. Push this folder to a GitHub repository
-2. On [vercel.com](https://vercel.com) → **Add New → Project** → import the repo
-3. Framework preset: **Other**. Leave build command and output directory empty
-4. **Deploy**
+```bash
+git remote add origin https://github.com/<USERNAME>/org-hub.git
+git push -u origin main
+```
 
-## Data & privacy
+### 2 · Import into Vercel
 
-Data is stored in the visitor's browser under the `orghub.v1` key. It is per-browser and
-per-device — it does not sync between devices, and it is never sent anywhere. Use
-**Settings → Export** to back it up or move it to another machine.
+[vercel.com](https://vercel.com) → **Add New → Project** → import the repo →
+Framework preset **Other**, build command and output directory **empty** → **Deploy**.
 
-> The admin password prevents casual editing in the browser. It is client-side only, so it is not
-> protection against someone determined with developer tools. For multi-user accounts and real
-> server-side security, the app needs a backend (see the roadmap below).
+It is live at this point and already usable — but data is still per-browser until step 3.
 
-## Roadmap
+### 3 · Turn on shared storage (Supabase, free)
 
-- [ ] Cloud accounts + sync across devices (Supabase auth + Postgres)
-- [ ] Public shareable org profile page (`/acme`)
-- [ ] Team members with view / edit roles
-- [ ] Link health checker (flag dead URLs)
-- [ ] CSV / bulk import
-- [ ] Logo upload per organization
+1. [supabase.com](https://supabase.com) → **New project**
+2. **SQL Editor** → run:
 
-## License
+   ```sql
+   create table if not exists orghub_state (
+     id int primary key,
+     data jsonb not null default '{}'::jsonb,
+     updated_at timestamptz not null default now()
+   );
+   insert into orghub_state (id, data)
+     values (1, '{"orgs":[]}'::jsonb)
+     on conflict (id) do nothing;
+   ```
 
-MIT
+3. **Project Settings → API** → copy the **Project URL** and the **`service_role`** key
+4. Vercel → **Project → Settings → Environment Variables** → add three:
+
+   | Name | Value |
+   |---|---|
+   | `SUPABASE_URL` | `https://xxxx.supabase.co` |
+   | `SUPABASE_SERVICE_KEY` | the `service_role` key |
+   | `ADMIN_PASSWORD` | the password only you know |
+
+5. **Deployments → ⋯ → Redeploy**
+
+The header badge flips from **Local only** to **Cloud**. The in-app **Settings → Storage → Set up**
+panel shows these same steps with a copy button for the SQL.
+
+> Already added data before connecting the database? Settings shows **Upload to cloud** to move
+> this browser's data up.
+
+### Custom domain
+
+Vercel → Settings → Domains → add your domain → copy the two DNS records into your registrar.
+HTTPS is automatic.
+
+## Embedding on another site
+
+```html
+<script src="https://YOUR-SITE.vercel.app/embed.js" data-org="ORG_ID"></script>
+```
+
+| Attribute | Effect |
+|---|---|
+| `data-theme="dark"` | dark colours |
+| `data-show="social"` | only social channels (`"web"` = only websites) |
+| `data-title="false"` | hide the organization name |
+
+Grab the ready-made snippet from the **Embed** button on any organization.
+
+## Security notes
+
+- The Supabase `service_role` key and `ADMIN_PASSWORD` are **server-side only** — never sent to
+  the browser, never committed. Keep them in Vercel env vars.
+- Writes require the password on every request and are compared in constant time.
+- Reads are public to anyone with the URL — that is intentional for an internal directory.
+  If you need reads restricted too, put Vercel Password Protection or Vercel Authentication on
+  the project (Settings → Deployment Protection).
+- `noindex, nofollow` is set, so search engines skip it.
+- Concurrent edits: the server rejects a save whose base version is stale (HTTP 409) and the app
+  offers to reload, so two devices can't silently overwrite each other.
+- If a save fails, the app says **Not saved** in the header and toasts the error — the change is
+  still on screen but not stored. Retry once you're back online.
+
+## Free-tier caveat
+
+Supabase pauses a free project after ~7 days with no activity; open the Supabase dashboard to
+resume it. A directory in daily use never hits this. If it becomes annoying,
+[Upstash Redis](https://upstash.com) has no pause and the same REST-only integration style.
+
+## Local development
+
+Open `index.html` directly — it falls back to browser storage, and features that need the server
+(link check, cloud sync) say so. For the real thing: `npx vercel dev`.

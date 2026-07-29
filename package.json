@@ -1,0 +1,9 @@
+{
+  "name": "org-hub",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Internal directory of every official website and social media channel",
+  "engines": {
+    "node": ">=18"
+  }
+}

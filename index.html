@@ -3,390 +3,456 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Org Hub — All your websites & social channels in one place</title>
-<meta name="description" content="Org Hub is a free, private workspace to keep every organization's websites and social media channels organized in one clean dashboard. No signup. Your data stays in your browser.">
-<meta name="theme-color" content="#6d5efc">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Org Hub — All your websites & social channels in one place">
-<meta property="og:description" content="A free, private dashboard for organizing every company's websites and social media channels. No signup required.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%236d5efc'/%3E%3Ccircle cx='16' cy='16' r='6' fill='white'/%3E%3C/svg%3E">
+<title>Aiko Org Hub — official websites & social channels</title>
+<meta name="description" content="The internal directory of every official website and social media channel, always up to date.">
+<meta name="theme-color" content="#5b6bff">
+<meta name="robots" content="noindex, nofollow">
+<meta property="og:title" content="Aiko Org Hub">
+<meta property="og:description" content="Every official website and social channel in one place.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%235b6bff'/%3E%3Cpath d='M9 21l7-13 7 13z' fill='white'/%3E%3C/svg%3E">
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-icons-font@13/font/simple-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/lucide@0.454.0/dist/umd/lucide.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
 <style>
-/* ============================ tokens ============================ */
+/* ═══════════════ tokens ═══════════════ */
 :root{
-  --a1:#6d5efc; --a2:#a855f7;
-  --bg:#f7f8fc; --bg2:#eef0f8;
-  --panel:#ffffff; --panel2:#f7f8fb; --glass:rgba(255,255,255,.72);
-  --text:#0f1424; --muted:#68708a; --faint:#9aa1b8;
-  --line:#e6e9f2; --line2:#eef0f7;
-  --danger:#e0342c; --ok:#12a150;
-  --sh-sm:0 1px 2px rgba(20,25,50,.06);
-  --sh:0 2px 6px rgba(20,25,50,.05), 0 14px 34px -18px rgba(20,25,50,.22);
-  --sh-lg:0 30px 80px -28px rgba(20,25,50,.38);
-  --r:16px; --r-sm:11px;
+  --a1:#5b6bff; --a2:#a855f7;
+  --bg:#f7f8fb; --bg-tint:#eef0f8;
+  --surf:#ffffff; --surf2:#f6f7fb; --surf3:#eef0f6;
+  --glass:rgba(255,255,255,.75);
+  --tx:#0b0e18; --tx2:#5a6280; --tx3:#9aa1bb;
+  --ln:#e7e9f2; --ln2:#f0f1f7;
+  --red:#e0342c; --amb:#d97706; --grn:#0f9d58;
+  --s1:0 1px 2px rgba(12,17,40,.05);
+  --s2:0 1px 3px rgba(12,17,40,.05),0 10px 26px -14px rgba(12,17,40,.2);
+  --s3:0 2px 8px rgba(12,17,40,.06),0 26px 60px -24px rgba(12,17,40,.3);
+  --s4:0 40px 90px -30px rgba(12,17,40,.45);
+  --rl:20px; --rm:14px; --rs:10px;
 }
 html[data-theme="dark"]{
-  --bg:#0a0d16; --bg2:#0f1320;
-  --panel:#141926; --panel2:#1a2030; --glass:rgba(20,25,38,.72);
-  --text:#eaeefb; --muted:#9099b5; --faint:#6b7392;
-  --line:#242c3e; --line2:#1e2534;
-  --danger:#ff6b63; --ok:#3ddc84;
-  --sh-sm:0 1px 2px rgba(0,0,0,.3);
-  --sh:0 2px 6px rgba(0,0,0,.25), 0 16px 40px -20px rgba(0,0,0,.7);
-  --sh-lg:0 30px 90px -30px rgba(0,0,0,.9);
+  --bg:#070810; --bg-tint:#0c0e18;
+  --surf:#101320; --surf2:#161a2a; --surf3:#1d2234;
+  --glass:rgba(14,17,28,.78);
+  --tx:#f0f2fa; --tx2:#98a0bd; --tx3:#69708c;
+  --ln:#212639; --ln2:#191d2c;
+  --red:#ff6b63; --amb:#fbbf24; --grn:#3ddc84;
+  --s1:0 1px 2px rgba(0,0,0,.35);
+  --s2:0 1px 3px rgba(0,0,0,.3),0 12px 30px -16px rgba(0,0,0,.75);
+  --s3:0 2px 10px rgba(0,0,0,.35),0 30px 70px -28px rgba(0,0,0,.9);
+  --s4:0 40px 100px -30px rgba(0,0,0,1);
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
 body{
-  margin:0;min-height:100vh;background:var(--bg);color:var(--text);
+  margin:0;min-height:100vh;background:var(--bg);color:var(--tx);
   font:15px/1.55 "Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-feature-settings:"cv02","cv03","cv04","tnum";
   -webkit-font-smoothing:antialiased;overflow-x:hidden;
 }
-/* animated mesh background */
-.mesh{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
-.mesh i{position:absolute;border-radius:50%;filter:blur(90px);opacity:.32}
-html[data-theme="dark"] .mesh i{opacity:.22}
-.mesh i:nth-child(1){width:46vw;height:46vw;background:var(--a1);top:-14vw;left:-8vw;animation:float1 22s ease-in-out infinite}
-.mesh i:nth-child(2){width:38vw;height:38vw;background:var(--a2);top:8vw;right:-10vw;animation:float2 26s ease-in-out infinite}
-.mesh i:nth-child(3){width:34vw;height:34vw;background:#22d3ee;bottom:-14vw;left:26vw;animation:float3 30s ease-in-out infinite}
-@keyframes float1{50%{transform:translate(6vw,7vw) scale(1.14)}}
-@keyframes float2{50%{transform:translate(-7vw,9vw) scale(.88)}}
-@keyframes float3{50%{transform:translate(5vw,-6vw) scale(1.1)}}
-@media(prefers-reduced-motion:reduce){.mesh i{animation:none}}
-
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 input,select,textarea{font:inherit;color:inherit}
 a{color:inherit;text-decoration:none}
-::selection{background:color-mix(in srgb,var(--a1) 30%,transparent)}
-.grad-txt{background:linear-gradient(100deg,var(--a1),var(--a2) 60%,#22d3ee);
-  -webkit-background-clip:text;background-clip:text;color:transparent}
+::selection{background:color-mix(in srgb,var(--a1) 28%,transparent)}
+.gt{background:linear-gradient(100deg,var(--a1),var(--a2) 70%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
 
-/* ============================ buttons ============================ */
-.btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:7px;
-  padding:9px 15px;border-radius:11px;font-weight:600;font-size:14px;
-  background:var(--panel2);border:1px solid var(--line);white-space:nowrap;
-  transition:transform .16s cubic-bezier(.2,.9,.3,1.3),box-shadow .18s,background .18s,border-color .18s,color .18s;
-}
-.btn:hover{transform:translateY(-1.5px);box-shadow:var(--sh-sm);border-color:color-mix(in srgb,var(--a1) 45%,var(--line))}
-.btn:active{transform:translateY(0) scale(.97)}
-.btn.pri{background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;border-color:transparent;
-  box-shadow:0 6px 18px -8px color-mix(in srgb,var(--a1) 85%,transparent)}
-.btn.pri:hover{box-shadow:0 12px 28px -10px color-mix(in srgb,var(--a1) 90%,transparent);color:#fff}
-.btn.gh{background:none;border-color:transparent;color:var(--muted)}
-.btn.gh:hover{background:var(--panel2);color:var(--text);border-color:var(--line)}
-.btn.dg{color:var(--danger)}
-.btn.dg:hover{border-color:var(--danger);background:color-mix(in srgb,var(--danger) 10%,transparent)}
-.btn.sm{padding:6px 11px;font-size:13px;border-radius:9px;gap:5px}
-.btn.ic{padding:7px;width:32px;height:32px;border-radius:9px}
-.btn.lg{padding:13px 24px;font-size:15.5px;border-radius:13px}
-.btn i[data-lucide]{width:16px;height:16px}
-.btn.lg i[data-lucide]{width:18px;height:18px}
+/* ambient light */
+.aura{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.aura i{position:absolute;border-radius:50%;filter:blur(100px);opacity:.28}
+html[data-theme="dark"] .aura i{opacity:.2}
+.aura i:nth-child(1){width:44vw;height:44vw;background:var(--a1);top:-16vw;left:-10vw;animation:dr1 24s ease-in-out infinite}
+.aura i:nth-child(2){width:36vw;height:36vw;background:var(--a2);top:4vw;right:-12vw;animation:dr2 28s ease-in-out infinite}
+@keyframes dr1{50%{transform:translate(5vw,6vw) scale(1.15)}}
+@keyframes dr2{50%{transform:translate(-6vw,8vw) scale(.9)}}
+@media(prefers-reduced-motion:reduce){.aura i{animation:none}}
 
-/* ============================ header ============================ */
-header{
-  position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:12px;
-  padding:11px 22px;background:var(--glass);backdrop-filter:blur(18px) saturate(1.6);
-  border-bottom:1px solid var(--line);flex-wrap:wrap;
-}
-.logo{display:flex;align-items:center;gap:10px;font-weight:750;font-size:17.5px;letter-spacing:-.35px}
-.logo .mk{
-  width:30px;height:30px;border-radius:10px;flex:none;display:grid;place-items:center;
-  background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;
-  box-shadow:0 5px 16px -6px color-mix(in srgb,var(--a1) 90%,transparent);
-}
-.logo .mk i[data-lucide]{width:17px;height:17px}
+/* ═══════════════ buttons ═══════════════ */
+.b{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 14px;
+  border-radius:11px;font-weight:600;font-size:13.5px;letter-spacing:-.1px;white-space:nowrap;
+  background:var(--surf2);border:1px solid var(--ln);
+  transition:transform .16s cubic-bezier(.2,.9,.3,1.35),box-shadow .18s,background .18s,border-color .18s,color .18s}
+.b:hover{transform:translateY(-1.5px);box-shadow:var(--s1);border-color:color-mix(in srgb,var(--a1) 42%,var(--ln))}
+.b:active{transform:translateY(0) scale(.97)}
+.b.p{background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;border-color:transparent;
+  box-shadow:0 6px 20px -9px color-mix(in srgb,var(--a1) 90%,transparent)}
+.b.p:hover{box-shadow:0 14px 32px -11px color-mix(in srgb,var(--a1) 95%,transparent)}
+.b.g{background:none;border-color:transparent;color:var(--tx2)}
+.b.g:hover{background:var(--surf2);color:var(--tx);border-color:var(--ln)}
+.b.d{color:var(--red)}
+.b.d:hover{border-color:var(--red);background:color-mix(in srgb,var(--red) 10%,transparent)}
+.b.s{padding:6px 11px;font-size:12.5px;border-radius:9px;gap:5px}
+.b.i{padding:0;width:32px;height:32px;border-radius:9px;flex:none}
+.b.i.s{width:28px;height:28px;border-radius:8px}
+.b.xl{padding:13px 22px;font-size:15px;border-radius:13px}
+.b[disabled]{opacity:.4;pointer-events:none}
+.b svg{width:15px;height:15px;flex:none}
+.b.xl svg{width:17px;height:17px}
+.b.i.s svg{width:13px;height:13px}
+
+/* ═══════════════ topbar ═══════════════ */
+header{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:11px;padding:11px 20px;
+  background:var(--glass);backdrop-filter:blur(20px) saturate(1.7);border-bottom:1px solid var(--ln);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:750;font-size:16.5px;letter-spacing:-.4px}
+.brand .m{width:30px;height:30px;border-radius:10px;flex:none;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;box-shadow:0 5px 16px -6px color-mix(in srgb,var(--a1) 90%,transparent)}
+.brand .m svg{width:16px;height:16px}
 .sp{flex:1}
-.search{
-  display:flex;align-items:center;gap:9px;background:var(--panel2);
-  border:1px solid var(--line);border-radius:999px;padding:8px 15px;min-width:230px;
-  transition:.2s;
-}
-.search:focus-within{border-color:var(--a1);box-shadow:0 0 0 4px color-mix(in srgb,var(--a1) 14%,transparent);background:var(--panel)}
-.search input{background:none;border:0;outline:none;width:100%;min-width:0}
-.search i[data-lucide]{width:16px;height:16px;color:var(--faint);flex:none}
-.kbd{font:600 11px/1 ui-monospace,monospace;color:var(--faint);border:1px solid var(--line);
-  border-radius:5px;padding:3px 5px;background:var(--panel);flex:none}
+.sbox{display:flex;align-items:center;gap:9px;background:var(--surf2);border:1px solid var(--ln);
+  border-radius:999px;padding:8px 14px;min-width:210px;transition:.2s}
+.sbox:focus-within{border-color:var(--a1);background:var(--surf);box-shadow:0 0 0 4px color-mix(in srgb,var(--a1) 13%,transparent)}
+.sbox input{background:none;border:0;outline:none;width:100%;min-width:0;font-size:14px}
+.sbox svg{width:15px;height:15px;color:var(--tx3);flex:none}
+.kb{font:600 10.5px/1 ui-monospace,monospace;color:var(--tx3);border:1px solid var(--ln);border-radius:5px;padding:3px 5px;background:var(--surf);flex:none}
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:650;padding:6px 11px;
+  border-radius:999px;border:1px solid var(--ln);background:var(--surf2);color:var(--tx2)}
+.sync .d{width:6px;height:6px;border-radius:50%;background:var(--tx3)}
+.sync.on .d{background:var(--grn);box-shadow:0 0 0 3px color-mix(in srgb,var(--grn) 22%,transparent)}
+.sync.warn{color:var(--amb);border-color:color-mix(in srgb,var(--amb) 40%,transparent)}
+.sync.warn .d{background:var(--amb)}
+.sync.busy .d{background:var(--a1);animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
 
-/* ============================ landing ============================ */
-.hero{max-width:1000px;margin:0 auto;padding:70px 22px 40px;text-align:center}
-.pill{
-  display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;
-  background:var(--panel);border:1px solid var(--line);box-shadow:var(--sh-sm);
-  font-size:13px;font-weight:600;color:var(--muted);margin-bottom:26px;
-}
-.pill .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);
-  box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 25%,transparent)}
-.hero h1{margin:0 0 18px;font-size:clamp(34px,6.2vw,62px);line-height:1.03;letter-spacing:-2px;font-weight:800}
-.hero p.lead{margin:0 auto 32px;max-width:600px;font-size:clamp(16px,2vw,18.5px);color:var(--muted)}
-.hero .cta{display:flex;gap:11px;justify-content:center;flex-wrap:wrap}
-.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;
-  max-width:1000px;margin:60px auto 0;padding:0 22px}
-.feat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:22px;
-  text-align:left;box-shadow:var(--sh);transition:transform .25s,box-shadow .25s}
-.feat:hover{transform:translateY(-4px);box-shadow:var(--sh-lg)}
-.feat .fi{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;margin-bottom:14px;
-  background:color-mix(in srgb,var(--a1) 13%,transparent);color:var(--a1)}
-.feat .fi i[data-lucide]{width:20px;height:20px}
-.feat h3{margin:0 0 6px;font-size:15.5px;letter-spacing:-.2px}
-.feat p{margin:0;font-size:13.5px;color:var(--muted);line-height:1.6}
+/* ═══════════════ layout ═══════════════ */
+.shell{display:grid;grid-template-columns:262px 1fr;gap:20px;max-width:1460px;margin:0 auto;padding:20px;align-items:start}
+.card{background:var(--surf);border:1px solid var(--ln);border-radius:var(--rl);box-shadow:var(--s2)}
+aside{position:sticky;top:82px}
+.rail-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 15px;border-bottom:1px solid var(--ln2)}
+.rail-h h2{margin:0;font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--tx3);font-weight:750}
+.rail{max-height:calc(100vh - 240px);overflow:auto;padding:9px}
+.rail::-webkit-scrollbar{width:7px}.rail::-webkit-scrollbar-thumb{background:var(--ln);border-radius:8px}
+.oi{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:9px 10px;border-radius:12px;
+  border:1px solid transparent;margin-bottom:2px;transition:.16s;position:relative}
+.oi:hover{background:var(--surf2)}
+.oi.on{background:color-mix(in srgb,var(--a1) 10%,transparent);border-color:color-mix(in srgb,var(--a1) 26%,transparent)}
+.oi.on::before{content:"";position:absolute;left:-9px;top:50%;transform:translateY(-50%);width:3px;height:20px;
+  border-radius:0 3px 3px 0;background:linear-gradient(var(--a1),var(--a2))}
+.oi .nm{font-weight:650;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.oi .sb{font-size:11.5px;color:var(--tx2);display:block}
 
-/* ============================ app shell ============================ */
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:13px;
-  max-width:1420px;margin:0 auto;padding:20px 22px 0}
-.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 17px;
-  box-shadow:var(--sh-sm);display:flex;align-items:center;gap:13px}
-.stat .si-box{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none;
-  background:color-mix(in srgb,var(--a1) 12%,transparent);color:var(--a1)}
-.stat .si-box i[data-lucide]{width:18px;height:18px}
-.stat b{display:block;font-size:22px;font-weight:750;letter-spacing:-.6px;line-height:1.15}
-.stat span{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+/* logo blocks */
+.lg{width:36px;height:36px;border-radius:11px;flex:none;position:relative;overflow:hidden;box-shadow:var(--s1);
+  display:grid;place-items:center;background:var(--surf3)}
+.lg img{width:100%;height:100%;object-fit:cover;display:block}
+.lg .fb{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-weight:750;font-size:13px;letter-spacing:-.4px}
+.lg.xl{width:64px;height:64px;border-radius:18px}
+.lg.xl .fb{font-size:23px}
+.lg.sm{width:30px;height:30px;border-radius:9px}
+.lg.sm .fb{font-size:11px}
 
-.wrap{display:grid;grid-template-columns:296px 1fr;gap:18px;max-width:1420px;margin:0 auto;padding:18px 22px 60px;align-items:start}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
-aside{position:sticky;top:80px}
-.sh{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 15px;border-bottom:1px solid var(--line2)}
-.sh h2{margin:0;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:750}
-.olist{max-height:calc(100vh - 250px);overflow:auto;padding:9px}
-.olist::-webkit-scrollbar{width:8px}
-.olist::-webkit-scrollbar-thumb{background:var(--line);border-radius:9px}
-.oitem{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:9px 10px;
-  border-radius:12px;border:1px solid transparent;margin-bottom:2px;transition:.16s;position:relative}
-.oitem:hover{background:var(--panel2)}
-.oitem.on{background:color-mix(in srgb,var(--a1) 11%,transparent);border-color:color-mix(in srgb,var(--a1) 30%,transparent)}
-.oitem.on::before{content:"";position:absolute;left:-9px;top:50%;transform:translateY(-50%);
-  width:3px;height:20px;border-radius:0 3px 3px 0;background:linear-gradient(var(--a1),var(--a2))}
-.oitem .nm{font-weight:650;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
-.oitem .sb{font-size:11.5px;color:var(--muted);display:block}
-.av{width:36px;height:36px;border-radius:11px;flex:none;display:grid;place-items:center;
-  color:#fff;font-weight:750;font-size:13px;letter-spacing:-.4px;box-shadow:var(--sh-sm)}
-.av.lg{width:58px;height:58px;border-radius:17px;font-size:21px}
-
-/* ============================ detail ============================ */
-.detail{display:flex;flex-direction:column;gap:16px;min-width:0}
-.ohead{display:flex;gap:16px;align-items:flex-start;padding:20px;position:relative;overflow:hidden}
-.ohead::after{content:"";position:absolute;inset:0 0 auto;height:3px;
-  background:linear-gradient(90deg,var(--a1),var(--a2),transparent)}
-.ohead h1{margin:0 0 4px;font-size:24px;letter-spacing:-.7px;font-weight:750}
+/* ═══════════════ detail ═══════════════ */
+.main{display:flex;flex-direction:column;gap:18px;min-width:0}
+.hero{padding:22px;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--a1),var(--a2),transparent)}
+.hero-top{display:flex;gap:16px;align-items:flex-start}
+.hero h1{margin:0 0 5px;font-size:26px;letter-spacing:-.9px;font-weight:780;line-height:1.15}
 .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-.tag{font-size:11.5px;font-weight:650;padding:3px 10px;border-radius:999px;
-  background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
-.notes{margin:11px 0 0;color:var(--muted);font-size:13.5px;white-space:pre-wrap;max-width:70ch}
-.sech{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 17px;border-bottom:1px solid var(--line2)}
-.sech h3{margin:0;font-size:14.5px;display:flex;align-items:center;gap:9px;letter-spacing:-.2px;font-weight:700}
-.sech h3 i[data-lucide]{width:17px;height:17px;color:var(--a1)}
-.cnt{font-size:11.5px;font-weight:750;color:var(--muted);background:var(--panel2);
-  border:1px solid var(--line);padding:1px 8px;border-radius:999px}
-.rows{padding:7px}
-.row{display:flex;align-items:center;gap:12px;padding:11px;border-radius:12px;transition:.16s}
-.row:hover{background:var(--panel2);transform:translateX(3px)}
-.row .mn{flex:1;min-width:0}
-.row .lb{font-weight:650;font-size:14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.row .ur{font-size:12.5px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;
-  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.row .ur:hover{color:var(--a1)}
-.row .ur i[data-lucide]{width:12px;height:12px;flex:none}
-.acts{display:flex;gap:3px;flex:none;opacity:0;transform:translateX(6px);transition:.18s}
-.row:hover .acts,.row:focus-within .acts{opacity:1;transform:none}
-@media(hover:none){.acts{opacity:1;transform:none}}
-.chip{width:36px;height:36px;border-radius:11px;flex:none;display:grid;place-items:center;
-  color:#fff;font-weight:800;font-size:12px;box-shadow:var(--sh-sm);
-  border:1px solid rgba(255,255,255,.14)}
-.chip i.si{font-size:17px;line-height:1}
-.chip i[data-lucide]{width:18px;height:18px}
+.tag{font-size:11.5px;font-weight:650;padding:3px 10px;border-radius:999px;background:var(--surf2);border:1px solid var(--ln);color:var(--tx2)}
+.notes{margin:11px 0 0;color:var(--tx2);font-size:13.5px;white-space:pre-wrap;max-width:72ch}
+.tools{display:flex;gap:7px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--ln2)}
+
+.mrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.m{background:var(--surf);border:1px solid var(--ln);border-radius:var(--rm);padding:14px 16px;box-shadow:var(--s1)}
+.m b{display:block;font-size:24px;font-weight:750;letter-spacing:-1px;line-height:1.1}
+.m span{font-size:11.5px;color:var(--tx2);font-weight:650;letter-spacing:.02em}
+.m .hl{display:flex;align-items:center;gap:5px;margin-top:5px;font-size:11.5px;font-weight:650}
+
+.sec-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;padding:0 2px}
+.sec-h h3{margin:0;font-size:15px;display:flex;align-items:center;gap:9px;letter-spacing:-.3px;font-weight:720}
+.sec-h h3 svg{width:16px;height:16px;color:var(--a1)}
+.ct{font-size:11.5px;font-weight:750;color:var(--tx2);background:var(--surf2);border:1px solid var(--ln);padding:1px 8px;border-radius:999px}
+
+/* tile grid — the main visual upgrade */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:12px}
+.t{--c:var(--a1);position:relative;background:var(--surf);border:1px solid var(--ln);border-radius:var(--rm);
+  padding:14px;box-shadow:var(--s1);overflow:hidden;transition:transform .2s cubic-bezier(.2,.9,.3,1.2),box-shadow .22s,border-color .2s}
+.t::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--c);opacity:.9}
+.t::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:.22s;
+  background:radial-gradient(120% 90% at 50% 0%,color-mix(in srgb,var(--c) 13%,transparent),transparent 70%)}
+.t:hover{transform:translateY(-3px);box-shadow:var(--s3);border-color:color-mix(in srgb,var(--c) 40%,var(--ln))}
+.t:hover::after{opacity:1}
+.t .r1{display:flex;align-items:flex-start;gap:10px;margin-bottom:11px}
+.t .nm{font-weight:680;font-size:14px;letter-spacing:-.2px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t .hd{font-size:12px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t .lk{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--tx2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 8px;border-radius:8px;
+  background:var(--surf2);border:1px solid var(--ln2);transition:.16s}
+.t .lk:hover{color:var(--c);border-color:color-mix(in srgb,var(--c) 45%,transparent)}
+.t .lk svg{width:12px;height:12px;flex:none;opacity:.7}
+.t .tb{display:flex;gap:3px;justify-content:flex-end;margin-top:9px;opacity:0;transform:translateY(4px);transition:.2s}
+.t:hover .tb,.t:focus-within .tb{opacity:1;transform:none}
+@media(hover:none){.t .tb{opacity:1;transform:none}}
+.chip{width:34px;height:34px;border-radius:10px;flex:none;display:grid;place-items:center;color:#fff;
+  font-weight:800;font-size:11.5px;box-shadow:var(--s1);border:1px solid rgba(255,255,255,.16);background:var(--c)}
+.chip i.si{font-size:16px;line-height:1}
+.chip svg{width:17px;height:17px}
 .chip .ini{display:block}
 body.si-ok .chip .ini{display:none}
 body:not(.si-ok) .chip i.si{display:none}
-.empty{padding:34px 18px;text-align:center;color:var(--muted);font-size:13.5px}
-.empty b{display:block;color:var(--text);margin-bottom:5px;font-size:15px}
-.empty .eic{width:44px;height:44px;border-radius:14px;margin:0 auto 13px;display:grid;place-items:center;
-  background:var(--panel2);border:1px solid var(--line);color:var(--faint)}
-.empty .eic i[data-lucide]{width:21px;height:21px}
-.banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 16px;border-radius:13px;
-  font-size:13.5px;font-weight:550;background:color-mix(in srgb,var(--a1) 9%,transparent);
-  border:1px solid color-mix(in srgb,var(--a1) 26%,transparent)}
-.banner i[data-lucide]{width:16px;height:16px;flex:none;color:var(--a1)}
+.hd-dot{width:8px;height:8px;border-radius:50%;flex:none;margin-left:auto;background:var(--tx3);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--tx3) 18%,transparent);cursor:help}
+.hd-dot.ok{background:var(--grn);box-shadow:0 0 0 3px color-mix(in srgb,var(--grn) 20%,transparent)}
+.hd-dot.warn{background:var(--amb);box-shadow:0 0 0 3px color-mix(in srgb,var(--amb) 20%,transparent)}
+.hd-dot.bad{background:var(--red);box-shadow:0 0 0 3px color-mix(in srgb,var(--red) 20%,transparent)}
+.hd-dot.spin{background:var(--a1);animation:pulse .9s ease-in-out infinite}
 
-footer{border-top:1px solid var(--line);padding:26px 22px 40px;text-align:center;
-  color:var(--faint);font-size:12.5px;line-height:1.9}
-footer a{color:var(--muted);font-weight:600}
+.empty{padding:38px 20px;text-align:center;color:var(--tx2);font-size:13.5px;
+  border:1.5px dashed var(--ln);border-radius:var(--rm);background:var(--surf2)}
+.empty b{display:block;color:var(--tx);margin-bottom:5px;font-size:15px;font-weight:700}
+.empty .e{width:44px;height:44px;border-radius:13px;margin:0 auto 12px;display:grid;place-items:center;
+  background:var(--surf);border:1px solid var(--ln);color:var(--tx3)}
+.empty .e svg{width:20px;height:20px}
+.note{display:flex;align-items:flex-start;gap:10px;padding:12px 15px;border-radius:var(--rm);font-size:13.5px;line-height:1.55;
+  background:color-mix(in srgb,var(--a1) 8%,transparent);border:1px solid color-mix(in srgb,var(--a1) 24%,transparent)}
+.note.warn{background:color-mix(in srgb,var(--amb) 10%,transparent);border-color:color-mix(in srgb,var(--amb) 34%,transparent)}
+.note svg{width:16px;height:16px;flex:none;margin-top:2px;color:var(--a1)}
+.note.warn svg{color:var(--amb)}
+.note .b{margin-left:auto;flex:none}
 
-/* ============================ modal ============================ */
-.veil{position:fixed;inset:0;z-index:100;display:none;place-items:center;padding:18px;
-  background:rgba(8,11,22,.6);backdrop-filter:blur(5px)}
+footer{border-top:1px solid var(--ln);padding:24px 20px 36px;text-align:center;color:var(--tx3);font-size:12.5px;line-height:1.9}
+
+/* ═══════════════ modal ═══════════════ */
+.veil{position:fixed;inset:0;z-index:110;display:none;place-items:center;padding:18px;
+  background:rgba(5,7,15,.62);backdrop-filter:blur(6px)}
 .veil.on{display:grid}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:var(--sh-lg);
+.mo{background:var(--surf);border:1px solid var(--ln);border-radius:22px;box-shadow:var(--s4);
   width:100%;max-width:490px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
-.modal.wide{max-width:640px}
-.mh{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:17px 19px;border-bottom:1px solid var(--line2)}
-.mh h3{margin:0;font-size:17.5px;letter-spacing:-.35px;display:flex;align-items:center;gap:9px;font-weight:700}
-.mh h3 i[data-lucide]{width:18px;height:18px;color:var(--a1)}
+.mo.w{max-width:660px}
+.mh{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:17px 19px;border-bottom:1px solid var(--ln2)}
+.mh h3{margin:0;font-size:17px;letter-spacing:-.4px;display:flex;align-items:center;gap:9px;font-weight:730}
+.mh h3 svg{width:18px;height:18px;color:var(--a1)}
 .mb{padding:19px;overflow:auto}
-.mf{display:flex;gap:9px;justify-content:flex-end;padding:15px 19px;border-top:1px solid var(--line2);background:var(--panel2)}
-.f{margin-bottom:15px}
-.f:last-child{margin-bottom:0}
-.f label{display:block;font-size:12px;font-weight:750;margin-bottom:7px;color:var(--muted);letter-spacing:.03em;text-transform:uppercase}
-.f input[type=text],.f input[type=password],.f select,.f textarea{
-  width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:11px;
-  background:var(--panel2);outline:none;transition:.18s}
-.f input:focus,.f select:focus,.f textarea:focus{
-  border-color:var(--a1);background:var(--panel);box-shadow:0 0 0 4px color-mix(in srgb,var(--a1) 14%,transparent)}
+.mf{display:flex;gap:9px;justify-content:flex-end;padding:15px 19px;border-top:1px solid var(--ln2);background:var(--surf2)}
+.f{margin-bottom:15px}.f:last-child{margin-bottom:0}
+.f label{display:block;font-size:11.5px;font-weight:750;margin-bottom:7px;color:var(--tx2);letter-spacing:.05em;text-transform:uppercase}
+.f input[type=text],.f input[type=password],.f select,.f textarea{width:100%;padding:11px 13px;border:1px solid var(--ln);
+  border-radius:11px;background:var(--surf2);outline:none;transition:.18s}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--a1);background:var(--surf);
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--a1) 13%,transparent)}
 .f textarea{resize:vertical;min-height:70px}
-.hint{font-size:12px;color:var(--faint);margin-top:7px;line-height:1.55}
-.err{color:var(--danger);font-size:13px;font-weight:650;margin-top:12px;display:none;
-  padding:9px 12px;border-radius:10px;background:color-mix(in srgb,var(--danger) 10%,transparent)}
+.hint{font-size:12px;color:var(--tx3);margin-top:7px;line-height:1.55}
+.err{color:var(--red);font-size:13px;font-weight:650;margin-top:12px;display:none;padding:9px 12px;
+  border-radius:10px;background:color-mix(in srgb,var(--red) 10%,transparent)}
 .err.on{display:block}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
-.dv{height:1px;background:var(--line2);margin:19px 0}
-.srow{display:flex;align-items:center;justify-content:space-between;gap:13px;padding:10px 0}
-.srow .t{font-weight:650;font-size:14px}
-.srow .d{font-size:12.5px;color:var(--muted)}
-.prow{display:flex;align-items:center;gap:10px;padding:7px;border-radius:10px;transition:.15s}
-.prow:hover{background:var(--panel2)}
+.dv{height:1px;background:var(--ln2);margin:19px 0}
+.sr{display:flex;align-items:center;justify-content:space-between;gap:13px;padding:10px 0}
+.sr .t1{font-weight:660;font-size:14px}
+.sr .d1{font-size:12.5px;color:var(--tx2)}
+.pr{display:flex;align-items:center;gap:10px;padding:7px;border-radius:10px;transition:.15s}
+.pr:hover{background:var(--surf2)}
 .sws{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .sw{width:28px;height:28px;border-radius:9px;border:2.5px solid transparent;cursor:pointer;transition:.16s}
-.sw:hover{transform:scale(1.12)}
-.sw.on{border-color:var(--text);transform:scale(1.12)}
-.seg{display:flex;gap:3px;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:3px}
-.seg button{padding:6px 13px;border-radius:8px;font-size:13px;font-weight:650;color:var(--muted);transition:.16s}
-.seg button.on{background:var(--panel);color:var(--text);box-shadow:var(--sh-sm)}
+.sw:hover,.sw.on{transform:scale(1.12)}
+.sw.on{border-color:var(--tx)}
+.seg{display:flex;gap:3px;background:var(--surf2);border:1px solid var(--ln);border-radius:11px;padding:3px}
+.seg button{padding:6px 13px;border-radius:8px;font-size:12.5px;font-weight:660;color:var(--tx2);transition:.16s}
+.seg button.on{background:var(--surf);color:var(--tx);box-shadow:var(--s1)}
+pre.code{margin:0;padding:13px 15px;border-radius:12px;background:var(--surf3);border:1px solid var(--ln);
+  font:500 12px/1.65 ui-monospace,"SF Mono",Menlo,Consolas,monospace;overflow-x:auto;white-space:pre;color:var(--tx)}
+#qrbox{display:grid;place-items:center;padding:18px;background:#fff;border-radius:16px;border:1px solid var(--ln)}
+#qrbox canvas,#qrbox img{display:block}
 
-#toast{position:fixed;bottom:24px;left:50%;z-index:200;display:flex;align-items:center;gap:9px;
-  padding:12px 19px;border-radius:13px;font-weight:650;font-size:14px;pointer-events:none;
-  background:var(--text);color:var(--bg);box-shadow:var(--sh-lg);opacity:0;
-  transform:translateX(-50%) translateY(24px)}
+#toast{position:fixed;bottom:24px;left:50%;z-index:220;display:flex;align-items:center;gap:9px;padding:12px 18px;
+  border-radius:13px;font-weight:650;font-size:13.5px;pointer-events:none;background:var(--tx);color:var(--bg);
+  box-shadow:var(--s4);opacity:0;transform:translateX(-50%) translateY(22px);max-width:min(90vw,460px)}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0);transition:.26s cubic-bezier(.2,.9,.3,1.2)}
-#toast i[data-lucide]{width:16px;height:16px}
+#toast svg{width:15px;height:15px;flex:none}
 
-@media(max-width:880px){
-  .wrap{grid-template-columns:1fr;padding:14px}
+.sk{background:linear-gradient(90deg,var(--surf2),var(--surf3),var(--surf2));background-size:200% 100%;
+  animation:sh 1.3s linear infinite;border-radius:var(--rm);height:96px}
+@keyframes sh{to{background-position:-200% 0}}
+
+@media(max-width:900px){
+  .shell{grid-template-columns:1fr;padding:14px;gap:14px}
   aside{position:static}
-  .olist{max-height:290px}
+  .rail{max-height:270px}
   header{padding:10px 14px}
-  .search{order:9;width:100%;min-width:0}
-  .kbd{display:none}
-  .stats{padding:14px 14px 0}
-  .hero{padding:44px 18px 26px}
+  .sbox{order:9;width:100%;min-width:0}
+  .kb{display:none}
+  .hero{padding:18px}
+  .hero h1{font-size:22px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
 }
 </style>
 </head>
 <body>
 
-<div class="mesh"><i></i><i></i><i></i></div>
+<div class="aura"><i></i><i></i></div>
 
 <header>
-  <div class="logo"><span class="mk"><i data-lucide="orbit"></i></span><span id="appTitle">Org Hub</span></div>
-  <div class="search">
+  <div class="brand"><span class="m"><i data-lucide="radio-tower"></i></span><span id="ttl">Aiko Org Hub</span></div>
+  <div class="sbox">
     <i data-lucide="search"></i>
-    <input id="q" type="text" placeholder="Search orgs, websites, channels…" autocomplete="off">
-    <span class="kbd">/</span>
+    <input id="q" type="text" placeholder="Search organizations, sites, channels…" autocomplete="off">
+    <span class="kb">/</span>
   </div>
   <div class="sp"></div>
-  <button class="btn gh ic" id="themeBtn" title="Light / dark" data-fb="◐"><i data-lucide="sun-moon"></i></button>
-  <button class="btn gh sm" id="setBtn" data-fb="⚙"><i data-lucide="settings-2"></i> Settings</button>
-  <button class="btn sm" id="lockBtn"><i data-lucide="lock"></i> <span>Admin</span></button>
+  <span class="sync" id="sync" title="Storage mode"><span class="d"></span><span class="lbl">…</span></span>
+  <button class="b g i" id="thm" title="Light / dark" data-fb="◐"><i data-lucide="sun-moon"></i></button>
+  <button class="b g s" id="set" data-fb="Settings"><i data-lucide="settings-2"></i> Settings</button>
+  <button class="b s" id="lock"><i data-lucide="lock"></i> <span>Admin</span></button>
 </header>
 
-<div id="app"></div>
+<div id="app"><div class="shell"><aside class="card" style="height:220px"></aside>
+  <main class="main"><div class="sk" style="height:140px"></div><div class="sk"></div><div class="sk"></div></main></div></div>
 
 <footer>
-  <div style="font-weight:700;color:var(--muted);margin-bottom:4px">Org Hub</div>
-  One clean home for every organization's websites and social channels.<br>
-  Your data is stored privately in your own browser — nothing is uploaded to any server.
+  <strong style="color:var(--tx2)">Aiko Org Hub</strong> · internal channel directory<br>
+  Every official website and social channel, in one place.
 </footer>
 
-<div class="veil" id="veil"><div class="modal" id="modal"></div></div>
+<div class="veil" id="veil"><div class="mo" id="mo"></div></div>
 <div id="toast"></div>
 
 <script>
 (() => {
 "use strict";
 
-/* ======================= libs (all optional / graceful) ======================= */
-const G  = () => window.gsap;
-const LU = () => window.lucide;
+/* ═══════════════════ optional libs (never fatal) ═══════════════════ */
+const G = () => window.gsap;
+const reduce = () => matchMedia("(prefers-reduced-motion:reduce)").matches;
+
 function icons(root){
-  const l = LU();
-  if(l && l.createIcons){
-    try{ l.createIcons({ root: root || document.body, attrs:{ "stroke-width":2 } }); }catch(e){}
-  }else{
-    (root || document).querySelectorAll("[data-lucide]").forEach(el => {
-      const host = el.closest("[data-fb]");
-      if(host && !host.dataset.fbDone){ host.dataset.fbDone = "1"; host.textContent = host.dataset.fb; }
-      else if(!el.dataset.fbDone){ el.dataset.fbDone = "1"; el.textContent = "•"; el.style.font = "inherit"; }
-    });
-  }
+  const l = window.lucide;
+  if(l && l.createIcons){ try{ l.createIcons({ root: root || document.body, attrs:{ "stroke-width":2 } }); return; }catch(e){} }
+  (root || document).querySelectorAll("[data-lucide]").forEach(el => {
+    if(el.dataset.fbd) return;
+    el.dataset.fbd = "1";
+    const host = el.closest("[data-fb]");
+    if(host){ host.textContent = host.dataset.fb; } else { el.remove(); }
+  });
 }
-// only trust brand-icon font once it has actually loaded
 if(document.fonts && document.fonts.ready){
   document.fonts.ready.then(() => {
     try{ if(document.fonts.check('1em "simple-icons"')) document.body.classList.add("si-ok"); }catch(e){}
   });
 }
-function anim(el, from, opts){
+function anim(t, from){
   const g = G();
-  if(!el || !g || matchMedia("(prefers-reduced-motion:reduce)").matches) return;
-  g.from(el, Object.assign({ duration:.5, ease:"power3.out" }, from, opts));
+  if(!t || !g || reduce()) return;
+  try{ g.from(t, Object.assign({ duration:.45, ease:"power3.out" }, from)); }catch(e){}
 }
 
-/* ======================= data ======================= */
-const KEY = "orghub.v1";
-const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3);
-
+/* ═══════════════════ constants ═══════════════════ */
 const DEF_PLATFORMS = [
-  { id:"facebook",  name:"Facebook",         color:"#1877f2", icon:"si:facebook" },
-  { id:"instagram", name:"Instagram",        color:"#e1306c", icon:"si:instagram" },
-  { id:"x",         name:"X (Twitter)",      color:"#16181c", icon:"si:x" },
-  { id:"linkedin",  name:"LinkedIn",         color:"#0a66c2", icon:"si:linkedin" },
-  { id:"youtube",   name:"YouTube",          color:"#ff0033", icon:"si:youtube" },
-  { id:"tiktok",    name:"TikTok",           color:"#00b8c4", icon:"si:tiktok" },
-  { id:"pinterest", name:"Pinterest",        color:"#bd081c", icon:"si:pinterest" },
-  { id:"threads",   name:"Threads",          color:"#3d3d3d", icon:"si:threads" },
-  { id:"whatsapp",  name:"WhatsApp",         color:"#25d366", icon:"si:whatsapp" },
-  { id:"telegram",  name:"Telegram",         color:"#229ed9", icon:"si:telegram" },
-  { id:"youtube2",  name:"YouTube Shorts",   color:"#c4001d", icon:"si:youtube" },
-  { id:"reddit",    name:"Reddit",           color:"#ff4500", icon:"si:reddit" },
-  { id:"snapchat",  name:"Snapchat",         color:"#c9a800", icon:"si:snapchat" },
-  { id:"discord",   name:"Discord",          color:"#5865f2", icon:"si:discord" },
-  { id:"gbp",       name:"Google Business",  color:"#34a853", icon:"lucide:store" },
-  { id:"other",     name:"Other channel",    color:"#64748b", icon:"lucide:at-sign" },
+  { id:"facebook",  name:"Facebook",        color:"#1877f2", icon:"si:facebook" },
+  { id:"instagram", name:"Instagram",       color:"#e1306c", icon:"si:instagram" },
+  { id:"x",         name:"X (Twitter)",     color:"#16181c", icon:"si:x" },
+  { id:"linkedin",  name:"LinkedIn",        color:"#0a66c2", icon:"si:linkedin" },
+  { id:"youtube",   name:"YouTube",         color:"#ff0033", icon:"si:youtube" },
+  { id:"tiktok",    name:"TikTok",          color:"#00b8c4", icon:"si:tiktok" },
+  { id:"threads",   name:"Threads",         color:"#3d3d3d", icon:"si:threads" },
+  { id:"pinterest", name:"Pinterest",       color:"#bd081c", icon:"si:pinterest" },
+  { id:"whatsapp",  name:"WhatsApp",        color:"#25d366", icon:"si:whatsapp" },
+  { id:"telegram",  name:"Telegram",        color:"#229ed9", icon:"si:telegram" },
+  { id:"snapchat",  name:"Snapchat",        color:"#c9a800", icon:"si:snapchat" },
+  { id:"reddit",    name:"Reddit",          color:"#ff4500", icon:"si:reddit" },
+  { id:"discord",   name:"Discord",         color:"#5865f2", icon:"si:discord" },
+  { id:"spotify",   name:"Spotify",         color:"#1db954", icon:"si:spotify" },
+  { id:"gbp",       name:"Google Business", color:"#34a853", icon:"lucide:store" },
+  { id:"other",     name:"Other channel",  color:"#64748b", icon:"lucide:at-sign" },
 ];
+const THEMES = [
+  { a1:"#5b6bff", a2:"#a855f7" }, { a1:"#0ea5e9", a2:"#22d3ee" }, { a1:"#10b981", a2:"#84cc16" },
+  { a1:"#f43f5e", a2:"#f97316" }, { a1:"#f59e0b", a2:"#eab308" }, { a1:"#8b5cf6", a2:"#ec4899" },
+  { a1:"#334155", a2:"#64748b" },
+];
+const LKEY = "orghub.v1", HKEY = "orghub.health", HTTL = 3600e3;
 
 const blank = () => ({
-  settings:{ title:"Org Hub", a1:"#6d5efc", a2:"#a855f7", theme:"light", passHash:null,
+  settings:{ title:"Aiko Org Hub", a1:"#5b6bff", a2:"#a855f7", theme:"dark", passHash:null,
              platforms:DEF_PLATFORMS.map(p => ({ ...p })) },
   orgs:[]
 });
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3);
 
-function load(){
-  try{
-    const raw = localStorage.getItem(KEY);
-    if(!raw) return blank();
-    const d = JSON.parse(raw), b = blank();
-    const st = { settings:{ ...b.settings, ...(d.settings || {}) }, orgs:Array.isArray(d.orgs) ? d.orgs : [] };
-    // carry forward: old saves had accent/no icons
-    if(d.settings && d.settings.accent && !d.settings.a1){ st.settings.a1 = d.settings.accent; st.settings.a2 = d.settings.accent; }
-    st.settings.platforms = (st.settings.platforms || []).map(p => {
-      const def = DEF_PLATFORMS.find(x => x.id === p.id);
-      return { ...p, icon:p.icon || (def ? def.icon : "") };
-    });
-    if(!st.settings.platforms.length) st.settings.platforms = b.settings.platforms;
-    st.orgs.forEach(o => { o.websites = o.websites || []; o.socials = o.socials || []; o.tags = o.tags || []; });
-    return st;
-  }catch(e){ return blank(); }
+/* ═══════════════════ state ═══════════════════ */
+let state = blank();
+let cloud = { mode:"local", configured:false, adminReady:false, updatedAt:null, saving:false, error:null };
+let unlocked = false, selected = null, query = "", booting = true;
+let health = {};                                        // url -> {ok,status,note,at}
+let checking = new Set();
+
+function normalize(d){
+  const b = blank();
+  const st = { settings:{ ...b.settings, ...((d && d.settings) || {}) },
+               orgs:(d && Array.isArray(d.orgs)) ? d.orgs : [] };
+  if(d && d.settings && d.settings.accent && !d.settings.a1){ st.settings.a1 = d.settings.accent; st.settings.a2 = d.settings.accent; }
+  st.settings.platforms = (st.settings.platforms || []).map(p => {
+    const def = DEF_PLATFORMS.find(x => x.id === p.id);
+    return { ...p, icon:p.icon || (def ? def.icon : "") };
+  });
+  if(!st.settings.platforms.length) st.settings.platforms = b.settings.platforms;
+  st.orgs.forEach(o => { o.websites = o.websites || []; o.socials = o.socials || []; o.tags = o.tags || []; });
+  return st;
 }
-let state = load();
-const save = () => localStorage.setItem(KEY, JSON.stringify(state));
+const readLocal  = () => { try{ return normalize(JSON.parse(localStorage.getItem(LKEY) || "null")); }catch(e){ return blank(); } };
+const writeLocal = () => { try{ localStorage.setItem(LKEY, JSON.stringify(state)); }catch(e){} };
+const adminKey   = () => sessionStorage.getItem("orghub.key") || "";
 
-let unlocked = sessionStorage.getItem("orghub.unlocked") === "1";
-let selected = state.orgs.length ? state.orgs[0].id : null;
-let query = "";
+try{ const h = JSON.parse(localStorage.getItem(HKEY) || "{}"); if(h && typeof h === "object") health = h; }catch(e){}
+const saveHealth = () => { try{ localStorage.setItem(HKEY, JSON.stringify(health)); }catch(e){} };
 
-/* ======================= helpers ======================= */
+/* ═══════════════════ cloud layer ═══════════════════ */
+async function pull(){
+  const r = await fetch("api/data", { cache:"no-store" });
+  const j = await r.json();
+  if(!j.ok) throw new Error(j.error || "read failed");
+  cloud.configured = !!j.configured;
+  cloud.adminReady = !!j.adminReady;
+  if(j.configured){
+    cloud.mode = "cloud"; cloud.updatedAt = j.updatedAt || null;
+    state = normalize(j.data);
+  }else{
+    cloud.mode = "local"; state = readLocal();
+  }
+}
+
+async function persist(){
+  if(cloud.mode !== "cloud"){ writeLocal(); return true; }
+  cloud.saving = true; cloud.error = null; paintSync();
+  try{
+    const r = await fetch("api/data", {
+      method:"PUT",
+      headers:{ "Content-Type":"application/json", "x-admin-key":adminKey() },
+      body:JSON.stringify({ data:state, baseUpdatedAt:cloud.updatedAt })
+    });
+    const j = await r.json().catch(() => ({}));
+    if(r.status === 409){
+      cloud.saving = false; paintSync();
+      const go = await confirmBox("Changed on another device",
+        "Someone saved a newer version of this data. Reload to get the latest — your unsaved change here will be lost.", false);
+      if(go){ await pull(); render(); }
+      return false;
+    }
+    if(r.status === 401){
+      cloud.saving = false; setUnlocked(false);
+      toast("Session expired — sign in again", "lock"); return false;
+    }
+    if(!r.ok || !j.ok) throw new Error((j && j.error) || ("HTTP " + r.status));
+    cloud.updatedAt = j.updatedAt || cloud.updatedAt;
+    cloud.saving = false; paintSync();
+    return true;
+  }catch(e){
+    cloud.saving = false; cloud.error = String(e.message || e); paintSync();
+    toast("Could not save: " + cloud.error, "triangle-alert");
+    return false;
+  }
+}
+/* every mutation goes through this */
+async function commit(msg, ic){
+  const ok = await persist();
+  render();
+  if(ok && msg) toast(msg, ic || "check");
+  return ok;
+}
+
+/* ═══════════════════ helpers ═══════════════════ */
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 const org = id => state.orgs.find(o => o.id === id);
 
@@ -394,28 +460,40 @@ function safeUrl(u){
   const s = String(u || "").trim();
   if(!s) return "";
   if(/^https?:\/\//i.test(s)) return s;
-  if(/^[a-z][a-z0-9+.-]*:/i.test(s)) return "";        // block javascript:, data:, mailto: etc.
+  if(/^[a-z][a-z0-9+.-]*:/i.test(s)) return "";
   return "https://" + s.replace(/^\/+/, "");
 }
+function hostOf(u){ try{ return new URL(safeUrl(u)).hostname; }catch(e){ return ""; } }
 function pretty(u){
   try{ const x = new URL(safeUrl(u)); return (x.host.replace(/^www\./, "") + x.pathname).replace(/\/$/, ""); }
   catch(e){ return String(u || ""); }
+}
+/* logo auto-fetch — favicon straight from the domain, no API key */
+function favicon(u, sz){
+  const h = hostOf(u);
+  return h ? "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(h) + "&sz=" + (sz || 64) : "";
 }
 const platform = id => state.settings.platforms.find(p => p.id === id) ||
   { id:"other", name:"Other channel", color:"#64748b", icon:"lucide:at-sign" };
 
 function initials(n){
   const p = String(n || "?").trim().split(/\s+/).filter(Boolean);
-  return ((p[0] && p[0][0]) || "?").concat((p[1] && p[1][0]) || "").toUpperCase();
+  return (((p[0] || "?")[0]) + ((p[1] || "")[0] || "")).toUpperCase();
 }
 function hue(n){ let h = 0; const s = String(n || ""); for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
-const gradOf = n => `linear-gradient(135deg,hsl(${hue(n)} 62% 52%),hsl(${(hue(n) + 42) % 360} 66% 44%))`;
+const grad = n => `linear-gradient(135deg,hsl(${hue(n)} 64% 54%),hsl(${(hue(n) + 44) % 360} 68% 44%))`;
 
-function iconHtml(spec, fallbackText){
+function iconOf(spec, fallback){
   const s = String(spec || "");
-  if(s.startsWith("si:"))     return `<span class="ini">${esc(fallbackText)}</span><i class="si si-${esc(s.slice(3))}"></i>`;
+  if(s.startsWith("si:"))     return `<span class="ini">${esc(fallback)}</span><i class="si si-${esc(s.slice(3))}"></i>`;
   if(s.startsWith("lucide:")) return `<i data-lucide="${esc(s.slice(7))}"></i>`;
-  return `<span class="ini" style="display:block">${esc(fallbackText)}</span>`;
+  return `<span class="ini" style="display:block">${esc(fallback)}</span>`;
+}
+/* org logo: manual override → favicon of its first website → gradient initials */
+function logoBox(o, cls){
+  const src = o.logo ? safeUrl(o.logo) : (o.websites[0] ? favicon(o.websites[0].url, 128) : "");
+  const fb = `<span class="fb" style="background:${grad(o.name)}">${esc(initials(o.name))}</span>`;
+  return `<span class="lg ${cls || ""}">${src ? `<img src="${esc(src)}" alt="" loading="lazy">` : ""}${fb}</span>`;
 }
 async function sha(t){
   try{
@@ -428,325 +506,548 @@ async function sha(t){
   }
 }
 let tT;
-function toast(msg, ic = "check"){
+function toast(msg, ic){
   const t = document.getElementById("toast");
-  t.innerHTML = `<i data-lucide="${esc(ic)}"></i><span>${esc(msg)}</span>`;
+  t.innerHTML = `<i data-lucide="${esc(ic || "check")}"></i><span>${esc(msg)}</span>`;
   icons(t); t.classList.add("on");
-  clearTimeout(tT); tT = setTimeout(() => t.classList.remove("on"), 2300);
+  clearTimeout(tT); tT = setTimeout(() => t.classList.remove("on"), 2600);
 }
+function copy(txt, msg){
+  const done = () => toast(msg || "Copied", "copy");
+  if(navigator.clipboard && navigator.clipboard.writeText)
+    return navigator.clipboard.writeText(txt).then(done, fb);
+  fb();
+  function fb(){
+    const a = document.createElement("textarea");
+    a.value = txt; a.style.cssText = "position:fixed;opacity:0";
+    document.body.appendChild(a); a.select();
+    try{ document.execCommand("copy"); done(); }catch(e){ toast("Copy failed", "triangle-alert"); }
+    a.remove();
+  }
+}
+const wireLogos = root => root.querySelectorAll(".lg img").forEach(img => {
+  img.addEventListener("error", () => { img.style.display = "none"; }, { once:true });
+  img.addEventListener("load", () => {
+    // favicon services return a 16px placeholder for unknown domains — keep the initials then
+    if(img.naturalWidth && img.naturalWidth <= 16) img.style.display = "none";
+    else { const fb = img.parentNode.querySelector(".fb"); if(fb) fb.style.display = "none"; }
+  }, { once:true });
+});
 
-/* ======================= modal ======================= */
-const veil = document.getElementById("veil"), modal = document.getElementById("modal");
+/* ═══════════════════ modal ═══════════════════ */
+const veil = document.getElementById("veil"), mo = document.getElementById("mo");
 let onEsc = null, onVeil = null;
 
-function openModal(html, { wide = false, focus = "input,select,textarea", onSubmit = null } = {}){
-  modal.className = "modal" + (wide ? " wide" : "");
-  modal.innerHTML = html;
+function openModal(html, opt){
+  opt = opt || {};
+  mo.className = "mo" + (opt.wide ? " w" : "");
+  mo.innerHTML = html;
   veil.classList.add("on");
-  icons(modal);
-  anim(modal, { y:16, scale:.97, opacity:0, duration:.34, ease:"back.out(1.6)" });
-  modal.querySelectorAll("[data-close]").forEach(b => b.onclick = closeModal);
-  const form = modal.querySelector("form");
-  if(form && onSubmit) form.onsubmit = e => { e.preventDefault(); onSubmit(form); };
-  const f = focus && modal.querySelector(focus);
+  icons(mo); wireLogos(mo);
+  anim(mo, { y:14, scale:.975, opacity:0, duration:.32, ease:"back.out(1.5)" });
+  mo.querySelectorAll("[data-close]").forEach(b => b.onclick = closeModal);
+  const form = mo.querySelector("form");
+  if(form && opt.onSubmit) form.onsubmit = e => { e.preventDefault(); opt.onSubmit(form); };
+  const sel = opt.focus === null ? null : (opt.focus || "input,select,textarea");
+  const f = sel && mo.querySelector(sel);
   if(f) setTimeout(() => f.focus(), 60);
-  onEsc = closeModal; onVeil = closeModal;
+  onEsc = onVeil = closeModal;
 }
-function closeModal(){ veil.classList.remove("on"); modal.innerHTML = ""; onEsc = onVeil = null; }
+function closeModal(){ veil.classList.remove("on"); mo.innerHTML = ""; onEsc = onVeil = null; }
 veil.onclick = e => { if(e.target === veil && onVeil) onVeil(); };
 document.addEventListener("keydown", e => {
   if(e.key === "Escape" && onEsc) return onEsc();
   if(e.key === "/" && !veil.classList.contains("on") && !/input|textarea|select/i.test(document.activeElement.tagName)){
-    e.preventDefault(); document.getElementById("q").focus();
+    e.preventDefault(); const q = document.getElementById("q"); if(q) q.focus();
   }
 });
+const X = `<button class="b g i" data-close data-fb="X"><i data-lucide="x"></i></button>`;
 function showErr(m){
-  let el = modal.querySelector(".err");
-  if(!el){ el = document.createElement("div"); el.className = "err"; modal.querySelector(".mb").appendChild(el); }
-  el.textContent = m; el.classList.add("on");
-  anim(el, { y:-5, opacity:0, duration:.25 });
+  let el = mo.querySelector(".err");
+  if(!el){ el = document.createElement("div"); el.className = "err"; mo.querySelector(".mb").appendChild(el); }
+  el.textContent = m; el.classList.add("on"); anim(el, { y:-4, opacity:0, duration:.22 });
 }
-function confirmBox(title, body, danger = true){
+function confirmBox(title, body, danger){
+  danger = danger !== false;
   return new Promise(res => {
     openModal(`
-      <div class="mh"><h3><i data-lucide="${danger ? "triangle-alert" : "circle-help"}"></i>${esc(title)}</h3>
-        <button class="btn gh ic" data-close data-fb="✕"><i data-lucide="x"></i></button></div>
-      <div class="mb"><div style="color:var(--muted);line-height:1.6">${body}</div></div>
-      <div class="mf"><button class="btn" data-close>Cancel</button>
-        <button class="btn ${danger ? "dg" : "pri"}" id="yes">${danger ? "Yes, delete" : "Confirm"}</button></div>`,
-      { focus:"#yes" });
-    modal.querySelector("#yes").onclick = () => { closeModal(); res(true); };
+      <div class="mh"><h3><i data-lucide="${danger ? "triangle-alert" : "circle-help"}"></i>${esc(title)}</h3>${X}</div>
+      <div class="mb"><div style="color:var(--tx2);line-height:1.6">${body}</div></div>
+      <div class="mf"><button class="b" data-close>Cancel</button>
+        <button class="b ${danger ? "d" : "p"}" id="y">${danger ? "Yes, delete" : "Continue"}</button></div>`,
+      { focus:"#y" });
+    mo.querySelector("#y").onclick = () => { closeModal(); res(true); };
     onEsc = onVeil = () => { closeModal(); res(false); };
   });
 }
 
-/* ======================= admin lock ======================= */
-function setUnlocked(v){ unlocked = v; sessionStorage.setItem("orghub.unlocked", v ? "1" : "0"); render(); }
-
+/* ═══════════════════ admin ═══════════════════ */
+function setUnlocked(v){
+  unlocked = v;
+  if(!v) sessionStorage.removeItem("orghub.key");
+  sessionStorage.setItem("orghub.unlocked", v ? "1" : "0");
+  render();
+}
 function lockUI(){
-  if(unlocked){ setUnlocked(false); toast("Locked — the page is view-only now", "lock"); return; }
-  if(!state.settings.passHash) return passwordModal(true);
+  if(unlocked){ setUnlocked(false); toast("Locked — the page is read-only now", "lock"); return; }
+  if(cloud.mode === "cloud" && !cloud.adminReady){
+    return openModal(`
+      <div class="mh"><h3><i data-lucide="triangle-alert"></i>Admin password not set</h3>${X}</div>
+      <div class="mb"><div class="note warn"><i data-lucide="info"></i><span>Cloud storage is connected, but no
+        <b>ADMIN_PASSWORD</b> environment variable exists on this deployment — so editing is disabled for everybody.
+        Add it in Vercel → Project → Settings → Environment Variables, then redeploy.</span></div></div>
+      <div class="mf"><button class="b p" data-close>Got it</button></div>`, { focus:null });
+  }
+  if(cloud.mode === "local" && !state.settings.passHash) return passwordModal(true);
+
   openModal(`
-    <div class="mh"><h3><i data-lucide="shield-check"></i>Admin sign in</h3>
-      <button class="btn gh ic" data-close data-fb="✕"><i data-lucide="x"></i></button></div>
+    <div class="mh"><h3><i data-lucide="shield-check"></i>Admin sign in</h3>${X}</div>
     <form><div class="mb">
       <div class="f"><label>Admin password</label>
-        <input type="password" name="p" placeholder="Enter your password" autocomplete="current-password">
-        <div class="hint">Without this password the page is read-only — nobody can add, edit or delete anything.</div></div>
+        <input type="password" name="p" placeholder="Enter password" autocomplete="current-password">
+        <div class="hint">${cloud.mode === "cloud"
+          ? "Verified on the server. Without it this page is strictly read-only for everyone."
+          : "Stored only in this browser. Without it the page is read-only."}</div></div>
     </div>
-    <div class="mf"><button type="button" class="btn" data-close>Cancel</button>
-      <button class="btn pri"><i data-lucide="lock-open"></i> Unlock</button></div></form>`, {
+    <div class="mf"><button type="button" class="b" data-close>Cancel</button>
+      <button class="b p"><i data-lucide="lock-open"></i> Unlock</button></div></form>`, {
     onSubmit: async f => {
-      if(await sha(f.p.value) !== state.settings.passHash) return showErr("Wrong password. Try again.");
+      const pw = f.p.value;
+      if(cloud.mode === "cloud"){
+        try{
+          const r = await fetch("api/auth", { method:"POST", headers:{ "Content-Type":"application/json" },
+                                              body:JSON.stringify({ password:pw }) });
+          const j = await r.json().catch(() => ({}));
+          if(!r.ok || !j.ok) return showErr(j.error || "Wrong password.");
+          sessionStorage.setItem("orghub.key", pw);
+        }catch(e){ return showErr("Could not reach the server. Check your connection."); }
+      }else{
+        if(await sha(pw) !== state.settings.passHash) return showErr("Wrong password.");
+      }
       closeModal(); setUnlocked(true); toast("Admin unlocked", "lock-open");
     }
   });
 }
-function passwordModal(first = false){
+function passwordModal(first){
+  if(cloud.mode === "cloud"){
+    return openModal(`
+      <div class="mh"><h3><i data-lucide="key-round"></i>Admin password</h3>${X}</div>
+      <div class="mb"><div class="note"><i data-lucide="info"></i><span>In cloud mode the password lives on the
+        server as the <b>ADMIN_PASSWORD</b> environment variable — it is never stored in the browser.
+        To change it: Vercel → Project → Settings → Environment Variables → edit <b>ADMIN_PASSWORD</b> → Redeploy.</span></div></div>
+      <div class="mf"><button class="b p" data-close>Got it</button></div>`, { focus:null });
+  }
   const has = !!state.settings.passHash;
   openModal(`
-    <div class="mh"><h3><i data-lucide="key-round"></i>${first ? "Create your admin password" : "Change admin password"}</h3>
-      <button class="btn gh ic" data-close data-fb="✕"><i data-lucide="x"></i></button></div>
+    <div class="mh"><h3><i data-lucide="key-round"></i>${first ? "Create admin password" : "Change password"}</h3>${X}</div>
     <form><div class="mb">
-      ${first ? `<div class="banner" style="margin-bottom:17px"><i data-lucide="info"></i>
-        <span>This password locks editing on this device. It is saved only in your browser as a
-        one-way hash — write it down, it cannot be recovered.</span></div>` : ""}
-      ${has ? `<div class="f"><label>Current password</label>
-        <input type="password" name="old" autocomplete="current-password"></div>` : ""}
-      <div class="f"><label>New password</label><input type="password" name="a" autocomplete="new-password"></div>
-      <div class="f"><label>Repeat password</label><input type="password" name="b" autocomplete="new-password"></div>
+      ${first ? `<div class="note" style="margin-bottom:16px"><i data-lucide="info"></i><span>Saved in this browser
+        as a one-way hash. Write it down — it cannot be recovered.</span></div>` : ""}
+      ${has ? `<div class="f"><label>Current password</label><input type="password" name="old"></div>` : ""}
+      <div class="f"><label>New password</label><input type="password" name="a"></div>
+      <div class="f"><label>Repeat password</label><input type="password" name="b"></div>
     </div>
-    <div class="mf"><button type="button" class="btn" data-close>Cancel</button>
-      <button class="btn pri">Save password</button></div></form>`, {
+    <div class="mf"><button type="button" class="b" data-close>Cancel</button>
+      <button class="b p">Save password</button></div></form>`, {
     onSubmit: async f => {
       if(has && await sha(f.old.value) !== state.settings.passHash) return showErr("Current password is wrong.");
       if(f.a.value.length < 4) return showErr("Use at least 4 characters.");
-      if(f.a.value !== f.b.value) return showErr("The two passwords don't match.");
+      if(f.a.value !== f.b.value) return showErr("The passwords don't match.");
       state.settings.passHash = await sha(f.a.value);
-      save(); closeModal(); setUnlocked(true);
+      writeLocal(); closeModal(); setUnlocked(true);
       toast(first ? "Password set — you're signed in" : "Password updated", "shield-check");
     }
   });
 }
 
-/* ======================= forms ======================= */
+/* ═══════════════════ forms ═══════════════════ */
 function orgForm(id){
   const o = id ? org(id) : null;
   openModal(`
-    <div class="mh"><h3><i data-lucide="building-2"></i>${o ? "Edit organization" : "New organization"}</h3>
-      <button class="btn gh ic" data-close data-fb="✕"><i data-lucide="x"></i></button></div>
+    <div class="mh"><h3><i data-lucide="building-2"></i>${o ? "Edit organization" : "New organization"}</h3>${X}</div>
     <form><div class="mb">
-      <div class="f"><label>Organization name *</label>
-        <input type="text" name="name" value="${esc(o ? o.name : "")}" placeholder="Acme Media Pvt Ltd"></div>
+      <div class="f"><label>Name *</label>
+        <input type="text" name="name" value="${esc(o ? o.name : "")}" placeholder="Aiko Media"></div>
+      <div class="f"><label>Logo URL <span style="font-weight:400;text-transform:none">— optional</span></label>
+        <input type="text" name="logo" value="${esc(o ? o.logo || "" : "")}" placeholder="Leave empty to auto-fetch from the website">
+        <div class="hint">Empty = the logo is pulled automatically from the first website's domain.</div></div>
       <div class="f"><label>Tags</label>
-        <input type="text" name="tags" value="${esc(o ? o.tags.join(", ") : "")}" placeholder="client, retail, priority">
-        <div class="hint">Separate with commas. Tags are searchable.</div></div>
+        <input type="text" name="tags" value="${esc(o ? o.tags.join(", ") : "")}" placeholder="brand, india, priority"></div>
       <div class="f"><label>Notes</label>
-        <textarea name="notes" placeholder="Anything worth remembering about this org…">${esc(o ? o.notes || "" : "")}</textarea></div>
+        <textarea name="notes" placeholder="Anything the team should know…">${esc(o ? o.notes || "" : "")}</textarea></div>
     </div>
-    <div class="mf"><button type="button" class="btn" data-close>Cancel</button>
-      <button class="btn pri">${o ? "Save changes" : "Add organization"}</button></div></form>`, {
-    onSubmit: f => {
+    <div class="mf"><button type="button" class="b" data-close>Cancel</button>
+      <button class="b p">${o ? "Save changes" : "Add organization"}</button></div></form>`, {
+    onSubmit: async f => {
       const name = f.name.value.trim();
-      if(!name) return showErr("Please enter an organization name.");
-      const tags = f.tags.value.split(",").map(t => t.trim()).filter(Boolean);
-      const notes = f.notes.value.trim();
-      if(o) Object.assign(o, { name, tags, notes });
-      else { const n = { id:uid(), name, tags, notes, websites:[], socials:[] }; state.orgs.push(n); selected = n.id; }
-      save(); closeModal(); render(); toast(o ? "Organization updated" : `${name} added`, "building-2");
+      if(!name) return showErr("Please enter a name.");
+      const d = { name, logo:f.logo.value.trim(), tags:f.tags.value.split(",").map(t => t.trim()).filter(Boolean),
+                  notes:f.notes.value.trim() };
+      if(o) Object.assign(o, d);
+      else { const n = { id:uid(), websites:[], socials:[], ...d }; state.orgs.push(n); selected = n.id; }
+      closeModal();
+      await commit(o ? "Organization updated" : name + " added", "building-2");
     }
   });
 }
-
-function siteForm(orgId, sid){
-  const o = org(orgId), s = sid ? o.websites.find(w => w.id === sid) : null;
+function siteForm(oid, sid){
+  const o = org(oid), s = sid ? o.websites.find(w => w.id === sid) : null;
   openModal(`
-    <div class="mh"><h3><i data-lucide="globe"></i>${s ? "Edit website" : "Add website"}</h3>
-      <button class="btn gh ic" data-close data-fb="✕"><i data-lucide="x"></i></button></div>
+    <div class="mh"><h3><i data-lucide="globe"></i>${s ? "Edit website" : "Add website"}</h3>${X}</div>
     <form><div class="mb">
       <div class="f"><label>Label</label>
-        <input type="text" name="label" value="${esc(s ? s.label : "")}" placeholder="Main site / Blog / Careers page"></div>
+        <input type="text" name="label" value="${esc(s ? s.label : "")}" placeholder="Main site / Blog / Careers"></div>
       <div class="f"><label>URL *</label>
-        <input type="text" name="url" value="${esc(s ? s.url : "")}" placeholder="acme.com">
-        <div class="hint">https:// is added for you. Add as many websites as this organization has.</div></div>
+        <input type="text" name="url" value="${esc(s ? s.url : "")}" placeholder="aiko.com">
+        <div class="hint">https:// is added automatically. Add as many websites as you need.</div></div>
     </div>
-    <div class="mf"><button type="button" class="btn" data-close>Cancel</button>
-      <button class="btn pri">${s ? "Save" : "Add website"}</button></div></form>`, {
-    onSubmit: f => {
+    <div class="mf"><button type="button" class="b" data-close>Cancel</button>
+      <button class="b p">${s ? "Save" : "Add website"}</button></div></form>`, {
+    onSubmit: async f => {
       const url = safeUrl(f.url.value);
-      if(!url) return showErr("Please enter a valid website address.");
+      if(!url) return showErr("Please enter a valid URL.");
       const label = f.label.value.trim() || pretty(url);
       if(s) Object.assign(s, { label, url }); else o.websites.push({ id:uid(), label, url });
-      save(); closeModal(); render(); toast(s ? "Website updated" : "Website added", "globe");
+      closeModal();
+      if(await commit(s ? "Website updated" : "Website added", "globe")) checkLinks(o, [url]);
     }
   });
 }
-
-function socialForm(orgId, sid){
-  const o = org(orgId), s = sid ? o.socials.find(x => x.id === sid) : null;
+function socialForm(oid, sid){
+  const o = org(oid), s = sid ? o.socials.find(x => x.id === sid) : null;
   const opts = state.settings.platforms
     .map(p => `<option value="${esc(p.id)}"${s && s.platform === p.id ? " selected" : ""}>${esc(p.name)}</option>`).join("");
   openModal(`
-    <div class="mh"><h3><i data-lucide="share-2"></i>${s ? "Edit social channel" : "Add social channel"}</h3>
-      <button class="btn gh ic" data-close data-fb="✕"><i data-lucide="x"></i></button></div>
+    <div class="mh"><h3><i data-lucide="share-2"></i>${s ? "Edit channel" : "Add social channel"}</h3>${X}</div>
     <form><div class="mb">
       <div class="g2">
         <div class="f"><label>Platform</label><select name="platform">${opts}</select></div>
-        <div class="f"><label>Handle / page</label>
-          <input type="text" name="handle" value="${esc(s ? s.handle : "")}" placeholder="@acmemedia"></div>
+        <div class="f"><label>Handle</label>
+          <input type="text" name="handle" value="${esc(s ? s.handle : "")}" placeholder="@aikomedia"></div>
       </div>
       <div class="f"><label>Channel URL *</label>
-        <input type="text" name="url" value="${esc(s ? s.url : "")}" placeholder="facebook.com/acmemedia">
-        <div class="hint">Add unlimited channels per org — even several pages on the same platform.</div></div>
+        <input type="text" name="url" value="${esc(s ? s.url : "")}" placeholder="instagram.com/aikomedia">
+        <div class="hint">Unlimited channels per org — several pages on the same platform is fine.</div></div>
       <div class="f"><label>Note</label>
         <input type="text" name="note" value="${esc(s ? s.note || "" : "")}" placeholder="Regional page, agency-managed…"></div>
     </div>
-    <div class="mf"><button type="button" class="btn" data-close>Cancel</button>
-      <button class="btn pri">${s ? "Save" : "Add channel"}</button></div></form>`, {
+    <div class="mf"><button type="button" class="b" data-close>Cancel</button>
+      <button class="b p">${s ? "Save" : "Add channel"}</button></div></form>`, {
     focus:"select",
-    onSubmit: f => {
+    onSubmit: async f => {
       const url = safeUrl(f.url.value);
       if(!url) return showErr("Please enter the channel URL.");
       const d = { platform:f.platform.value, handle:f.handle.value.trim(), url, note:f.note.value.trim() };
       if(s) Object.assign(s, d); else o.socials.push({ id:uid(), ...d });
-      save(); closeModal(); render(); toast(s ? "Channel updated" : "Channel added", "share-2");
+      closeModal();
+      if(await commit(s ? "Channel updated" : "Channel added", "share-2")) checkLinks(o, [url]);
     }
   });
 }
 
-/* ======================= settings ======================= */
-const THEMES = [
-  { a1:"#6d5efc", a2:"#a855f7" }, { a1:"#0ea5e9", a2:"#22d3ee" },
-  { a1:"#10b981", a2:"#84cc16" }, { a1:"#f43f5e", a2:"#f97316" },
-  { a1:"#f59e0b", a2:"#eab308" }, { a1:"#8b5cf6", a2:"#ec4899" },
-  { a1:"#1e293b", a2:"#475569" },
-];
+/* ═══════════════════ link health checker ═══════════════════ */
+const hkey = u => safeUrl(u);
+function hstate(u){
+  const h = health[hkey(u)];
+  if(!h) return { cls:"", txt:"Not checked yet" };
+  const age = Date.now() - (h.at || 0);
+  const when = age < 60e3 ? "just now" : age < 3600e3 ? Math.round(age / 60e3) + "m ago" : Math.round(age / 3600e3) + "h ago";
+  if(h.ok)          return { cls:"ok",   txt:`Live · HTTP ${h.status} · ${h.ms}ms · checked ${when}` };
+  if(h.status === 403 || h.status === 0 && h.note === "Blocked") return { cls:"warn", txt:`${h.note} · checked ${when}` };
+  return { cls:"bad", txt:`${h.note || "HTTP " + h.status} · checked ${when}` };
+}
+function allUrls(o){
+  return [...o.websites.map(w => safeUrl(w.url)), ...o.socials.map(s => safeUrl(s.url))].filter(Boolean);
+}
+async function checkLinks(o, only){
+  if(!location.protocol.startsWith("http")){
+    if(!only) toast("Link checking needs the deployed site (it runs on the server)", "info");
+    return;
+  }
+  const urls = (only || allUrls(o)).filter(Boolean);
+  if(!urls.length) return;
+  urls.forEach(u => checking.add(u));
+  paintDots();
+  try{
+    const r = await fetch("api/check", { method:"POST", headers:{ "Content-Type":"application/json" },
+                                         body:JSON.stringify({ urls }) });
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error || "check failed");
+    j.results.forEach(x => { health[hkey(x.url)] = { ok:x.ok, status:x.status, ms:x.ms, note:x.note, at:Date.now() }; });
+    saveHealth();
+    const bad = j.results.filter(x => !x.ok).length;
+    if(!only) toast(bad ? `${bad} of ${j.results.length} link(s) need attention` : `All ${j.results.length} links are live`,
+                    bad ? "triangle-alert" : "check-check");
+  }catch(e){
+    if(!only) toast("Link check unavailable (deploy the site to use it)", "triangle-alert");
+  }finally{
+    urls.forEach(u => checking.delete(u));
+    render();
+  }
+}
+function paintDots(){
+  document.querySelectorAll("[data-h]").forEach(el => {
+    const u = el.dataset.h;
+    if(checking.has(u)){ el.className = "hd-dot spin"; el.title = "Checking…"; return; }
+    const h = hstate(u); el.className = "hd-dot " + h.cls; el.title = h.txt;
+  });
+}
+function healthSummary(o){
+  const u = allUrls(o);
+  let ok = 0, bad = 0, un = 0;
+  u.forEach(x => { const h = health[hkey(x)]; if(!h) un++; else if(h.ok) ok++; else bad++; });
+  return { total:u.length, ok, bad, un };
+}
+/* auto-check the open org when the cache has gone stale */
+function autoCheck(o){
+  if(!o || cloud.mode !== "cloud") return;
+  const stale = allUrls(o).filter(u => { const h = health[hkey(u)]; return !h || Date.now() - h.at > HTTL; });
+  if(stale.length) checkLinks(o, stale);
+}
+
+/* ═══════════════════ QR + embed ═══════════════════ */
+const orgLink = o => location.origin + location.pathname + "#/" + o.id;
+
+function qrModal(o){
+  const url = orgLink(o);
+  openModal(`
+    <div class="mh"><h3><i data-lucide="qr-code"></i>QR code — ${esc(o.name)}</h3>${X}</div>
+    <div class="mb">
+      <div id="qrbox"></div>
+      <div class="hint" style="text-align:center;margin-top:12px">Scan to open this organization's page.<br>
+        <span class="mono" style="font-size:11px;word-break:break-all">${esc(url)}</span></div>
+      ${location.protocol === "file:" ? `<div class="note warn" style="margin-top:14px"><i data-lucide="info"></i>
+        <span>You are opening the file directly, so this QR points at a local path. Deploy the site first
+        for a QR that works on phones.</span></div>` : ""}
+    </div>
+    <div class="mf"><button class="b" data-close>Close</button>
+      <button class="b" id="cp"><i data-lucide="copy"></i> Copy link</button>
+      <button class="b p" id="dl"><i data-lucide="download"></i> PNG</button></div>`, { focus:null });
+
+  const box = mo.querySelector("#qrbox");
+  if(window.QRCode){
+    try{
+      new window.QRCode(box, { text:url, width:220, height:220, colorDark:"#000000", colorLight:"#ffffff",
+                               correctLevel:window.QRCode.CorrectLevel.M });
+    }catch(e){ box.innerHTML = `<div class="hint">QR library failed to load.</div>`; }
+  }else{
+    box.innerHTML = `<div class="hint" style="color:#333">QR library did not load (offline?).<br>Reconnect and try again.</div>`;
+  }
+  mo.querySelector("#cp").onclick = () => copy(url, "Link copied");
+  mo.querySelector("#dl").onclick = () => {
+    const cv = box.querySelector("canvas"), im = box.querySelector("img");
+    let href = "";
+    try{ href = cv ? cv.toDataURL("image/png") : (im ? im.src : ""); }catch(e){}
+    if(!href) return toast("Could not export the image", "triangle-alert");
+    const a = document.createElement("a");
+    a.href = href; a.download = o.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase() + "-qr.png"; a.click();
+    toast("QR downloaded", "download");
+  };
+}
+
+function embedModal(o){
+  const base = location.protocol === "file:" ? "https://YOUR-SITE.vercel.app" : location.origin;
+  const snippet = `<script src="${base}/embed.js" data-org="${o.id}"><\/script>`;
+  const iframe = `<iframe src="${base}/#/${o.id}" style="width:100%;height:560px;border:0;border-radius:14px" title="${o.name} channels"><\/iframe>`;
+  openModal(`
+    <div class="mh"><h3><i data-lucide="code-xml"></i>Embed — ${esc(o.name)}</h3>${X}</div>
+    <div class="mb">
+      <div class="f"><label>Script widget <span style="font-weight:400;text-transform:none">— recommended</span></label>
+        <pre class="code" id="s1">${esc(snippet)}</pre>
+        <div class="hint">Paste it anywhere in your website's HTML. It renders a read-only list of this
+          organization's websites and channels, and updates automatically whenever you change something here.</div></div>
+      <div class="f"><label>Options</label>
+        <pre class="code">data-theme="dark"      dark colours
+data-show="social"     only social channels ("web" = only websites)
+data-title="false"     hide the organization name</pre></div>
+      <div class="dv"></div>
+      <div class="f"><label>Or a full-page iframe</label>
+        <pre class="code" id="s2">${esc(iframe)}</pre></div>
+      ${location.protocol === "file:" ? `<div class="note warn"><i data-lucide="info"></i>
+        <span>Replace <b>YOUR-SITE.vercel.app</b> with your real domain after deploying.</span></div>` : ""}
+    </div>
+    <div class="mf"><button class="b" data-close>Close</button>
+      <button class="b" id="c2"><i data-lucide="copy"></i> Copy iframe</button>
+      <button class="b p" id="c1"><i data-lucide="copy"></i> Copy script</button></div>`, { wide:true, focus:null });
+  mo.querySelector("#c1").onclick = () => copy(snippet, "Embed script copied");
+  mo.querySelector("#c2").onclick = () => copy(iframe, "Iframe copied");
+}
+
+/* ═══════════════════ settings & setup ═══════════════════ */
+const SQL = `create table if not exists orghub_state (
+  id int primary key,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+insert into orghub_state (id, data)
+  values (1, '{"orgs":[]}'::jsonb)
+  on conflict (id) do nothing;`;
+
+function setupModal(){
+  openModal(`
+    <div class="mh"><h3><i data-lucide="cloud-cog"></i>Turn on shared cloud storage</h3>${X}</div>
+    <div class="mb">
+      <div class="note"><i data-lucide="info"></i><span>Right now data lives only in <b>this</b> browser.
+        Connect a free database and everyone — phone, laptop, any teammate — sees the same data.</span></div>
+      <div class="dv"></div>
+      <div class="f"><label>1 · Create a free Supabase project</label>
+        <div class="hint">Go to <b>supabase.com</b> → New project. Wait for it to finish provisioning.</div></div>
+      <div class="f"><label>2 · SQL Editor → run this</label>
+        <pre class="code" id="sql">${esc(SQL)}</pre></div>
+      <div class="f"><label>3 · Add 3 environment variables in Vercel</label>
+        <pre class="code">SUPABASE_URL           https://xxxx.supabase.co
+SUPABASE_SERVICE_KEY   (Settings -> API -> service_role key)
+ADMIN_PASSWORD         (the password only you know)</pre>
+        <div class="hint">Vercel → Project → Settings → Environment Variables. Then <b>Redeploy</b>.
+          The service key stays on the server and is never sent to the browser.</div></div>
+    </div>
+    <div class="mf"><button class="b" data-close>Close</button>
+      <button class="b p" id="cs"><i data-lucide="copy"></i> Copy SQL</button></div>`, { wide:true, focus:null });
+  mo.querySelector("#cs").onclick = () => copy(SQL, "SQL copied");
+}
 
 function settingsModal(){
   const s = state.settings;
+  const localCount = (() => { try{ const d = JSON.parse(localStorage.getItem(LKEY) || "null"); return d && d.orgs ? d.orgs.length : 0; }catch(e){ return 0; } })();
   openModal(`
-    <div class="mh"><h3><i data-lucide="settings-2"></i>Settings</h3>
-      <button class="btn gh ic" data-close data-fb="✕"><i data-lucide="x"></i></button></div>
+    <div class="mh"><h3><i data-lucide="settings-2"></i>Settings</h3>${X}</div>
     <div class="mb">
-      <div class="f"><label>Site name</label><input type="text" id="sTitle" value="${esc(s.title)}"></div>
-
-      <div class="f"><label>Colour theme</label>
+      <div class="f"><label>Site name</label><input type="text" id="st" value="${esc(s.title)}"></div>
+      <div class="f"><label>Accent</label>
         <div class="sws" id="sw">
           ${THEMES.map((t, i) => `<div class="sw ${t.a1 === s.a1 ? "on" : ""}" data-i="${i}"
             style="background:linear-gradient(135deg,${t.a1},${t.a2})"></div>`).join("")}
-          <input type="color" id="sCustom" value="${esc(s.a1)}"
-            style="width:30px;height:30px;padding:0;border:1px solid var(--line);border-radius:9px;background:none;cursor:pointer">
-        </div>
-      </div>
-
-      <div class="srow"><div><div class="t">Appearance</div><div class="d">Light or dark mode</div></div>
-        <div class="seg" id="seg">
+          <input type="color" id="sc" value="${esc(s.a1)}" title="Custom colour"
+            style="width:30px;height:30px;padding:0;border:1px solid var(--ln);border-radius:9px;background:none;cursor:pointer">
+        </div></div>
+      <div class="sr"><div><div class="t1">Appearance</div><div class="d1">Light or dark</div></div>
+        <div class="seg" id="sg">
           <button data-t="light" class="${s.theme === "light" ? "on" : ""}">Light</button>
-          <button data-t="dark" class="${s.theme === "dark" ? "on" : ""}">Dark</button>
-        </div>
-      </div>
+          <button data-t="dark" class="${s.theme === "dark" ? "on" : ""}">Dark</button></div></div>
 
       <div class="dv"></div>
-      <div class="srow"><div><div class="t">Social platforms</div>
-        <div class="d">Remove what you don't need, or add your own</div></div></div>
-      <div id="plats" style="max-height:210px;overflow:auto"></div>
-      <form id="addPlat" style="display:flex;gap:8px;margin-top:11px">
-        <input type="text" id="pName" placeholder="New platform name"
-          style="flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)">
-        <input type="color" id="pColor" value="#6d5efc"
-          style="width:44px;padding:0;border:1px solid var(--line);border-radius:10px;background:none;cursor:pointer">
-        <button class="btn"><i data-lucide="plus"></i></button>
+      <div class="sr"><div><div class="t1">Storage</div>
+        <div class="d1">${cloud.mode === "cloud"
+          ? "Cloud — shared across every device" + (cloud.updatedAt ? " · last saved " + new Date(cloud.updatedAt).toLocaleString() : "")
+          : "This browser only — not shared"}</div></div>
+        ${cloud.mode === "cloud" ? `<span class="sync on"><span class="d"></span>Connected</span>`
+          : `<button class="b s p" id="setup"><i data-lucide="cloud-cog"></i> Set up</button>`}</div>
+      ${cloud.mode === "cloud" && localCount ? `<div class="sr"><div><div class="t1">Old browser data found</div>
+        <div class="d1">${localCount} organization(s) still sit in this browser's local storage</div></div>
+        <button class="b s" id="push"><i data-lucide="cloud-upload"></i> Upload to cloud</button></div>` : ""}
+
+      <div class="dv"></div>
+      <div class="sr"><div><div class="t1">Social platforms</div><div class="d1">Remove or add your own</div></div></div>
+      <div id="pl" style="max-height:200px;overflow:auto"></div>
+      <form id="ap" style="display:flex;gap:8px;margin-top:11px">
+        <input type="text" id="pn" placeholder="New platform name"
+          style="flex:1;padding:10px 12px;border:1px solid var(--ln);border-radius:10px;background:var(--surf2)">
+        <input type="color" id="pc" value="#5b6bff"
+          style="width:44px;padding:0;border:1px solid var(--ln);border-radius:10px;background:none;cursor:pointer">
+        <button class="b"><i data-lucide="plus"></i></button>
       </form>
 
       <div class="dv"></div>
-      <div class="srow"><div><div class="t">Admin password</div><div class="d">Guards every add, edit and delete</div></div>
-        <button class="btn sm" id="pw"><i data-lucide="key-round"></i> Change</button></div>
-      <div class="srow"><div><div class="t">Backup</div><div class="d">Save or restore everything as a JSON file</div></div>
-        <div style="display:flex;gap:8px">
-          <button class="btn sm" id="exp"><i data-lucide="download"></i> Export</button>
-          <button class="btn sm" id="imp"><i data-lucide="upload"></i> Import</button></div></div>
-      <div class="srow"><div><div class="t" style="color:var(--danger)">Erase everything</div>
-        <div class="d">Deletes all data and your password from this browser</div></div>
-        <button class="btn sm dg" id="wipe"><i data-lucide="trash-2"></i> Reset</button></div>
-      <input type="file" id="impFile" accept="application/json,.json" hidden>
+      <div class="sr"><div><div class="t1">Admin password</div>
+        <div class="d1">${cloud.mode === "cloud" ? "Managed on the server" : "Stored in this browser"}</div></div>
+        <button class="b s" id="pw"><i data-lucide="key-round"></i> ${cloud.mode === "cloud" ? "How to change" : "Change"}</button></div>
+      <div class="sr"><div><div class="t1">Check every link</div><div class="d1">Test all websites and channels of all orgs</div></div>
+        <button class="b s" id="ck"><i data-lucide="link-2"></i> Run check</button></div>
+      <div class="sr"><div><div class="t1">Backup</div><div class="d1">Download or restore everything as JSON</div></div>
+        <div style="display:flex;gap:8px"><button class="b s" id="ex"><i data-lucide="download"></i> Export</button>
+          <button class="b s" id="im"><i data-lucide="upload"></i> Import</button></div></div>
+      <div class="sr"><div><div class="t1" style="color:var(--red)">Erase everything</div>
+        <div class="d1">Deletes all organizations${cloud.mode === "cloud" ? " from the cloud" : " from this browser"}</div></div>
+        <button class="b s d" id="wp"><i data-lucide="trash-2"></i> Reset</button></div>
+      <input type="file" id="fi" accept="application/json,.json" hidden>
     </div>
-    <div class="mf"><button class="btn" data-close>Close</button>
-      <button class="btn pri" id="saveSet"><i data-lucide="check"></i> Save settings</button></div>`,
-    { wide:true, focus:"#sTitle" });
+    <div class="mf"><button class="b" data-close>Close</button>
+      <button class="b p" id="sv"><i data-lucide="check"></i> Save settings</button></div>`, { wide:true, focus:"#st" });
 
   let a1 = s.a1, a2 = s.a2, theme = s.theme;
-  const preview = () => {
+  const prev = () => {
     document.documentElement.style.setProperty("--a1", a1);
     document.documentElement.style.setProperty("--a2", a2);
     document.documentElement.dataset.theme = theme;
   };
-
-  const drawPlats = () => {
-    const box = modal.querySelector("#plats");
+  const drawPl = () => {
+    const box = mo.querySelector("#pl");
     box.innerHTML = state.settings.platforms.map(p => `
-      <div class="prow">
-        <span class="chip" style="width:28px;height:28px;border-radius:9px;font-size:10px;background:${esc(p.color)}">
-          ${iconHtml(p.icon, initials(p.name))}</span>
-        <span style="flex:1;font-size:13.5px;font-weight:600">${esc(p.name)}</span>
-        <span class="cnt">${state.orgs.reduce((n, o) => n + o.socials.filter(x => x.platform === p.id).length, 0)}</span>
-        <button class="btn gh ic" data-del="${esc(p.id)}" title="Remove" data-fb="✕"><i data-lucide="x"></i></button>
+      <div class="pr">
+        <span class="chip" style="--c:${esc(p.color)};width:28px;height:28px;border-radius:9px;font-size:10px">
+          ${iconOf(p.icon, initials(p.name))}</span>
+        <span style="flex:1;font-size:13.5px;font-weight:620">${esc(p.name)}</span>
+        <span class="ct">${state.orgs.reduce((n, o) => n + o.socials.filter(x => x.platform === p.id).length, 0)}</span>
+        <button class="b g i s" data-del="${esc(p.id)}" title="Remove" data-fb="X"><i data-lucide="x"></i></button>
       </div>`).join("");
     icons(box);
-    box.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+    box.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
       if(state.orgs.some(o => o.socials.some(x => x.platform === b.dataset.del)))
         return toast("Channels still use it — remove those first", "triangle-alert");
       state.settings.platforms = state.settings.platforms.filter(p => p.id !== b.dataset.del);
-      save(); drawPlats(); render();
+      await persist(); drawPl();
     });
   };
-  drawPlats();
+  drawPl();
 
-  modal.querySelector("#addPlat").onsubmit = e => {
+  mo.querySelector("#ap").onsubmit = async e => {
     e.preventDefault();
-    const el = modal.querySelector("#pName"), name = el.value.trim();
+    const el = mo.querySelector("#pn"), name = el.value.trim();
     if(!name) return;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "");
-    state.settings.platforms.push({
-      id:slug + "-" + uid().slice(0, 3), name,
-      color:modal.querySelector("#pColor").value,
-      icon:slug ? "si:" + slug : ""                     // uses the real brand logo when one exists
-    });
-    save(); el.value = ""; drawPlats(); toast(name + " added", "plus");
+    state.settings.platforms.push({ id:slug + "-" + uid().slice(0, 3), name,
+      color:mo.querySelector("#pc").value, icon:slug ? "si:" + slug : "" });
+    await persist(); el.value = ""; drawPl(); toast(name + " added", "plus");
   };
-
-  modal.querySelectorAll("#sw .sw").forEach(el => el.onclick = () => {
+  mo.querySelectorAll("#sw .sw").forEach(el => el.onclick = () => {
     const t = THEMES[+el.dataset.i]; a1 = t.a1; a2 = t.a2;
-    modal.querySelectorAll("#sw .sw").forEach(x => x.classList.toggle("on", x === el));
-    preview();
+    mo.querySelectorAll("#sw .sw").forEach(x => x.classList.toggle("on", x === el)); prev();
   });
-  modal.querySelector("#sCustom").oninput = e => {
+  mo.querySelector("#sc").oninput = e => {
     a1 = e.target.value; a2 = e.target.value;
-    modal.querySelectorAll("#sw .sw").forEach(x => x.classList.remove("on"));
-    preview();
+    mo.querySelectorAll("#sw .sw").forEach(x => x.classList.remove("on")); prev();
   };
-  modal.querySelectorAll("#seg button").forEach(b => b.onclick = () => {
+  mo.querySelectorAll("#sg button").forEach(b => b.onclick = () => {
     theme = b.dataset.t;
-    modal.querySelectorAll("#seg button").forEach(x => x.classList.toggle("on", x === b));
-    preview();
+    mo.querySelectorAll("#sg button").forEach(x => x.classList.toggle("on", x === b)); prev();
   });
-
-  modal.querySelector("#saveSet").onclick = () => {
-    s.title = modal.querySelector("#sTitle").value.trim() || "Org Hub";
+  mo.querySelector("#sv").onclick = async () => {
+    s.title = mo.querySelector("#st").value.trim() || "Org Hub";
     s.a1 = a1; s.a2 = a2; s.theme = theme;
-    save(); closeModal(); render(); toast("Settings saved", "check");
+    closeModal(); await commit("Settings saved", "check");
   };
-  modal.querySelector("#pw").onclick = () => passwordModal(false);
-
-  modal.querySelector("#exp").onclick = () => {
+  const setupBtn = mo.querySelector("#setup"); if(setupBtn) setupBtn.onclick = setupModal;
+  mo.querySelector("#pw").onclick = () => passwordModal(false);
+  mo.querySelector("#ck").onclick = async () => {
+    closeModal();
+    const urls = [...new Set(state.orgs.flatMap(allUrls))];
+    if(!urls.length) return toast("Nothing to check yet", "info");
+    toast(`Checking ${urls.length} link(s)…`, "loader");
+    urls.forEach(u => checking.add(u)); paintDots();
+    for(let i = 0; i < urls.length; i += 30){
+      await checkLinks({ websites:[], socials:[] }, urls.slice(i, i + 30));
+    }
+    const bad = urls.filter(u => health[u] && !health[u].ok).length;
+    toast(bad ? `${bad} link(s) need attention` : "All links are live", bad ? "triangle-alert" : "check-check");
+  };
+  const push = mo.querySelector("#push");
+  if(push) push.onclick = async () => {
+    const local = readLocal();
+    if(!await confirmBox("Upload local data to the cloud?",
+      `<b>${local.orgs.length}</b> organization(s) from this browser will replace the
+       <b>${state.orgs.length}</b> currently in the cloud.`, false)) return;
+    state = local; closeModal(); await commit("Uploaded to the cloud", "cloud-upload");
+  };
+  mo.querySelector("#ex").onclick = () => {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type:"application/json" }));
     a.download = "org-hub-backup.json"; a.click(); URL.revokeObjectURL(a.href);
     toast("Backup downloaded", "download");
   };
-  const file = modal.querySelector("#impFile");
-  modal.querySelector("#imp").onclick = () => file.click();
-  file.onchange = () => {
-    const f = file.files[0]; if(!f) return;
+  const fi = mo.querySelector("#fi");
+  mo.querySelector("#im").onclick = () => fi.click();
+  fi.onchange = () => {
+    const f = fi.files[0]; if(!f) return;
     const r = new FileReader();
     r.onload = async () => {
       try{
@@ -755,25 +1056,36 @@ function settingsModal(){
         if(!await confirmBox("Replace current data?",
           `Your <b>${state.orgs.length}</b> organization(s) will be replaced by <b>${d.orgs.length}</b> from this file.`, false)) return;
         const keep = state.settings.passHash;
-        state = { settings:{ ...blank().settings, ...(d.settings || {}),
-                             passHash:(d.settings && d.settings.passHash) || keep }, orgs:d.orgs };
-        state.orgs.forEach(o => { o.websites = o.websites || []; o.socials = o.socials || []; o.tags = o.tags || []; });
+        state = normalize(d);
+        if(cloud.mode !== "cloud") state.settings.passHash = state.settings.passHash || keep;
         selected = state.orgs.length ? state.orgs[0].id : null;
-        save(); closeModal(); render(); toast("Data imported", "upload");
-      }catch(e){ toast("Not a valid Org Hub backup file", "triangle-alert"); }
+        closeModal(); await commit("Data imported", "upload");
+      }catch(e){ toast("Not a valid Org Hub backup", "triangle-alert"); }
     };
     r.readAsText(f);
   };
-  modal.querySelector("#wipe").onclick = async () => {
+  mo.querySelector("#wp").onclick = async () => {
     if(!await confirmBox("Erase everything?",
-      "Every organization, website, channel and your password will be permanently removed from this browser.")) return;
-    localStorage.removeItem(KEY); sessionStorage.clear();
-    state = blank(); selected = null; unlocked = false; save(); closeModal(); render();
-    toast("Everything erased", "trash-2");
+      `Every organization, website and channel will be permanently deleted${cloud.mode === "cloud" ? " for everyone" : ""}.`)) return;
+    const keep = state.settings;
+    state = blank(); state.settings = { ...keep, platforms:keep.platforms };
+    selected = null; closeModal(); await commit("Everything erased", "trash-2");
   };
 }
 
-/* ======================= render ======================= */
+/* ═══════════════════ render ═══════════════════ */
+function paintSync(){
+  const el = document.getElementById("sync");
+  if(!el) return;
+  let cls = "sync", txt = "Local only", tip = "Data is saved in this browser only";
+  if(cloud.saving){ cls += " busy"; txt = "Saving…"; tip = "Writing to the cloud"; }
+  else if(cloud.error){ cls += " warn"; txt = "Not saved"; tip = cloud.error; }
+  else if(cloud.mode === "cloud"){ cls += " on"; txt = "Cloud"; tip = "Shared across all devices" + (cloud.updatedAt ? " · saved " + new Date(cloud.updatedAt).toLocaleString() : ""); }
+  else{ cls += " warn"; }
+  el.className = cls; el.title = tip;
+  el.querySelector(".lbl").textContent = txt;
+}
+
 function matches(o, q){
   if(!q) return true;
   return [o.name, o.notes, ...(o.tags || []),
@@ -787,280 +1099,273 @@ function render(){
   document.documentElement.dataset.theme = s.theme;
   document.documentElement.style.setProperty("--a1", s.a1);
   document.documentElement.style.setProperty("--a2", s.a2);
-  document.title = s.title + " — websites & social channels in one place";
-  document.getElementById("appTitle").textContent = s.title;
+  document.title = s.title + " — websites & social channels";
+  document.getElementById("ttl").textContent = s.title;
+  paintSync();
 
-  const lb = document.getElementById("lockBtn");
-  lb.innerHTML = unlocked ? `<i data-lucide="lock-open"></i> <span>Admin on</span>` : `<i data-lucide="lock"></i> <span>Admin</span>`;
-  lb.classList.toggle("pri", unlocked);
-  document.getElementById("setBtn").style.display = unlocked ? "" : "none";
+  const lk = document.getElementById("lock");
+  lk.innerHTML = unlocked ? `<i data-lucide="lock-open"></i> <span>Admin on</span>` : `<i data-lucide="lock"></i> <span>Admin</span>`;
+  lk.classList.toggle("p", unlocked);
+  document.getElementById("set").style.display = unlocked ? "" : "none";
 
-  const q = query.trim().toLowerCase();
-  const all = state.orgs.slice().sort((a, b) => a.name.localeCompare(b.name));
-  const list = all.filter(o => matches(o, q));
   const app = document.getElementById("app");
+  const q = query.trim().toLowerCase();
+  const sorted = state.orgs.slice().sort((a, b) => a.name.localeCompare(b.name));
+  const list = sorted.filter(o => matches(o, q));
 
-  /* ---------- landing (no data yet) ---------- */
-  if(!state.orgs.length){
-    app.innerHTML = `
-      <div class="hero">
-        <div class="pill"><span class="dot"></span> Free · No signup · Works offline</div>
-        <h1>Every website and social channel,<br><span class="grad-txt">one organized home.</span></h1>
-        <p class="lead">Add an organization, then attach unlimited websites and unlimited social media
-          channels to it. Search everything instantly. Lock it with a password so only you can make changes.</p>
-        <div class="cta">
-          <button class="btn pri lg" id="heroStart"><i data-lucide="sparkles"></i> Create your first organization</button>
-          <button class="btn lg" id="heroDemo"><i data-lucide="wand-2"></i> Load a sample</button>
-        </div>
-      </div>
-      <div class="feats">
-        <div class="feat"><div class="fi"><i data-lucide="layers"></i></div>
-          <h3>Unlimited per org</h3><p>One organization can hold any number of websites and any number of
-          social channels — even several pages on the same platform.</p></div>
-        <div class="feat"><div class="fi"><i data-lucide="shield-check"></i></div>
-          <h3>Password protected</h3><p>Locked by default. Without your password the page is strictly
-          read-only — nothing can be added, changed or deleted.</p></div>
-        <div class="feat"><div class="fi"><i data-lucide="palette"></i></div>
-          <h3>Fully customizable</h3><p>Your site name, colour theme, light or dark mode, and your own
-          social platforms with your own brand colours.</p></div>
-        <div class="feat"><div class="fi"><i data-lucide="hard-drive"></i></div>
-          <h3>Private by design</h3><p>Everything stays in your own browser. No account, no server,
-          no tracking. Export a JSON backup whenever you want.</p></div>
-      </div>`;
-    icons(app);
-    anim(".hero .pill", { y:-10, opacity:0 });
-    anim(".hero h1", { y:22, opacity:0, duration:.7, delay:.05 });
-    anim(".hero .lead", { y:16, opacity:0, delay:.16 });
-    anim(".hero .cta", { y:16, opacity:0, delay:.26 });
-    anim(".feat", { y:26, opacity:0, delay:.34, stagger:.08 });
-    app.querySelector("#heroStart").onclick = () => unlocked ? orgForm() : lockUI();
-    app.querySelector("#heroDemo").onclick = () => { seed(); toast("Sample organization loaded", "wand-2"); };
-    return;
-  }
+  if(!list.some(o => o.id === selected)) selected = list.length ? list[0].id : null;
 
   const tw = state.orgs.reduce((n, o) => n + o.websites.length, 0);
   const tc = state.orgs.reduce((n, o) => n + o.socials.length, 0);
 
   app.innerHTML = `
-    <div class="stats">
-      <div class="stat"><span class="si-box"><i data-lucide="building-2"></i></span>
-        <span><b data-num="${state.orgs.length}">0</b><span>Organizations</span></span></div>
-      <div class="stat"><span class="si-box"><i data-lucide="globe"></i></span>
-        <span><b data-num="${tw}">0</b><span>Websites</span></span></div>
-      <div class="stat"><span class="si-box"><i data-lucide="share-2"></i></span>
-        <span><b data-num="${tc}">0</b><span>Social channels</span></span></div>
-      <div class="stat"><span class="si-box"><i data-lucide="${unlocked ? "lock-open" : "lock"}"></i></span>
-        <span><b style="font-size:15px;padding-top:3px">${unlocked ? "Admin mode" : "View only"}</b>
-        <span>${unlocked ? "You can edit" : "Editing locked"}</span></span></div>
-    </div>
-    <div class="wrap">
+    <div class="shell">
       <aside class="card">
-        <div class="sh"><h2>Organizations <span class="cnt">${state.orgs.length}</span></h2>
-          ${unlocked ? `<button class="btn pri sm" id="newOrg"><i data-lucide="plus"></i> New</button>` : ""}</div>
-        <div class="olist" id="olist"></div>
+        <div class="rail-h"><h2>Organizations <span class="ct">${state.orgs.length}</span></h2>
+          ${unlocked ? `<button class="b p s" id="new"><i data-lucide="plus"></i> New</button>` : ""}</div>
+        <div class="rail" id="rail"></div>
       </aside>
-      <main class="detail" id="detail"></main>
+      <main class="main" id="main"></main>
     </div>`;
 
-  /* sidebar */
-  const ol = app.querySelector("#olist");
-  ol.innerHTML = list.length ? list.map(o => `
-    <button class="oitem ${o.id === selected ? "on" : ""}" data-org="${o.id}">
-      <span class="av" style="background:${gradOf(o.name)}">${esc(initials(o.name))}</span>
+  const rail = app.querySelector("#rail");
+  rail.innerHTML = list.length ? list.map(o => {
+    const h = healthSummary(o);
+    return `<button class="oi ${o.id === selected ? "on" : ""}" data-org="${esc(o.id)}">
+      ${logoBox(o)}
       <span style="min-width:0;flex:1">
         <span class="nm">${esc(o.name)}</span>
         <span class="sb">${o.websites.length} site${o.websites.length === 1 ? "" : "s"} · ${o.socials.length} channel${o.socials.length === 1 ? "" : "s"}</span>
       </span>
-    </button>`).join("")
-    : `<div class="empty"><div class="eic"><i data-lucide="search-x"></i></div>
-       <b>No match</b>Nothing found for “${esc(query)}”.</div>`;
-  ol.querySelectorAll("[data-org]").forEach(b => b.onclick = () => { selected = b.dataset.org; render(); });
-
-  if(!list.some(o => o.id === selected)) selected = list.length ? list[0].id : null;
-  renderDetail(org(selected));
-
-  icons(app);
-  anim(".stat", { y:-12, opacity:0, stagger:.06, duration:.45 });
-  anim(".oitem", { x:-14, opacity:0, stagger:.03, duration:.35 });
-  countUp();
-}
-
-function countUp(){
-  const g = G();
-  document.querySelectorAll("[data-num]").forEach(el => {
-    const n = +el.dataset.num;
-    if(!g || matchMedia("(prefers-reduced-motion:reduce)").matches){ el.textContent = n; return; }
-    const o = { v:0 };
-    g.to(o, { v:n, duration:.9, ease:"power2.out",
-      onUpdate:() => el.textContent = Math.round(o.v) });
+      ${h.bad ? `<span class="hd-dot bad" title="${h.bad} broken link(s)"></span>` : ""}
+    </button>`; }).join("")
+    : `<div class="empty" style="border:0;background:none;padding:26px 12px">
+        <div class="e"><i data-lucide="${state.orgs.length ? "search-x" : "building-2"}"></i></div>
+        <b>${state.orgs.length ? "No match" : "No organizations"}</b>
+        ${state.orgs.length ? "Nothing found for “" + esc(query) + "”." : (unlocked ? "Click <b style='display:inline'>New</b> to add one." : "Unlock admin to add one.")}</div>`;
+  rail.querySelectorAll("[data-org]").forEach(b => b.onclick = () => {
+    selected = b.dataset.org;
+    try{ history.replaceState(null, "", "#/" + selected); }catch(e){}
+    render();
   });
+
+  renderMain(org(selected), { tw, tc });
+  icons(app); wireLogos(app); paintDots();
+
+  if(!booting){
+    anim(".oi", { x:-12, opacity:0, stagger:.025, duration:.3 });
+    anim("#main > *", { y:16, opacity:0, stagger:.06, duration:.42 });
+  }
 }
 
-function renderDetail(o){
-  const d = document.getElementById("detail");
-  if(!d) return;
-  if(!o){ d.innerHTML = `<div class="card"><div class="empty" style="padding:60px 20px">
-    <div class="eic"><i data-lucide="mouse-pointer-click"></i></div>
-    <b>Pick an organization</b>Choose one on the left to see its websites and channels.</div></div>`;
-    icons(d); return; }
+function renderMain(o, tot){
+  const m = document.getElementById("main");
+  if(!m) return;
 
-  const acts = key => unlocked ? `
-    <span class="acts">
-      <button class="btn gh ic" data-edit="${key}" title="Edit" data-fb="✎"><i data-lucide="pencil"></i></button>
-      <button class="btn gh ic dg" data-rm="${key}" title="Remove" data-fb="✕"><i data-lucide="trash-2"></i></button>
+  const setupBanner = (cloud.mode === "local" && location.protocol.startsWith("http"))
+    ? `<div class="note warn"><i data-lucide="cloud-off"></i><span><b>Not shared yet.</b> Data is saved only in
+        this browser, so your phone and your teammates see nothing. Connect a free database to fix it.</span>
+        <button class="b s p" id="setupB">Set up</button></div>` : "";
+
+  if(!o){
+    m.innerHTML = setupBanner + `<div class="card" style="padding:56px 24px">
+      <div class="empty" style="border:0;background:none;padding:0">
+        <div class="e"><i data-lucide="radio-tower"></i></div>
+        <b style="font-size:19px">${state.orgs.length ? "Pick an organization" : "Nothing here yet"}</b>
+        ${state.orgs.length ? "Choose one on the left to see its websites and channels."
+          : (unlocked ? "Add your first organization to get started."
+                      : "Press <b style='display:inline'>Admin</b> in the top-right to sign in and add one.")}
+        ${!state.orgs.length && unlocked ? `<div style="margin-top:18px"><button class="b p xl" id="first">
+          <i data-lucide="plus"></i> Add organization</button></div>` : ""}
+      </div></div>`;
+    icons(m);
+    const b1 = m.querySelector("#first"); if(b1) b1.onclick = () => orgForm();
+    const b2 = m.querySelector("#setupB"); if(b2) b2.onclick = setupModal;
+    return;
+  }
+
+  const h = healthSummary(o);
+  const hlab = h.total === 0 ? `<span style="color:var(--tx3)">nothing to check</span>`
+    : h.bad ? `<span style="color:var(--red)"><b style="font-size:inherit">${h.bad}</b> need attention</span>`
+    : h.un === h.total ? `<span style="color:var(--tx3)">not checked yet</span>`
+    : `<span style="color:var(--grn)">all ${h.ok} live</span>`;
+
+  const tools = key => unlocked ? `
+    <span class="tb">
+      <button class="b g i s" data-ed="${key}" title="Edit" data-fb="Edit"><i data-lucide="pencil"></i></button>
+      <button class="b g i s d" data-rm="${key}" title="Remove" data-fb="Del"><i data-lucide="trash-2"></i></button>
     </span>` : "";
 
-  d.innerHTML = `
-    ${unlocked ? "" : `<div class="banner"><i data-lucide="lock"></i>
-      <span><b>View only.</b> Nothing here can be added, edited or deleted without the admin password.</span></div>`}
-
-    <div class="card ohead">
-      <span class="av lg" style="background:${gradOf(o.name)}">${esc(initials(o.name))}</span>
-      <div style="flex:1;min-width:0">
-        <h1>${esc(o.name)}</h1>
-        <div style="color:var(--muted);font-size:13px;font-weight:600">
-          ${o.websites.length} website${o.websites.length === 1 ? "" : "s"} ·
-          ${o.socials.length} social channel${o.socials.length === 1 ? "" : "s"}</div>
-        ${o.tags.length ? `<div class="tags">${o.tags.map(t => `<span class="tag">${esc(t)}</span>`).join("")}</div>` : ""}
-        ${o.notes ? `<p class="notes">${esc(o.notes)}</p>` : ""}
+  const webTiles = o.websites.map(w => {
+    const u = safeUrl(w.url);
+    return `<div class="t" style="--c:hsl(${hue(w.label || w.url)} 62% 52%)">
+      <div class="r1">
+        <span class="lg sm"><img src="${esc(favicon(u, 64))}" alt="" loading="lazy">
+          <span class="fb" style="background:${grad(w.label || w.url)}">${esc(initials(w.label || hostOf(u)))}</span></span>
+        <span style="min-width:0;flex:1">
+          <span class="nm">${esc(w.label || pretty(u))}</span>
+          <span class="hd">${esc(hostOf(u))}</span>
+        </span>
+        <span class="hd-dot" data-h="${esc(u)}"></span>
       </div>
-      <div style="display:flex;gap:6px;flex:none;flex-wrap:wrap;justify-content:flex-end">
-        <button class="btn sm" id="copyAll" title="Copy every link"><i data-lucide="copy"></i> Copy all</button>
-        ${unlocked ? `<button class="btn sm" id="editOrg"><i data-lucide="pencil"></i> Edit</button>
-          <button class="btn sm dg" id="delOrg"><i data-lucide="trash-2"></i></button>` : ""}
+      <a class="lk" href="${esc(u)}" target="_blank" rel="noopener noreferrer">
+        <span style="overflow:hidden;text-overflow:ellipsis">${esc(pretty(u))}</span><i data-lucide="arrow-up-right"></i></a>
+      ${unlocked ? tools("w:" + w.id) : `<div class="tb" style="opacity:1;transform:none">
+        <button class="b g i s" data-cp="${esc(u)}" title="Copy" data-fb="Copy"><i data-lucide="copy"></i></button></div>`}
+    </div>`;
+  }).join("");
+
+  const socTiles = o.socials.map(x => {
+    const p = platform(x.platform), u = safeUrl(x.url);
+    return `<div class="t" style="--c:${esc(p.color)}">
+      <div class="r1">
+        <span class="chip">${iconOf(p.icon, initials(p.name))}</span>
+        <span style="min-width:0;flex:1">
+          <span class="nm">${esc(p.name)}</span>
+          <span class="hd">${esc(x.handle || pretty(u))}</span>
+        </span>
+        <span class="hd-dot" data-h="${esc(u)}"></span>
+      </div>
+      ${x.note ? `<div class="tag" style="margin-bottom:8px">${esc(x.note)}</div>` : ""}
+      <a class="lk" href="${esc(u)}" target="_blank" rel="noopener noreferrer">
+        <span style="overflow:hidden;text-overflow:ellipsis">${esc(pretty(u))}</span><i data-lucide="arrow-up-right"></i></a>
+      ${unlocked ? tools("s:" + x.id) : `<div class="tb" style="opacity:1;transform:none">
+        <button class="b g i s" data-cp="${esc(u)}" title="Copy" data-fb="Copy"><i data-lucide="copy"></i></button></div>`}
+    </div>`;
+  }).join("");
+
+  m.innerHTML = `
+    ${setupBanner}
+    ${unlocked ? "" : `<div class="note"><i data-lucide="lock"></i><span><b>Read-only view.</b>
+      Nothing here can be added, changed or deleted without the admin password.</span></div>`}
+
+    <div class="card hero">
+      <div class="hero-top">
+        ${logoBox(o, "xl")}
+        <div style="flex:1;min-width:0">
+          <h1>${esc(o.name)}</h1>
+          <div style="color:var(--tx2);font-size:13px;font-weight:620">
+            ${o.websites.length} website${o.websites.length === 1 ? "" : "s"} ·
+            ${o.socials.length} social channel${o.socials.length === 1 ? "" : "s"}</div>
+          ${o.tags.length ? `<div class="tags">${o.tags.map(t => `<span class="tag">${esc(t)}</span>`).join("")}</div>` : ""}
+          ${o.notes ? `<p class="notes">${esc(o.notes)}</p>` : ""}
+        </div>
+      </div>
+      <div class="tools">
+        <button class="b s" id="qr"><i data-lucide="qr-code"></i> QR code</button>
+        <button class="b s" id="emb"><i data-lucide="code-xml"></i> Embed</button>
+        <button class="b s" id="chk"><i data-lucide="link-2"></i> Check links</button>
+        <button class="b s" id="cpall"><i data-lucide="copy"></i> Copy all</button>
+        <span class="sp"></span>
+        ${unlocked ? `<button class="b s" id="eo"><i data-lucide="pencil"></i> Edit org</button>
+          <button class="b s d" id="do"><i data-lucide="trash-2"></i> Delete</button>` : ""}
       </div>
     </div>
 
-    <div class="card">
-      <div class="sech"><h3><i data-lucide="globe"></i> Websites <span class="cnt">${o.websites.length}</span></h3>
-        ${unlocked ? `<button class="btn pri sm" id="addSite"><i data-lucide="plus"></i> Add website</button>` : ""}</div>
-      <div class="rows">${o.websites.length ? o.websites.map(w => `
-        <div class="row">
-          <span class="chip" style="background:${gradOf(w.label || w.url)}"><i data-lucide="globe"></i></span>
-          <span class="mn">
-            <span class="lb">${esc(w.label || pretty(w.url))}</span>
-            <a class="ur" href="${esc(safeUrl(w.url))}" target="_blank" rel="noopener noreferrer">
-              ${esc(pretty(w.url))} <i data-lucide="arrow-up-right"></i></a>
-          </span>
-          <button class="btn gh ic" data-copy="${esc(safeUrl(w.url))}" title="Copy link" data-fb="⧉"><i data-lucide="copy"></i></button>
-          ${acts("site:" + w.id)}
-        </div>`).join("")
-        : `<div class="empty"><div class="eic"><i data-lucide="globe"></i></div><b>No websites yet</b>
-           ${unlocked ? "Add the main site, blog, landing pages — as many as you like." : "Nothing added here yet."}</div>`}
-      </div>
+    <div class="mrow">
+      <div class="m"><b>${o.websites.length}</b><span>Websites</span></div>
+      <div class="m"><b>${o.socials.length}</b><span>Social channels</span></div>
+      <div class="m"><b>${tot.tw + tot.tc}</b><span>Links tracked (all orgs)</span>
+        <div class="hl">${hlab}</div></div>
     </div>
 
-    <div class="card">
-      <div class="sech"><h3><i data-lucide="share-2"></i> Social channels <span class="cnt">${o.socials.length}</span></h3>
-        ${unlocked ? `<button class="btn pri sm" id="addSoc"><i data-lucide="plus"></i> Add channel</button>` : ""}</div>
-      <div class="rows">${o.socials.length ? o.socials.map(x => {
-        const p = platform(x.platform);
-        return `<div class="row">
-          <span class="chip" style="background:${esc(p.color)}">${iconHtml(p.icon, initials(p.name))}</span>
-          <span class="mn">
-            <span class="lb">${esc(p.name)}
-              ${x.handle ? `<span class="tag">${esc(x.handle)}</span>` : ""}
-              ${x.note ? `<span class="tag">${esc(x.note)}</span>` : ""}</span>
-            <a class="ur" href="${esc(safeUrl(x.url))}" target="_blank" rel="noopener noreferrer">
-              ${esc(pretty(x.url))} <i data-lucide="arrow-up-right"></i></a>
-          </span>
-          <button class="btn gh ic" data-copy="${esc(safeUrl(x.url))}" title="Copy link" data-fb="⧉"><i data-lucide="copy"></i></button>
-          ${acts("soc:" + x.id)}
-        </div>`; }).join("")
-        : `<div class="empty"><div class="eic"><i data-lucide="share-2"></i></div><b>No social channels yet</b>
-           ${unlocked ? "Facebook, Instagram, LinkedIn, YouTube — one row per channel." : "Nothing added here yet."}</div>`}
-      </div>
+    <div>
+      <div class="sec-h"><h3><i data-lucide="globe"></i> Websites <span class="ct">${o.websites.length}</span></h3>
+        ${unlocked ? `<button class="b p s" id="aw"><i data-lucide="plus"></i> Add website</button>` : ""}</div>
+      ${o.websites.length ? `<div class="grid">${webTiles}</div>`
+        : `<div class="empty"><div class="e"><i data-lucide="globe"></i></div><b>No websites yet</b>
+           ${unlocked ? "Main site, blog, landing pages — add as many as you need." : "Nothing added yet."}</div>`}
+    </div>
+
+    <div>
+      <div class="sec-h"><h3><i data-lucide="share-2"></i> Social channels <span class="ct">${o.socials.length}</span></h3>
+        ${unlocked ? `<button class="b p s" id="as"><i data-lucide="plus"></i> Add channel</button>` : ""}</div>
+      ${o.socials.length ? `<div class="grid">${socTiles}</div>`
+        : `<div class="empty"><div class="e"><i data-lucide="share-2"></i></div><b>No social channels yet</b>
+           ${unlocked ? "Instagram, Facebook, LinkedIn, YouTube — one tile per channel." : "Nothing added yet."}</div>`}
     </div>`;
 
-  icons(d);
-  anim(d.querySelectorAll(".card"), { y:18, opacity:0, stagger:.07, duration:.45 });
+  icons(m); wireLogos(m);
 
-  d.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copy(b.dataset.copy, "Link copied"));
-  d.querySelector("#copyAll").onclick = () => {
-    const txt = [`${o.name}`,
-      ...o.websites.map(w => `${w.label || "Website"}: ${safeUrl(w.url)}`),
-      ...o.socials.map(x => `${platform(x.platform).name}${x.handle ? " (" + x.handle + ")" : ""}: ${safeUrl(x.url)}`)
-    ].join("\n");
-    copy(txt, "All links copied");
-  };
+  const sb = m.querySelector("#setupB"); if(sb) sb.onclick = setupModal;
+  m.querySelector("#qr").onclick = () => qrModal(o);
+  m.querySelector("#emb").onclick = () => embedModal(o);
+  m.querySelector("#chk").onclick = () => checkLinks(o);
+  m.querySelector("#cpall").onclick = () => copy([
+    o.name,
+    ...o.websites.map(w => `${w.label || "Website"}: ${safeUrl(w.url)}`),
+    ...o.socials.map(x => `${platform(x.platform).name}${x.handle ? " (" + x.handle + ")" : ""}: ${safeUrl(x.url)}`)
+  ].join("\n"), "All links copied");
+  m.querySelectorAll("[data-cp]").forEach(b => b.onclick = () => copy(b.dataset.cp, "Link copied"));
 
   if(!unlocked) return;
-  d.querySelector("#editOrg").onclick = () => orgForm(o.id);
-  d.querySelector("#delOrg").onclick = async () => {
+  m.querySelector("#eo").onclick = () => orgForm(o.id);
+  m.querySelector("#do").onclick = async () => {
     if(!await confirmBox("Delete organization?",
       `<b>${esc(o.name)}</b> plus its ${o.websites.length} website(s) and ${o.socials.length} channel(s) will be removed.`)) return;
     state.orgs = state.orgs.filter(x => x.id !== o.id);
     selected = state.orgs.length ? state.orgs[0].id : null;
-    save(); render(); toast("Organization deleted", "trash-2");
+    await commit("Organization deleted", "trash-2");
   };
-  d.querySelector("#addSite").onclick = () => siteForm(o.id);
-  d.querySelector("#addSoc").onclick = () => socialForm(o.id);
-  d.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => {
-    const p = b.dataset.edit.split(":");
-    p[0] === "site" ? siteForm(o.id, p[1]) : socialForm(o.id, p[1]);
+  m.querySelector("#aw").onclick = () => siteForm(o.id);
+  m.querySelector("#as").onclick = () => socialForm(o.id);
+  m.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => {
+    const p = b.dataset.ed.split(":");
+    p[0] === "w" ? siteForm(o.id, p[1]) : socialForm(o.id, p[1]);
   });
-  d.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
+  m.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
     const p = b.dataset.rm.split(":");
-    if(p[0] === "site"){
+    if(p[0] === "w"){
       const w = o.websites.find(x => x.id === p[1]);
       if(!await confirmBox("Remove website?", `<b>${esc(w.label || pretty(w.url))}</b> will be removed from ${esc(o.name)}.`)) return;
-      o.websites = o.websites.filter(x => x.id !== p[1]); toast("Website removed", "trash-2");
+      o.websites = o.websites.filter(x => x.id !== p[1]);
+      await commit("Website removed", "trash-2");
     }else{
       const x = o.socials.find(y => y.id === p[1]);
       if(!await confirmBox("Remove channel?", `The <b>${esc(platform(x.platform).name)}</b> channel will be removed from ${esc(o.name)}.`)) return;
-      o.socials = o.socials.filter(y => y.id !== p[1]); toast("Channel removed", "trash-2");
+      o.socials = o.socials.filter(y => y.id !== p[1]);
+      await commit("Channel removed", "trash-2");
     }
-    save(); render();
   });
 }
 
-function copy(txt, msg){
-  const done = () => toast(msg, "copy");
-  if(navigator.clipboard && navigator.clipboard.writeText)
-    return navigator.clipboard.writeText(txt).then(done, () => fb());
-  fb();
-  function fb(){
-    const t = document.createElement("textarea");
-    t.value = txt; t.style.position = "fixed"; t.style.opacity = "0";
-    document.body.appendChild(t); t.select();
-    try{ document.execCommand("copy"); done(); }catch(e){ toast("Copy failed", "triangle-alert"); }
-    t.remove();
-  }
-}
-
-/* sample data so a first-time visitor immediately understands the layout */
-function seed(){
-  state.orgs = [{
-    id:uid(), name:"Acme Media", tags:["sample","agency"],
-    notes:"This is sample data — delete it any time from the org menu.",
-    websites:[
-      { id:uid(), label:"Main website", url:"https://acme.com" },
-      { id:uid(), label:"Blog",         url:"https://blog.acme.com" },
-      { id:uid(), label:"Careers",      url:"https://acme.com/careers" }],
-    socials:[
-      { id:uid(), platform:"facebook",  handle:"@acmemedia",  url:"https://facebook.com/acmemedia",  note:"" },
-      { id:uid(), platform:"instagram", handle:"@acme.media", url:"https://instagram.com/acme.media", note:"" },
-      { id:uid(), platform:"linkedin",  handle:"Acme Media",  url:"https://linkedin.com/company/acme", note:"" },
-      { id:uid(), platform:"youtube",   handle:"@AcmeMedia",  url:"https://youtube.com/@acmemedia",  note:"" }]
-  }];
-  selected = state.orgs[0].id; save(); render();
-}
-
-/* ======================= boot ======================= */
+/* ═══════════════════ boot ═══════════════════ */
 document.getElementById("q").oninput = e => { query = e.target.value; render(); };
-document.getElementById("lockBtn").onclick = lockUI;
-document.getElementById("setBtn").onclick = () => unlocked ? settingsModal() : lockUI();
-document.getElementById("themeBtn").onclick = () => {
+document.getElementById("lock").onclick = lockUI;
+document.getElementById("set").onclick = () => unlocked ? settingsModal() : lockUI();
+document.getElementById("thm").onclick = async () => {
   state.settings.theme = state.settings.theme === "dark" ? "light" : "dark";
-  save(); render();
+  document.documentElement.dataset.theme = state.settings.theme;
+  if(unlocked) await persist(); else writeLocal();
+  render();
 };
-document.addEventListener("click", e => {
-  const b = e.target.closest("#newOrg");
-  if(b) unlocked ? orgForm() : lockUI();
+document.getElementById("sync").onclick = () => cloud.mode === "cloud" ? settingsModal2() : setupModal();
+function settingsModal2(){ unlocked ? settingsModal() : toast("Cloud storage connected · shared across devices", "cloud"); }
+document.addEventListener("click", e => { if(e.target.closest("#new")) unlocked ? orgForm() : lockUI(); });
+addEventListener("hashchange", () => {
+  const id = (location.hash || "").replace(/^#\/?/, "");
+  if(id && org(id)){ selected = id; render(); }
 });
 
 icons(document.body);
-render();
+
+(async () => {
+  try{ await pull(); }
+  catch(e){ cloud.mode = "local"; state = readLocal(); }
+
+  unlocked = false;                                   // always start locked
+  sessionStorage.setItem("orghub.unlocked", "0");
+
+  const hashId = (location.hash || "").replace(/^#\/?/, "");
+  selected = (hashId && org(hashId)) ? hashId
+           : (state.orgs.length ? state.orgs.slice().sort((a, b) => a.name.localeCompare(b.name))[0].id : null);
+
+  booting = false;
+  render();
+  anim("#main > *", { y:18, opacity:0, stagger:.07, duration:.5 });
+  anim(".oi", { x:-14, opacity:0, stagger:.03, duration:.35 });
+  autoCheck(org(selected));
+})();
 })();
 </script>
 </body>
