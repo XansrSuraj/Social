@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Aiko Org Hub — official websites & social channels</title>
+<title>Aiko — official websites & social channels</title>
 <meta name="description" content="The internal directory of every official website and social media channel, always up to date.">
 <meta name="theme-color" content="#5b6bff">
 <meta name="robots" content="noindex, nofollow">
-<meta property="og:title" content="Aiko Org Hub">
+<meta property="og:title" content="Aiko">
 <meta property="og:description" content="Every official website and social channel in one place.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%235b6bff'/%3E%3Cpath d='M9 21l7-13 7 13z' fill='white'/%3E%3C/svg%3E">
 
@@ -285,7 +285,7 @@ pre.code{margin:0;padding:13px 15px;border-radius:12px;background:var(--surf3);b
 <div class="aura"><i></i><i></i></div>
 
 <header>
-  <div class="brand"><span class="m"><i data-lucide="radio-tower"></i></span><span id="ttl">Aiko Org Hub</span></div>
+  <div class="brand"><span class="m"><i data-lucide="radio-tower"></i></span><span id="ttl">Aiko</span></div>
   <div class="sbox">
     <i data-lucide="search"></i>
     <input id="q" type="text" placeholder="Search organizations, sites, channels…" autocomplete="off">
@@ -302,7 +302,7 @@ pre.code{margin:0;padding:13px 15px;border-radius:12px;background:var(--surf3);b
   <main class="main"><div class="sk" style="height:140px"></div><div class="sk"></div><div class="sk"></div></main></div></div>
 
 <footer>
-  <strong style="color:var(--tx2)">Aiko Org Hub</strong> · internal channel directory<br>
+  <strong style="color:var(--tx2)">Aiko</strong> · internal channel directory<br>
   Every official website and social channel, in one place.
 </footer>
 
@@ -386,7 +386,7 @@ const THEMES = [
 const LKEY = "orghub.v1", HKEY = "orghub.health", HTTL = 3600e3;
 
 const blank = () => ({
-  settings:{ title:"Aiko Org Hub", a1:"#5b6bff", a2:"#a855f7", theme:"dark", passHash:null,
+  settings:{ title:"Aiko", a1:"#5b6bff", a2:"#a855f7", theme:"dark", passHash:null,
              platforms:DEF_PLATFORMS.map(p => ({ ...p })) },
   orgs:[]
 });
@@ -404,6 +404,8 @@ function normalize(d){
   const st = { settings:{ ...b.settings, ...((d && d.settings) || {}) },
                orgs:(d && Array.isArray(d.orgs)) ? d.orgs : [] };
   if(d && d.settings && d.settings.accent && !d.settings.a1){ st.settings.a1 = d.settings.accent; st.settings.a2 = d.settings.accent; }
+  /* one-time rename: saved settings from earlier versions still carry the old title */
+  if(["Org Hub", "Aiko Org Hub"].indexOf(st.settings.title) !== -1) st.settings.title = "Aiko";
   st.settings.platforms = (st.settings.platforms || []).map(p => {
     const def = DEF_PLATFORMS.find(x => x.id === p.id);
     return { ...p, icon:p.icon || (def ? def.icon : "") };
@@ -1033,7 +1035,7 @@ function settingsModal(){
     mo.querySelectorAll("#sg button").forEach(x => x.classList.toggle("on", x === b)); prev();
   });
   mo.querySelector("#sv").onclick = async () => {
-    s.title = mo.querySelector("#st").value.trim() || "Org Hub";
+    s.title = mo.querySelector("#st").value.trim() || "Aiko";
     s.a1 = a1; s.a2 = a2; s.theme = theme;
     closeModal(); await commit("Settings saved", "check");
   };
@@ -1062,7 +1064,7 @@ function settingsModal(){
   mo.querySelector("#ex").onclick = () => {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type:"application/json" }));
-    a.download = "org-hub-backup.json"; a.click(); URL.revokeObjectURL(a.href);
+    a.download = "aiko-backup.json"; a.click(); URL.revokeObjectURL(a.href);
     toast("Backup downloaded", "download");
   };
   const fi = mo.querySelector("#fi");
@@ -1081,7 +1083,7 @@ function settingsModal(){
         if(cloud.mode !== "cloud") state.settings.passHash = state.settings.passHash || keep;
         selected = state.orgs.length ? state.orgs[0].id : null;
         closeModal(); await commit("Data imported", "upload");
-      }catch(e){ toast("Not a valid Org Hub backup", "triangle-alert"); }
+      }catch(e){ toast("Not a valid Aiko backup file", "triangle-alert"); }
     };
     r.readAsText(f);
   };

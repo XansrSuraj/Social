@@ -1,4 +1,4 @@
-# Aiko Org Hub
+# Aiko
 
 Internal directory of every **official website** and **social media channel**, in one place.
 

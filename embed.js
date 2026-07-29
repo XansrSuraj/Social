@@ -1,5 +1,5 @@
 /**
- * Org Hub embed widget.
+ * Aiko embed widget.
  *
  *   <script src="https://YOUR-SITE.vercel.app/embed.js" data-org="ORG_ID"></script>
  *
