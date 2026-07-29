@@ -176,8 +176,8 @@ aside{position:sticky;top:82px}
 .t:hover{transform:translateY(-3px);box-shadow:var(--s3);border-color:color-mix(in srgb,var(--c) 40%,var(--ln))}
 .t:hover::after{opacity:1}
 .t .r1{display:flex;align-items:flex-start;gap:10px;margin-bottom:11px}
-.t .nm{font-weight:680;font-size:14px;letter-spacing:-.2px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.t .hd{font-size:12px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t .nm{display:block;font-weight:680;font-size:14px;letter-spacing:-.2px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t .hd{display:block;font-size:12px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .t .lk{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--tx2);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 8px;border-radius:8px;
   background:var(--surf2);border:1px solid var(--ln2);transition:.16s}
@@ -332,10 +332,31 @@ if(document.fonts && document.fonts.ready){
     try{ if(document.fonts.check('1em "simple-icons"')) document.body.classList.add("si-ok"); }catch(e){}
   });
 }
+/* Entrance animation.
+   Uses fromTo() with an explicit end state — never from(). A bare from() records
+   its end value at creation time, so calling it twice on the same element makes the
+   second tween animate 0 -> 0 and the content stays invisible for good.
+   clearProps also strips the inline styles afterwards, so nothing can be left stranded. */
 function anim(t, from){
   const g = G();
   if(!t || !g || reduce()) return;
-  try{ g.from(t, Object.assign({ duration:.45, ease:"power3.out" }, from)); }catch(e){}
+  try{
+    const els = typeof t === "string" ? document.querySelectorAll(t) : t;
+    if(!els || (els.length === 0 && !els.nodeType)) return;
+    g.killTweensOf(els);
+    g.set(els, { clearProps:"opacity,transform" });
+    const start = Object.assign({}, from);
+    const end = { opacity:1, x:0, y:0, scale:1, duration:.4, ease:"power3.out",
+                  overwrite:"auto", clearProps:"opacity,transform" };
+    ["duration","ease","stagger","delay"].forEach(k => {
+      if(start[k] !== undefined){ end[k] = start[k]; delete start[k]; }
+    });
+    g.fromTo(els, start, end);
+    // Safety net: visibility must never depend on the animation finishing.
+    // A backgrounded tab pauses requestAnimationFrame, which would otherwise leave
+    // content stuck at opacity 0. Stripping the inline styles reveals it regardless.
+    setTimeout(() => { try{ g.set(els, { clearProps:"opacity,transform" }); }catch(e){} }, 1600);
+  }catch(e){}
 }
 
 /* ═══════════════════ constants ═══════════════════ */
@@ -1361,9 +1382,7 @@ icons(document.body);
            : (state.orgs.length ? state.orgs.slice().sort((a, b) => a.name.localeCompare(b.name))[0].id : null);
 
   booting = false;
-  render();
-  anim("#main > *", { y:18, opacity:0, stagger:.07, duration:.5 });
-  anim(".oi", { x:-14, opacity:0, stagger:.03, duration:.35 });
+  render();                     // render() owns the entrance animation — do not animate again here
   autoCheck(org(selected));
 })();
 })();
