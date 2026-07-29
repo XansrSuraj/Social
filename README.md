@@ -74,9 +74,14 @@ It is live at this point and already usable — but data is still per-browser un
      data jsonb not null default '{}'::jsonb,
      updated_at timestamptz not null default now()
    );
+
    insert into orghub_state (id, data)
      values (1, '{"orgs":[]}'::jsonb)
      on conflict (id) do nothing;
+
+   -- lock the table down: no policies means no public/anon access at all.
+   -- only the server-side service_role key (which bypasses RLS) can read or write.
+   alter table orghub_state enable row level security;
    ```
 
 3. **Project Settings → API** → copy the **Project URL** and the **`service_role`** key
