@@ -101,6 +101,12 @@ header{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:11px
 .brand .m{width:30px;height:30px;border-radius:10px;flex:none;display:grid;place-items:center;
   background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;box-shadow:0 5px 16px -6px color-mix(in srgb,var(--a1) 90%,transparent)}
 .brand .m svg{width:16px;height:16px}
+.beta{flex:none;display:inline-flex;align-items:center;font:800 10px/1 "Inter",system-ui,sans-serif;
+  letter-spacing:.09em;text-transform:uppercase;color:#fff;padding:3.5px 8px 3px;border-radius:7px;
+  background:linear-gradient(135deg,var(--a1),var(--a2));
+  box-shadow:0 5px 14px -6px color-mix(in srgb,var(--a1) 80%,transparent),inset 0 1px 0 rgba(255,255,255,.25);
+  transform:translateY(-9px) rotate(-3deg)}
+@media(max-width:900px){.beta{transform:translateY(-7px) rotate(-3deg);font-size:9px;padding:3px 6px 2.5px}}
 .sp{flex:1}
 .sbox{display:flex;align-items:center;gap:9px;background:var(--surf2);border:1px solid var(--ln);
   border-radius:999px;padding:8px 14px;min-width:210px;transition:.2s}
@@ -147,7 +153,10 @@ aside{position:sticky;top:82px}
 /* ═══════════════ detail ═══════════════ */
 .main{display:flex;flex-direction:column;gap:18px;min-width:0}
 .hero{padding:22px;position:relative;overflow:hidden}
-.hero::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--a1),var(--a2),transparent)}
+.hero::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--a1),var(--a2),transparent);z-index:1}
+.hero::after{content:"";position:absolute;right:-90px;top:-130px;width:340px;height:340px;border-radius:50%;
+  pointer-events:none;background:radial-gradient(circle,color-mix(in srgb,var(--a2) 17%,transparent),transparent 68%)}
+.hero > *{position:relative}
 .hero-top{display:flex;gap:16px;align-items:flex-start}
 .hero h1{margin:0 0 5px;font-size:26px;letter-spacing:-.9px;font-weight:780;line-height:1.15}
 .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
@@ -156,7 +165,14 @@ aside{position:sticky;top:82px}
 .tools{display:flex;gap:7px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--ln2)}
 
 .mrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
-.m{background:var(--surf);border:1px solid var(--ln);border-radius:var(--rm);padding:14px 16px;box-shadow:var(--s1)}
+.m{position:relative;overflow:hidden;background:var(--surf);border:1px solid var(--ln);border-radius:var(--rm);
+  padding:14px 16px;box-shadow:var(--s1);transition:transform .22s cubic-bezier(.2,.9,.3,1.2),box-shadow .22s,border-color .2s}
+.m::after{content:"";position:absolute;right:-16px;top:-16px;width:66px;height:66px;border-radius:50%;
+  background:radial-gradient(circle,color-mix(in srgb,var(--a1) 22%,transparent),transparent 70%);pointer-events:none}
+.m:hover{transform:translateY(-2px);box-shadow:var(--s2);border-color:color-mix(in srgb,var(--a1) 30%,var(--ln))}
+.m .ic{position:relative;display:grid;place-items:center;width:26px;height:26px;border-radius:8px;margin-bottom:9px;
+  background:color-mix(in srgb,var(--a1) 13%,transparent);color:var(--a1)}
+.m .ic svg{width:14px;height:14px}
 .m b{display:block;font-size:24px;font-weight:750;letter-spacing:-1px;line-height:1.1}
 .m span{font-size:11.5px;color:var(--tx2);font-weight:650;letter-spacing:.02em}
 .m .hl{display:flex;align-items:center;gap:5px;margin-top:5px;font-size:11.5px;font-weight:650}
@@ -166,33 +182,90 @@ aside{position:sticky;top:82px}
 .sec-h h3 svg{width:16px;height:16px;color:var(--a1)}
 .ct{font-size:11.5px;font-weight:750;color:var(--tx2);background:var(--surf2);border:1px solid var(--ln);padding:1px 8px;border-radius:999px}
 
-/* tile grid — the main visual upgrade */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:12px}
-.t{--c:var(--a1);position:relative;background:var(--surf);border:1px solid var(--ln);border-radius:var(--rm);
-  padding:14px;box-shadow:var(--s1);overflow:hidden;transition:transform .2s cubic-bezier(.2,.9,.3,1.2),box-shadow .22s,border-color .2s}
-.t::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--c);opacity:.9}
-.t::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:.22s;
-  background:radial-gradient(120% 90% at 50% 0%,color-mix(in srgb,var(--c) 13%,transparent),transparent 70%)}
-.t:hover{transform:translateY(-3px);box-shadow:var(--s3);border-color:color-mix(in srgb,var(--c) 40%,var(--ln))}
-.t:hover::after{opacity:1}
-.t .r1{display:flex;align-items:flex-start;gap:10px;margin-bottom:11px}
-.t .nm{display:block;font-weight:680;font-size:14px;letter-spacing:-.2px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.t .hd{display:block;font-size:12px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.t .lk{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--tx2);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 8px;border-radius:8px;
+/* ═══════════════ clustered groups — Channel › Language › Link ═══════════════ */
+.lfil{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.lfil .lb{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);font-weight:750;margin-right:3px}
+.lc{font-size:12.5px;font-weight:650;padding:7px 12px;border-radius:999px;color:var(--tx2);
+  background:var(--surf2);border:1px solid var(--ln);transition:.16s;display:inline-flex;align-items:center;gap:6px;
+  max-width:100%;min-width:0}
+/* the label ellipsises, never the count beside it */
+.lc>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.lc:hover{color:var(--tx);border-color:color-mix(in srgb,var(--a1) 42%,var(--ln))}
+.lc.on{background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;border-color:transparent;
+  box-shadow:0 5px 16px -8px color-mix(in srgb,var(--a1) 90%,transparent)}
+.lc .n{font-size:11px;font-weight:750;opacity:.72;font-variant-numeric:tabular-nums}
+
+.gstack{display:flex;flex-direction:column;gap:13px}
+.pg{--c:var(--a1);position:relative;background:var(--surf);border:1px solid var(--ln);border-radius:var(--rm);
+  box-shadow:var(--s1);overflow:hidden;transition:box-shadow .24s,border-color .22s,transform .24s cubic-bezier(.2,.9,.3,1.2)}
+.pg::before{content:"";position:absolute;inset:0 0 auto;height:3px;z-index:1;
+  background:linear-gradient(90deg,var(--c),color-mix(in srgb,var(--c) 35%,transparent))}
+.pg:hover{box-shadow:var(--s3);border-color:color-mix(in srgb,var(--c) 34%,var(--ln));transform:translateY(-2px)}
+.pg-h{display:flex;align-items:center;gap:12px;padding:13px 15px 12px;border-bottom:1px solid var(--ln2);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--c) 9%,var(--surf)),var(--surf))}
+.pg-h .pgt{min-width:0;flex:1;display:block}
+.pg-h .nm{display:block;font-weight:720;font-size:15px;letter-spacing:-.3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pg-h .sub{display:block;font-size:11.5px;color:var(--tx2);font-weight:600;margin-top:1px}
+.pg-h .ct{flex:none;background:color-mix(in srgb,var(--c) 13%,var(--surf));
+  border-color:color-mix(in srgb,var(--c) 30%,var(--ln));color:var(--tx)}
+
+/* one row = one channel: language · link · actions */
+.gr{position:relative;display:grid;grid-template-columns:150px minmax(0,1fr) auto;align-items:center;
+  gap:6px 12px;padding:9px 15px;border-top:1px solid var(--ln2);transition:background .16s}
+.gr:first-of-type{border-top:0}
+.gr:hover{background:color-mix(in srgb,var(--c) 5%,transparent)}
+.gr::before{content:"";position:absolute;left:0;top:5px;bottom:5px;width:2.5px;border-radius:0 3px 3px 0;
+  background:var(--c);opacity:0;transform:scaleY(.4);transition:.2s cubic-bezier(.2,.9,.3,1.2)}
+.gr:hover::before,.gr:focus-within::before{opacity:.9;transform:scaleY(1)}
+.lang{--lc:var(--tx3);display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:680;
+  letter-spacing:-.1px;padding:4px 11px;border-radius:999px;color:var(--tx);
+  background:color-mix(in srgb,var(--lc) 12%,var(--surf2));
+  border:1px solid color-mix(in srgb,var(--lc) 32%,var(--ln));
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:.16s}
+/* dashed = "you can fill this in", so only the admin's clickable version earns it;
+   a read-only viewer gets a flat, plainly non-interactive pill instead */
+button.lang.none{border-style:dashed;background:none;border-color:var(--ln)}
+.lang.none{color:var(--tx3);font-weight:600;background:none;border-color:var(--ln2)}
+button.lang{cursor:pointer}
+button.lang:hover{color:var(--tx);border-color:var(--a1);
+  background:color-mix(in srgb,var(--a1) 12%,var(--surf2))}
+.lang i{width:7px;height:7px;border-radius:50%;flex:none;display:block;background:var(--lc)}
+.lang.none i{width:8px;height:8px;background:none;border:1.5px dashed var(--tx3)}
+.glk{display:flex;align-items:center;gap:8px;min-width:0;padding:6px 10px;border-radius:9px;
   background:var(--surf2);border:1px solid var(--ln2);transition:.16s}
-.t .lk:hover{color:var(--c);border-color:color-mix(in srgb,var(--c) 45%,transparent)}
-.t .lk svg{width:12px;height:12px;flex:none;opacity:.7}
-.t .tb{display:flex;gap:3px;justify-content:flex-end;margin-top:9px;opacity:0;transform:translateY(4px);transition:.2s}
-.t:hover .tb,.t:focus-within .tb{opacity:1;transform:none}
-@media(hover:none){.t .tb{opacity:1;transform:none}}
-.chip{width:34px;height:34px;border-radius:10px;flex:none;display:grid;place-items:center;color:#fff;
+.glk:hover{border-color:color-mix(in srgb,var(--c) 45%,transparent);background:var(--surf)}
+.glk .hnd{font-size:12.5px;font-weight:660;color:var(--tx);flex:none;max-width:42%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.glk .u{font-size:12.5px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+/* with no handle beside it the URL is the whole label, so let it carry the weight */
+.glk .u.solo{color:var(--tx);font-weight:620}
+.glk:hover .u{color:var(--c)}
+.glk svg{width:12px;height:12px;flex:none;opacity:.65;margin-left:auto}
+.gact{display:flex;align-items:center;gap:4px;flex:none}
+.gact .hd-dot{margin-left:0;margin-right:3px}
+.gact .b{opacity:.55;transition:opacity .16s,transform .16s,background .18s,border-color .18s,color .18s}
+.gr:hover .gact .b,.gr:focus-within .gact .b{opacity:1}
+@media(hover:none){.gact .b{opacity:1}}
+/* the note belongs to the link, so it hangs under the link column — not under the language */
+.gnote{grid-column:2/-1;font-size:11.5px;color:var(--tx3);padding-left:10px;margin-top:-2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.chip{position:relative;overflow:hidden;width:34px;height:34px;border-radius:10px;flex:none;
+  display:grid;place-items:center;color:#fff;
   font-weight:800;font-size:11.5px;box-shadow:var(--s1);border:1px solid rgba(255,255,255,.16);background:var(--c)}
 .chip i.si{font-size:16px;line-height:1}
 .chip svg{width:17px;height:17px}
 .chip .ini{display:block}
 body.si-ok .chip .ini{display:none}
 body:not(.si-ok) .chip i.si{display:none}
+.chip.lgc{width:38px;height:38px;border-radius:12px;font-size:13px}
+.chip.lgc i.si{font-size:19px}
+.chip.lgc svg{width:19px;height:19px}
+/* real logo image, initials sitting underneath it as the fallback */
+.pic{position:absolute;inset:0;display:grid;place-items:center}
+.pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.pic .ini2{position:relative;color:#fff;font-weight:800}
 .hd-dot{width:8px;height:8px;border-radius:50%;flex:none;margin-left:auto;background:var(--tx3);
   box-shadow:0 0 0 3px color-mix(in srgb,var(--tx3) 18%,transparent);cursor:help}
 .hd-dot.ok{background:var(--grn);box-shadow:0 0 0 3px color-mix(in srgb,var(--grn) 20%,transparent)}
@@ -222,11 +295,18 @@ footer{border-top:1px solid var(--ln);padding:24px 20px 36px;text-align:center;c
 .mo{background:var(--surf);border:1px solid var(--ln);border-radius:22px;box-shadow:var(--s4);
   width:100%;max-width:490px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
 .mo.w{max-width:660px}
-.mh{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:17px 19px;border-bottom:1px solid var(--ln2)}
+/* Every modal is <.mh><form><.mb><.mf></form></.mo> or <.mh><.mb><.mf></.mo> (no form for
+   plain confirm/info dialogs). A bare <form> is not a flex box, so without this it refuses to
+   shrink below its content's full height — once a modal grows even one field taller than the
+   viewport, .mo's overflow:hidden then clips the .mf footer clean off instead of the body
+   scrolling. Making the form itself a matching flex column, with .mb the only side that
+   grows/shrinks, keeps the footer on screen and pushes the scroll into the body every time. */
+.mo>form{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.mh{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:17px 19px;border-bottom:1px solid var(--ln2)}
 .mh h3{margin:0;font-size:17px;letter-spacing:-.4px;display:flex;align-items:center;gap:9px;font-weight:730}
 .mh h3 svg{width:18px;height:18px;color:var(--a1)}
-.mb{padding:19px;overflow:auto}
-.mf{display:flex;gap:9px;justify-content:flex-end;padding:15px 19px;border-top:1px solid var(--ln2);background:var(--surf2)}
+.mb{flex:1 1 auto;min-height:0;padding:19px;overflow:auto}
+.mf{flex:none;display:flex;gap:9px;justify-content:flex-end;padding:15px 19px;border-top:1px solid var(--ln2);background:var(--surf2)}
 .f{margin-bottom:15px}.f:last-child{margin-bottom:0}
 .f label{display:block;font-size:11.5px;font-weight:750;margin-bottom:7px;color:var(--tx2);letter-spacing:.05em;text-transform:uppercase}
 .f input[type=text],.f input[type=password],.f select,.f textarea{width:100%;padding:11px 13px;border:1px solid var(--ln);
@@ -276,7 +356,31 @@ pre.code{margin:0;padding:13px 15px;border-radius:12px;background:var(--surf3);b
   .kb{display:none}
   .hero{padding:18px}
   .hero h1{font-size:22px}
-  .grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+  .gr{grid-template-columns:126px minmax(0,1fr) auto}
+}
+/* phones — the row folds: language + actions on top, the link full-width beneath */
+@media(max-width:640px){
+  .gr{grid-template-columns:minmax(0,1fr) auto;gap:8px 10px;padding:11px 13px}
+  .gr .lang{grid-column:1;grid-row:1;justify-self:start}
+  .gr .gact{grid-column:2;grid-row:1}
+  .gr .glk{grid-column:1/-1;grid-row:2}
+  .gr .gnote{grid-column:1/-1;grid-row:3}
+  .glk .hnd{max-width:50%}
+  .pg-h{padding:11px 13px 10px}
+  .hero-top{gap:12px}
+  .lg.xl{width:52px;height:52px;border-radius:15px}
+  .lg.xl .fb{font-size:19px}
+  /* paired fields are too cramped side by side once the modal is phone-width */
+  .g2{grid-template-columns:1fr;gap:0}
+  .b.i.s{width:32px;height:32px}
+}
+@media(max-width:400px){
+  .shell{padding:11px}
+  .hero{padding:15px}
+  .hero h1{font-size:20px}
+  .mrow{grid-template-columns:1fr 1fr}
+  .m{padding:12px 13px}
+  .m b{font-size:20px}
 }
 </style>
 </head>
@@ -285,7 +389,7 @@ pre.code{margin:0;padding:13px 15px;border-radius:12px;background:var(--surf3);b
 <div class="aura"><i></i><i></i></div>
 
 <header>
-  <div class="brand"><span class="m"><i data-lucide="radio-tower"></i></span><span id="ttl">Aiko</span></div>
+  <div class="brand"><span class="m"><i data-lucide="radio-tower"></i></span><span id="ttl">Aiko</span><span class="beta">Beta</span></div>
   <div class="sbox">
     <i data-lucide="search"></i>
     <input id="q" type="text" placeholder="Search organizations, sites, channels…" autocomplete="off">
@@ -383,6 +487,66 @@ const THEMES = [
   { a1:"#f43f5e", a2:"#f97316" }, { a1:"#f59e0b", a2:"#eab308" }, { a1:"#8b5cf6", a2:"#ec4899" },
   { a1:"#334155", a2:"#64748b" },
 ];
+/* Quick-pick suggestions only — the field is free text, so any language can be typed in. */
+const LANGS = [
+  "English", "Hindi", "Tamil", "Telugu", "Kannada", "Malayalam", "Bengali", "Marathi",
+  "Gujarati", "Punjabi", "Odia", "Assamese", "Urdu",
+  "Arabic", "Spanish", "French", "Portuguese", "Indonesian",
+];
+const NO_LANG = "Not set";                              // label for a channel with no language yet
+
+/* Recognising a language written by hand. Keyed by what people actually type — which
+   includes the country rather than the language ("china", "vietnam") — and mapped to one
+   canonical spelling, because two spellings of the same language would otherwise cluster
+   into two separate groups, defeating the point of grouping at all. */
+const LANG_ALIASES = {
+  english:"English", hindi:"Hindi", tamil:"Tamil", telugu:"Telugu", kannada:"Kannada",
+  malayalam:"Malayalam", bengali:"Bengali", bangla:"Bengali", marathi:"Marathi",
+  gujarati:"Gujarati", punjabi:"Punjabi", odia:"Odia", oriya:"Odia", assamese:"Assamese",
+  urdu:"Urdu", nepali:"Nepali", sinhala:"Sinhala", bhojpuri:"Bhojpuri",
+  arabic:"Arabic", spanish:"Spanish", french:"French", portuguese:"Portuguese",
+  german:"German", italian:"Italian", russian:"Russian", turkish:"Turkish", dutch:"Dutch",
+  indonesian:"Indonesian", bahasa:"Indonesian", malay:"Malay", malaysia:"Malay",
+  vietnamese:"Vietnamese", vietnam:"Vietnamese", thai:"Thai", thailand:"Thai",
+  chinese:"Chinese", china:"Chinese", mandarin:"Chinese", cantonese:"Cantonese",
+  japanese:"Japanese", japan:"Japanese", korean:"Korean", korea:"Korean",
+  filipino:"Filipino", tagalog:"Filipino", khmer:"Khmer", cambodia:"Khmer",
+  burmese:"Burmese", myanmar:"Burmese", lao:"Lao", laos:"Lao",
+  persian:"Persian", farsi:"Persian", swahili:"Swahili", hausa:"Hausa",
+};
+/* true when a and b differ by at most one insertion, deletion or substitution —
+   enough to forgive "chaina" for "china" without matching unrelated words */
+function ed1(a, b){
+  if(a === b) return true;
+  if(Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, diff = 0;
+  while(i < a.length && j < b.length){
+    if(a[i] === b[j]){ i++; j++; continue; }
+    if(++diff > 1) return false;
+    if(a.length > b.length) i++;
+    else if(a.length < b.length) j++;
+    else { i++; j++; }
+  }
+  return diff + (a.length - i) + (b.length - j) <= 1;
+}
+/* Fuzzy matching is only safe on longer words. "Lao" is one edit away from Tao, Law, Lab,
+   Leo and plenty of other ordinary words, so anything short has to match exactly. */
+const FUZZY_MIN = 5;
+function matchWord(w){
+  if(w.length < 3 || w.length > 14) return "";
+  if(LANG_ALIASES[w]) return LANG_ALIASES[w];
+  if(w.length < FUZZY_MIN) return "";
+  for(const a in LANG_ALIASES) if(a.length >= FUZZY_MIN && ed1(w, a)) return LANG_ALIASES[a];
+  return "";
+}
+/* Notes are rarely a bare language name — "Hindi version", "in Tamil", "Tamil (South)" are
+   all far more typical — so test each word rather than the note squashed into one string. */
+function guessLang(text){
+  const words = String(text || "").toLowerCase().split(/[^a-z]+/).filter(Boolean);
+  if(!words.length || words.length > 4) return "";
+  for(const w of words){ const hit = matchWord(w); if(hit) return hit; }
+  return "";
+}
 const LKEY = "orghub.v1", HKEY = "orghub.health", HTTL = 3600e3;
 
 const blank = () => ({
@@ -398,6 +562,7 @@ let cloud = { mode:"local", configured:false, adminReady:false, updatedAt:null, 
 let unlocked = false, selected = null, query = "", booting = true;
 let health = {};                                        // url -> {ok,status,note,at}
 let checking = new Set();
+let langFilter = null;                                  // null = all languages; "" = the unset ones
 
 function normalize(d){
   const b = blank();
@@ -411,7 +576,13 @@ function normalize(d){
     return { ...p, icon:p.icon || (def ? def.icon : "") };
   });
   if(!st.settings.platforms.length) st.settings.platforms = b.settings.platforms;
-  st.orgs.forEach(o => { o.websites = o.websites || []; o.socials = o.socials || []; o.tags = o.tags || []; });
+  st.orgs.forEach(o => {
+    o.websites = o.websites || []; o.socials = o.socials || []; o.tags = o.tags || [];
+    /* `language` arrived after the first channels were saved, so older rows simply
+       have no such key. Default it to "" — an unset language is a legitimate state
+       that renders as its own group, never as a hole in the layout. */
+    o.socials.forEach(s => { s.language = String(s.language || "").trim(); });
+  });
   return st;
 }
 const readLocal  = () => { try{ return normalize(JSON.parse(localStorage.getItem(LKEY) || "null")); }catch(e){ return blank(); } };
@@ -508,6 +679,60 @@ function favicon(u, sz){
 const platform = id => state.settings.platforms.find(p => p.id === id) ||
   { id:"other", name:"Other channel", color:"#64748b", icon:"lucide:at-sign" };
 
+/* ═══ clustering: Social channel › Language › Link ═══ */
+const langOf = s => String((s && s.language) || "").trim();
+
+/* Group on the RESOLVED platform id, not the raw one. A channel whose platform was
+   later deleted falls back to the shared "other" entry — grouping on the raw id would
+   give every deleted platform its own group, all of them titled "Other channel". */
+function groupSocials(list){
+  const groups = new Map();
+  list.forEach(s => {
+    const p = platform(s.platform);
+    if(!groups.has(p.id)) groups.set(p.id, { platform:p, items:[] });
+    groups.get(p.id).items.push(s);
+  });
+  const order = state.settings.platforms.map(p => p.id);
+  const rank = id => { const i = order.indexOf(id); return i < 0 ? 9e3 : i; };
+  return [...groups.values()]
+    .sort((a, b) => rank(a.platform.id) - rank(b.platform.id))
+    .map(g => {
+      /* named languages first, alphabetically; the unset ones sink to the bottom */
+      g.items = g.items.slice().sort((x, y) => {
+        const a = langOf(x), b = langOf(y);
+        if(!a !== !b) return a ? -1 : 1;
+        return a.localeCompare(b) || String(x.handle || "").localeCompare(String(y.handle || ""));
+      });
+      return g;
+    });
+}
+/* every language present in an org, with how many channels speak it */
+function languagesOf(o){
+  const counts = new Map();
+  o.socials.forEach(s => { const l = langOf(s); counts.set(l, (counts.get(l) || 0) + 1); });
+  return [...counts.entries()]
+    .sort((a, b) => (!a[0] !== !b[0]) ? (a[0] ? -1 : 1) : a[0].localeCompare(b[0]))
+    .map(e => ({ lang:e[0], n:e[1] }));
+}
+/* "Copy all" mirrors exactly what the page shows: platform, then language, then link */
+function orgAsText(o){
+  const out = [o.name];
+  if(o.websites.length){
+    out.push("", "WEBSITES");
+    o.websites.forEach(w => out.push("  " + (w.label || pretty(w.url)) + " — " + safeUrl(w.url)));
+  }
+  const groups = groupSocials(o.socials);
+  if(groups.length){
+    out.push("", "SOCIAL CHANNELS");
+    groups.forEach(g => {
+      out.push("", g.platform.name);
+      g.items.forEach(x => out.push("  " + (langOf(x) || NO_LANG) +
+        (x.handle ? " · " + x.handle : "") + " — " + safeUrl(x.url)));
+    });
+  }
+  return out.join("\n");
+}
+
 function initials(n){
   const p = String(n || "?").trim().split(/\s+/).filter(Boolean);
   return (((p[0] || "?")[0]) + ((p[1] || "")[0] || "")).toUpperCase();
@@ -515,11 +740,36 @@ function initials(n){
 function hue(n){ let h = 0; const s = String(n || ""); for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
 const grad = n => `linear-gradient(135deg,hsl(${hue(n)} 64% 54%),hsl(${(hue(n) + 44) % 360} 68% 44%))`;
 
+/* Icon specs, in the order they are tried:
+     img:URL     a real logo image — used for custom platforms, where the URL is the
+                 favicon of the channel's own domain, so any service gets a real mark
+     si:slug     the simple-icons webfont (every mainstream network ships one)
+     lucide:name a line icon
+   Every branch keeps initials underneath, so a blocked or 404 image still reads. */
 function iconOf(spec, fallback){
   const s = String(spec || "");
+  if(s.startsWith("img:")){
+    const u = safeUrl(s.slice(4));
+    return `<span class="pic"><span class="ini2">${esc(fallback)}</span>` +
+           (u ? `<img src="${esc(u)}" alt="" loading="lazy">` : "") + `</span>`;
+  }
   if(s.startsWith("si:"))     return `<span class="ini">${esc(fallback)}</span><i class="si si-${esc(s.slice(3))}"></i>`;
   if(s.startsWith("lucide:")) return `<i data-lucide="${esc(s.slice(7))}"></i>`;
   return `<span class="ini" style="display:block">${esc(fallback)}</span>`;
+}
+/* A brand new platform has no icon of its own, so borrow the favicon of the domain the
+   channel points at — that is "fetch the logo off the internet" with no API key and no
+   third-party script.
+   With no URL to work from, only fall back to a simple-icons slug when the name matches a
+   platform we already ship a real glyph for. Guessing a slug from an arbitrary name gives a
+   class like "si-jalo" that does not exist in the font, and CSS hides the initials for ANY
+   si: chip once the webfont loads — so the chip would render completely blank. */
+function autoIcon(name, url){
+  const slug = String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const fav = favicon(url, 128);
+  if(fav) return "img:" + fav;
+  const known = DEF_PLATFORMS.find(p => p.icon === "si:" + slug);
+  return known ? known.icon : "";
 }
 /* org logo: manual override → favicon of its first website → gradient initials */
 function logoBox(o, cls){
@@ -557,12 +807,12 @@ function copy(txt, msg){
     a.remove();
   }
 }
-const wireLogos = root => root.querySelectorAll(".lg img").forEach(img => {
+const wireLogos = root => root.querySelectorAll(".lg img,.pic img").forEach(img => {
   img.addEventListener("error", () => { img.style.display = "none"; }, { once:true });
   img.addEventListener("load", () => {
     // favicon services return a 16px placeholder for unknown domains — keep the initials then
     if(img.naturalWidth && img.naturalWidth <= 16) img.style.display = "none";
-    else { const fb = img.parentNode.querySelector(".fb"); if(fb) fb.style.display = "none"; }
+    else { const fb = img.parentNode.querySelector(".fb,.ini2"); if(fb) fb.style.display = "none"; }
   }, { once:true });
 });
 
@@ -745,36 +995,100 @@ function siteForm(oid, sid){
     }
   });
 }
-function socialForm(oid, sid){
+function socialForm(oid, sid, focusSel){
   const o = org(oid), s = sid ? o.socials.find(x => x.id === sid) : null;
-  const opts = state.settings.platforms
-    .map(p => `<option value="${esc(p.id)}"${s && s.platform === p.id ? " selected" : ""}>${esc(p.name)}</option>`).join("");
+  /* A channel's platform id can point at nothing (an import from elsewhere, or a platform
+     deleted after the fact — the delete guard stops new orphans, but old data can predate it).
+     Without an explicit placeholder, NO <option> ends up selected and the browser just shows
+     whichever platform is first in the list — so saving with the dropdown untouched would
+     silently rewrite the channel onto that unrelated platform. */
+  const orphan = s && !state.settings.platforms.some(p => p.id === s.platform);
+  const opts = (orphan ? `<option value="${esc(s.platform)}" selected disabled>Unknown platform (${esc(s.platform)})</option>` : "") +
+    state.settings.platforms
+      .map(p => `<option value="${esc(p.id)}"${s && s.platform === p.id ? " selected" : ""}>${esc(p.name)}</option>`).join("");
+  /* every language already used in this org, then the standard list — so the
+     ones the team actually uses surface first in the browser's suggestion popup */
+  const used = languagesOf(o).map(x => x.lang).filter(Boolean);
+  const sug = [...used, ...LANGS.filter(l => used.indexOf(l) === -1)];
   openModal(`
     <div class="mh"><h3><i data-lucide="share-2"></i>${s ? "Edit channel" : "Add social channel"}</h3>${X}</div>
     <form><div class="mb">
       <div class="g2">
-        <div class="f"><label>Platform</label><select name="platform">${opts}</select></div>
-        <div class="f"><label>Handle</label>
-          <input type="text" name="handle" value="${esc(s ? s.handle : "")}" placeholder="@aikomedia"></div>
+        <div class="f"><label>Platform</label>
+          <select name="platform">${opts}<option value="__new">＋ Add a new platform…</option></select></div>
+        <div class="f"><label>Language</label>
+          <input type="text" name="language" list="langlist" autocomplete="off" maxlength="32"
+            value="${esc(s ? s.language || "" : "")}" placeholder="Type any language">
+          <datalist id="langlist">${sug.map(l => `<option value="${esc(l)}"></option>`).join("")}</datalist></div>
       </div>
+      <div class="f np" id="np" hidden>
+        <label>New platform</label>
+        <div style="display:flex;gap:9px;align-items:center">
+          <span class="chip lgc" id="pprev" style="--c:#5b6bff"><span class="ini" style="display:block">?</span></span>
+          <input type="text" name="pname" placeholder="Jalo, Kwai, Bluesky…" style="flex:1;min-width:0">
+          <input type="color" name="pcolor" value="#5b6bff" title="Brand colour"
+            style="width:46px;flex:none;padding:0;border:1px solid var(--ln);border-radius:11px;background:none;cursor:pointer">
+        </div>
+        <div class="hint"><b>The logo is fetched for you.</b> Type the channel URL below and its
+          site's own icon becomes this platform's logo — nothing to upload, no key needed.</div>
+      </div>
+      <div class="f"><label>Handle</label>
+        <input type="text" name="handle" value="${esc(s ? s.handle : "")}" placeholder="@aikomedia"></div>
       <div class="f"><label>Channel URL *</label>
         <input type="text" name="url" value="${esc(s ? s.url : "")}" placeholder="instagram.com/aikomedia">
-        <div class="hint">Unlimited channels per org — several pages on the same platform is fine.</div></div>
+        <div class="hint">Channels are grouped by platform, then listed by language — so several
+          pages on the same platform, one per language, is exactly the point.</div></div>
       <div class="f"><label>Note</label>
         <input type="text" name="note" value="${esc(s ? s.note || "" : "")}" placeholder="Regional page, agency-managed…"></div>
     </div>
     <div class="mf"><button type="button" class="b" data-close>Cancel</button>
       <button class="b p">${s ? "Save" : "Add channel"}</button></div></form>`, {
-    focus:"select",
+    focus:focusSel || "select",
     onSubmit: async f => {
       const url = safeUrl(f.url.value);
       if(!url) return showErr("Please enter the channel URL.");
-      const d = { platform:f.platform.value, handle:f.handle.value.trim(), url, note:f.note.value.trim() };
+
+      let pid = f.platform.value, merged = "";
+      if(pid === "__new"){
+        const nm = f.pname.value.trim();
+        if(!nm) return showErr("Give the new platform a name.");
+        /* reuse an existing platform of the same name rather than making a twin */
+        const twin = state.settings.platforms.find(p => p.name.toLowerCase() === nm.toLowerCase());
+        if(twin){ pid = twin.id; merged = twin.name; }
+        else{
+          pid = (nm.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 14) || "plat") + "-" + uid().slice(0, 3);
+          state.settings.platforms.push({ id:pid, name:nm, color:f.pcolor.value, icon:autoIcon(nm, url) });
+        }
+      }
+
+      const d = { platform:pid, language:f.language.value.trim(),
+                  handle:f.handle.value.trim(), url, note:f.note.value.trim() };
       if(s) Object.assign(s, d); else o.socials.push({ id:uid(), ...d });
       closeModal();
-      if(await commit(s ? "Channel updated" : "Channel added", "share-2")) checkLinks(o, [url]);
+      /* say so when the typed name matched an existing platform — otherwise the colour they
+         picked is quietly ignored and it looks like a new platform was created */
+      const msg = merged ? `Added to the existing “${merged}” platform`
+                         : (s ? "Channel updated" : "Channel added");
+      if(await commit(msg, merged ? "merge" : "share-2")) checkLinks(o, [url]);
     }
   });
+
+  /* the new-platform block only exists once "+ Add a new platform…" is picked */
+  const sel = mo.querySelector("[name=platform]"), np = mo.querySelector("#np");
+  const prev = mo.querySelector("#pprev"), pc = mo.querySelector("[name=pcolor]");
+  sel.onchange = () => {
+    np.hidden = sel.value !== "__new";
+    if(!np.hidden) setTimeout(() => mo.querySelector("[name=pname]").focus(), 40);
+  };
+  pc.oninput = () => prev.style.setProperty("--c", pc.value);
+  /* live logo preview: the moment there is a usable URL, show the mark we would store */
+  const paintPrev = () => {
+    const nm = mo.querySelector("[name=pname]").value.trim();
+    prev.innerHTML = iconOf(autoIcon(nm, safeUrl(mo.querySelector("[name=url]").value)), initials(nm || "?"));
+    icons(prev); wireLogos(prev);
+  };
+  mo.querySelector("[name=pname]").oninput = paintPrev;
+  mo.querySelector("[name=url]").oninput = () => { if(!np.hidden) paintPrev(); };
 }
 
 /* ═══════════════════ link health checker ═══════════════════ */
@@ -943,9 +1257,75 @@ ADMIN_PASSWORD         (the password only you know)</pre>
   mo.querySelector("#cs").onclick = () => copy(SQL, "SQL copied");
 }
 
+/* Name, brand colour and logo of one platform — reachable from Settings, and the only
+   place a platform created on the fly can be corrected afterwards. */
+function platformForm(pid, back){
+  const p = state.settings.platforms.find(x => x.id === pid);
+  if(!p) return;
+  const isImg = String(p.icon || "").startsWith("img:");
+  openModal(`
+    <div class="mh"><h3><i data-lucide="palette"></i>Edit platform</h3>${X}</div>
+    <form><div class="mb">
+      <div style="display:flex;gap:13px;align-items:center;margin-bottom:17px">
+        <span class="chip lgc" id="pprev" style="--c:${esc(p.color || "#5b6bff")}">${iconOf(p.icon, initials(p.name))}</span>
+        <div class="hint" style="margin:0">This is exactly how it appears on the group header.</div>
+      </div>
+      <div class="g2">
+        <div class="f"><label>Name</label><input type="text" name="name" value="${esc(p.name)}"></div>
+        <div class="f"><label>Brand colour</label>
+          <input type="color" name="color" value="${esc(p.color || "#5b6bff")}"
+            style="width:100%;height:43px;padding:2px;border:1px solid var(--ln);border-radius:11px;background:none;cursor:pointer"></div>
+      </div>
+      <div class="f"><label>Logo URL <span style="font-weight:400;text-transform:none">— optional</span></label>
+        <input type="text" name="logo" value="${esc(isImg ? p.icon.slice(4) : "")}"
+          placeholder="Empty = use the built-in brand icon">
+        <div class="hint">Any image URL works. Platforms you add yourself get their own site's
+          icon here automatically — this is where you can swap it for a better one.</div></div>
+    </div>
+    <div class="mf"><button type="button" class="b" data-close>Cancel</button>
+      <button class="b p">Save platform</button></div></form>`, {
+    onSubmit: async f => {
+      const nm = f.name.value.trim();
+      if(!nm) return showErr("Please give the platform a name.");
+      const logo = safeUrl(f.logo.value.trim());
+      p.name = nm;
+      p.color = f.color.value;
+      if(logo) p.icon = "img:" + logo;
+      else if(isImg) p.icon = autoIcon(nm, "");        // cleared the image: fall back to the brand icon
+      closeModal();
+      await commit("Platform updated", "palette");
+      if(back) settingsModal();
+    }
+  });
+  /* this modal is only ever reached from Settings, so backing out of it should land back
+     there rather than dumping the admin on the page with their place lost */
+  if(back){
+    const goBack = () => { closeModal(); settingsModal(); };
+    mo.querySelectorAll("[data-close]").forEach(b => b.onclick = goBack);
+    onEsc = onVeil = goBack;
+  }
+  const prev = mo.querySelector("#pprev");
+  const repaint = () => {
+    const nm = mo.querySelector("[name=name]").value.trim();
+    const logo = safeUrl(mo.querySelector("[name=logo]").value.trim());
+    prev.style.setProperty("--c", mo.querySelector("[name=color]").value);
+    prev.innerHTML = iconOf(logo ? "img:" + logo : p.icon, initials(nm || "?"));
+    icons(prev); wireLogos(prev);
+  };
+  mo.querySelectorAll("[name=name],[name=color],[name=logo]").forEach(el => el.oninput = repaint);
+}
+
 function settingsModal(){
   const s = state.settings;
   const localCount = (() => { try{ const d = JSON.parse(localStorage.getItem(LKEY) || "null"); return d && d.orgs ? d.orgs.length : 0; }catch(e){ return 0; } })();
+  /* Channels whose note is really a language. Before this field existed the note was the
+     only place to put one, so most existing directories have them stranded there. */
+  const strays = [];
+  state.orgs.forEach(o => o.socials.forEach(x => {
+    if(langOf(x)) return;
+    const g = guessLang(x.note);
+    if(g) strays.push({ x, g });
+  }));
   openModal(`
     <div class="mh"><h3><i data-lucide="settings-2"></i>Settings</h3>${X}</div>
     <div class="mb">
@@ -988,6 +1368,10 @@ function settingsModal(){
       <div class="sr"><div><div class="t1">Admin password</div>
         <div class="d1">${cloud.mode === "cloud" ? "Managed on the server" : "Stored in this browser"}</div></div>
         <button class="b s" id="pw"><i data-lucide="key-round"></i> ${cloud.mode === "cloud" ? "How to change" : "Change"}</button></div>
+      ${strays.length ? `<div class="sr"><div><div class="t1">Languages sitting in notes</div>
+        <div class="d1">${strays.length} channel${strays.length === 1 ? " has a note that names" : "s have notes that name"}
+          a language, but an empty Language field</div></div>
+        <button class="b s p" id="fixlang"><i data-lucide="wand-sparkles"></i> Move them over</button></div>` : ""}
       <div class="sr"><div><div class="t1">Check every link</div><div class="d1">Test all websites and channels of all orgs</div></div>
         <button class="b s" id="ck"><i data-lucide="link-2"></i> Run check</button></div>
       <div class="sr"><div><div class="t1">Backup</div><div class="d1">Download or restore everything as JSON</div></div>
@@ -1013,11 +1397,14 @@ function settingsModal(){
       <div class="pr">
         <span class="chip" style="--c:${esc(p.color)};width:28px;height:28px;border-radius:9px;font-size:10px">
           ${iconOf(p.icon, initials(p.name))}</span>
-        <span style="flex:1;font-size:13.5px;font-weight:620">${esc(p.name)}</span>
+        <span style="flex:1;font-size:13.5px;font-weight:620;min-width:0;overflow:hidden;
+          text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</span>
         <span class="ct">${state.orgs.reduce((n, o) => n + o.socials.filter(x => x.platform === p.id).length, 0)}</span>
-        <button class="b g i s" data-del="${esc(p.id)}" title="Remove" data-fb="X"><i data-lucide="x"></i></button>
+        <button class="b g i s" data-edp="${esc(p.id)}" title="Edit name, colour and logo" data-fb="Edit"><i data-lucide="pencil"></i></button>
+        <button class="b g i s d" data-del="${esc(p.id)}" title="Remove" data-fb="X"><i data-lucide="x"></i></button>
       </div>`).join("");
-    icons(box);
+    icons(box); wireLogos(box);
+    box.querySelectorAll("[data-edp]").forEach(b => b.onclick = () => platformForm(b.dataset.edp, true));
     box.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
       if(state.orgs.some(o => o.socials.some(x => x.platform === b.dataset.del)))
         return toast("Channels still use it — remove those first", "triangle-alert");
@@ -1031,10 +1418,16 @@ function settingsModal(){
     e.preventDefault();
     const el = mo.querySelector("#pn"), name = el.value.trim();
     if(!name) return;
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    /* same case-insensitive guard the inline flow uses — two platforms of the same name would
+       render as two identically-titled groups with the channels split between them, and neither
+       could be deleted afterwards while any channel still points at it */
+    if(state.settings.platforms.some(p => p.name.toLowerCase() === name.toLowerCase()))
+      return toast(`“${name}” already exists`, "triangle-alert");
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 14) || "plat";
     state.settings.platforms.push({ id:slug + "-" + uid().slice(0, 3), name,
-      color:mo.querySelector("#pc").value, icon:slug ? "si:" + slug : "" });
-    await persist(); el.value = ""; drawPl(); toast(name + " added", "plus");
+      color:mo.querySelector("#pc").value, icon:autoIcon(name, "") });
+    await persist(); el.value = ""; drawPl();
+    toast(name + " added — open its pencil to set a logo", "plus");
   };
   mo.querySelectorAll("#sw .sw").forEach(el => el.onclick = () => {
     const t = THEMES[+el.dataset.i]; a1 = t.a1; a2 = t.a2;
@@ -1055,6 +1448,21 @@ function settingsModal(){
   };
   const setupBtn = mo.querySelector("#setup"); if(setupBtn) setupBtn.onclick = setupModal;
   mo.querySelector("#pw").onclick = () => passwordModal(false);
+  const fx = mo.querySelector("#fixlang");
+  if(fx) fx.onclick = async () => {
+    /* every row is listed, never a truncated sample — the guesses are fuzzy and this applies
+       to all of them at once, so the admin has to be able to see everything they are approving */
+    const rows = strays
+      .map(s => `<div><b style="color:var(--tx)">${esc(s.x.note)}</b> → ${esc(s.g)}</div>`).join("");
+    const ok = await confirmBox("Move these notes into Language?",
+      `<div style="max-height:200px;overflow:auto;line-height:1.85">${rows}</div>
+       <div style="margin-top:12px">Each note is cleared once its language is set. Anything that
+         is not a language — "Agency-managed", "Largest by subs" — is left exactly as it is.</div>`, false);
+    if(!ok) return;
+    strays.forEach(s => { s.x.language = s.g; s.x.note = ""; });
+    closeModal();
+    await commit(strays.length + " language" + (strays.length === 1 ? "" : "s") + " filled in", "wand-sparkles");
+  };
   mo.querySelector("#ck").onclick = async () => {
     closeModal();
     const urls = [...new Set(state.orgs.flatMap(allUrls))];
@@ -1127,7 +1535,7 @@ function matches(o, q){
   if(!q) return true;
   return [o.name, o.notes, ...(o.tags || []),
     ...o.websites.map(w => w.label + " " + w.url),
-    ...o.socials.map(s => platform(s.platform).name + " " + s.handle + " " + s.url + " " + (s.note || ""))
+    ...o.socials.map(s => platform(s.platform).name + " " + langOf(s) + " " + s.handle + " " + s.url + " " + (s.note || ""))
   ].join(" ").toLowerCase().includes(q);
 }
 
@@ -1182,6 +1590,9 @@ function render(){
         ${state.orgs.length ? "Nothing found for “" + esc(query) + "”." : (unlocked ? "Click <b style='display:inline'>New</b> to add one." : "Unlock admin to add one.")}</div>`;
   rail.querySelectorAll("[data-org]").forEach(b => b.onclick = () => {
     selected = b.dataset.org;
+    /* the filter belongs to the org you were looking at — carrying it across would silently
+       hide channels in the new one, with only a highlighted chip to explain why */
+    langFilter = null;
     try{ history.replaceState(null, "", "#/" + selected); }catch(e){}
     render();
   });
@@ -1191,7 +1602,10 @@ function render(){
 
   if(!booting){
     anim(".oi", { x:-12, opacity:0, stagger:.025, duration:.3 });
-    anim("#main > *", { y:16, opacity:0, stagger:.06, duration:.42 });
+    /* the platform groups animate individually, so their section wrapper must not fade too —
+       nesting two opacity tweens makes the groups visibly double-dip on every render */
+    anim("#main > *:not(.gwrap)", { y:16, opacity:0, stagger:.06, duration:.42 });
+    anim(".pg", { y:10, opacity:0, stagger:.04, duration:.36 });
   }
 }
 
@@ -1227,49 +1641,74 @@ function renderMain(o, tot){
     : h.un === h.total ? `<span style="color:var(--tx3)">not checked yet</span>`
     : `<span style="color:var(--grn)">all ${h.ok} live</span>`;
 
-  const tools = key => unlocked ? `
-    <span class="tb">
-      <button class="b g i s" data-ed="${key}" title="Edit" data-fb="Edit"><i data-lucide="pencil"></i></button>
-      <button class="b g i s d" data-rm="${key}" title="Remove" data-fb="Del"><i data-lucide="trash-2"></i></button>
-    </span>` : "";
+  /* ── one row = [ what it is ] · [ the link ] · [ health + actions ] ──────────
+     Websites put their label in the first column and channels put their language,
+     so both sections read straight down the same three columns.               */
+  const actions = (u, key) => `
+    <span class="gact">
+      <span class="hd-dot" data-h="${esc(u)}"></span>
+      <button class="b g i s" data-cp="${esc(u)}" title="Copy link" data-fb="Copy"><i data-lucide="copy"></i></button>
+      ${unlocked ? `<button class="b g i s" data-ed="${key}" title="Edit" data-fb="Edit"><i data-lucide="pencil"></i></button>
+        <button class="b g i s d" data-rm="${key}" title="Remove" data-fb="Del"><i data-lucide="trash-2"></i></button>` : ""}
+    </span>`;
 
-  const webTiles = o.websites.map(w => {
+  const linkCell = (u, handle) => `
+    <a class="glk" href="${esc(u)}" target="_blank" rel="noopener noreferrer" title="${esc(u)}">
+      ${handle ? `<span class="hnd">${esc(handle)}</span>` : ""}
+      <span class="u${handle ? "" : " solo"}">${esc(pretty(u))}</span><i data-lucide="arrow-up-right"></i></a>`;
+
+  const webRows = o.websites.map(w => {
     const u = safeUrl(w.url);
-    return `<div class="t" style="--c:hsl(${hue(w.label || w.url)} 62% 52%)">
-      <div class="r1">
-        <span class="lg sm"><img src="${esc(favicon(u, 64))}" alt="" loading="lazy">
-          <span class="fb" style="background:${grad(w.label || w.url)}">${esc(initials(w.label || hostOf(u)))}</span></span>
-        <span style="min-width:0;flex:1">
-          <span class="nm">${esc(w.label || pretty(u))}</span>
-          <span class="hd">${esc(hostOf(u))}</span>
-        </span>
-        <span class="hd-dot" data-h="${esc(u)}"></span>
-      </div>
-      <a class="lk" href="${esc(u)}" target="_blank" rel="noopener noreferrer">
-        <span style="overflow:hidden;text-overflow:ellipsis">${esc(pretty(u))}</span><i data-lucide="arrow-up-right"></i></a>
-      ${unlocked ? tools("w:" + w.id) : `<div class="tb" style="opacity:1;transform:none">
-        <button class="b g i s" data-cp="${esc(u)}" title="Copy" data-fb="Copy"><i data-lucide="copy"></i></button></div>`}
+    return `<div class="gr" style="--c:hsl(${hue(w.label || u)} 62% 52%)">
+      <span class="lang" style="--lc:hsl(${hue(w.label || u)} 62% 52%)"><i></i>${esc(w.label || pretty(u))}</span>
+      ${linkCell(u, "")}
+      ${actions(u, "w:" + w.id)}
     </div>`;
   }).join("");
 
-  const socTiles = o.socials.map(x => {
-    const p = platform(x.platform), u = safeUrl(x.url);
-    return `<div class="t" style="--c:${esc(p.color)}">
-      <div class="r1">
-        <span class="chip">${iconOf(p.icon, initials(p.name))}</span>
-        <span style="min-width:0;flex:1">
-          <span class="nm">${esc(p.name)}</span>
-          <span class="hd">${esc(x.handle || pretty(u))}</span>
+  /* language filter — a channel with no language is its own bucket ("" ), which is
+     why "all" is null rather than "": the two states must stay tellable apart. */
+  const langs = languagesOf(o);
+  if(langFilter !== null && !langs.some(x => x.lang === langFilter)) langFilter = null;
+  const shown = langFilter === null ? o.socials : o.socials.filter(s => langOf(s) === langFilter);
+
+  const langChips = langs.length > 1 ? `
+    <div class="lfil">
+      <span class="lb">Language</span>
+      <button class="lc ${langFilter === null ? "on" : ""}" data-lang="*"><span>All</span> <span class="n">${o.socials.length}</span></button>
+      ${langs.map(x => `<button class="lc ${langFilter === x.lang ? "on" : ""}" data-lang="${esc(x.lang)}"
+        title="${esc(x.lang || NO_LANG)}"><span>${esc(x.lang || NO_LANG)}</span> <span class="n">${x.n}</span></button>`).join("")}
+    </div>` : "";
+
+  const socGroups = groupSocials(shown).map(g => {
+    const spoken = new Set(g.items.map(langOf).filter(Boolean));
+    const n = g.items.length;
+    return `
+    <div class="pg" style="--c:${esc(g.platform.color)}">
+      <div class="pg-h">
+        <span class="chip lgc">${iconOf(g.platform.icon, initials(g.platform.name))}</span>
+        <span class="pgt">
+          <span class="nm">${esc(g.platform.name)}</span>
+          <span class="sub">${n} channel${n === 1 ? "" : "s"}${spoken.size
+            ? " · " + spoken.size + " language" + (spoken.size === 1 ? "" : "s") : ""}</span>
         </span>
-        <span class="hd-dot" data-h="${esc(u)}"></span>
+        <span class="ct">${n}</span>
       </div>
-      ${x.note ? `<div class="tag" style="margin-bottom:8px">${esc(x.note)}</div>` : ""}
-      <a class="lk" href="${esc(u)}" target="_blank" rel="noopener noreferrer">
-        <span style="overflow:hidden;text-overflow:ellipsis">${esc(pretty(u))}</span><i data-lucide="arrow-up-right"></i></a>
-      ${unlocked ? tools("s:" + x.id) : `<div class="tb" style="opacity:1;transform:none">
-        <button class="b g i s" data-cp="${esc(u)}" title="Copy" data-fb="Copy"><i data-lucide="copy"></i></button></div>`}
-    </div>`;
-  }).join("");
+      ${g.items.map(x => {
+        const u = safeUrl(x.url), l = langOf(x);
+        const pill = `<i></i>${esc(l || NO_LANG)}`;
+        const tint = l ? ` style="--lc:hsl(${hue(l)} 62% 52%)"` : "";
+        return `<div class="gr">
+          ${unlocked
+            ? `<button class="lang${l ? "" : " none"}"${tint} data-lang-edit="${esc(x.id)}"
+                title="${l ? "Change this channel's language" : "No language yet — click to set one"}">${pill}</button>`
+            : `<span class="lang${l ? "" : " none"}"${tint}${l ? "" : ` title="No language has been set for this channel"`}>${pill}</span>`}
+          ${linkCell(u, x.handle)}
+          ${actions(u, "s:" + x.id)}
+          ${x.note ? `<span class="gnote">${esc(x.note)}</span>` : ""}
+        </div>`;
+      }).join("")}
+    </div>`; }).join("");
 
   m.innerHTML = `
     ${setupBanner}
@@ -1300,26 +1739,36 @@ function renderMain(o, tot){
     </div>
 
     <div class="mrow">
-      <div class="m"><b>${o.websites.length}</b><span>Websites</span></div>
-      <div class="m"><b>${o.socials.length}</b><span>Social channels</span></div>
-      <div class="m"><b>${tot.tw + tot.tc}</b><span>Links tracked (all orgs)</span>
+      <div class="m"><span class="ic"><i data-lucide="globe"></i></span>
+        <b>${o.websites.length}</b><span>Websites</span></div>
+      <div class="m"><span class="ic"><i data-lucide="share-2"></i></span>
+        <b>${o.socials.length}</b><span>Social channels</span></div>
+      <div class="m"><span class="ic"><i data-lucide="languages"></i></span>
+        <b>${langs.filter(x => x.lang).length}</b><span>Languages</span></div>
+      <div class="m"><span class="ic"><i data-lucide="activity"></i></span>
+        <b>${tot.tw + tot.tc}</b><span>Links tracked (all orgs)</span>
         <div class="hl">${hlab}</div></div>
     </div>
 
     <div>
       <div class="sec-h"><h3><i data-lucide="globe"></i> Websites <span class="ct">${o.websites.length}</span></h3>
         ${unlocked ? `<button class="b p s" id="aw"><i data-lucide="plus"></i> Add website</button>` : ""}</div>
-      ${o.websites.length ? `<div class="grid">${webTiles}</div>`
+      ${o.websites.length ? `<div class="pg">${webRows}</div>`
         : `<div class="empty"><div class="e"><i data-lucide="globe"></i></div><b>No websites yet</b>
            ${unlocked ? "Main site, blog, landing pages — add as many as you need." : "Nothing added yet."}</div>`}
     </div>
 
-    <div>
+    <div class="gwrap">
       <div class="sec-h"><h3><i data-lucide="share-2"></i> Social channels <span class="ct">${o.socials.length}</span></h3>
         ${unlocked ? `<button class="b p s" id="as"><i data-lucide="plus"></i> Add channel</button>` : ""}</div>
-      ${o.socials.length ? `<div class="grid">${socTiles}</div>`
-        : `<div class="empty"><div class="e"><i data-lucide="share-2"></i></div><b>No social channels yet</b>
-           ${unlocked ? "Instagram, Facebook, LinkedIn, YouTube — one tile per channel." : "Nothing added yet."}</div>`}
+      ${langChips}
+      ${!o.socials.length
+        ? `<div class="empty"><div class="e"><i data-lucide="share-2"></i></div><b>No social channels yet</b>
+           ${unlocked ? "Add one per language — they cluster under their platform automatically." : "Nothing added yet."}</div>`
+        : !shown.length
+          ? `<div class="empty"><div class="e"><i data-lucide="search-x"></i></div>
+             <b>Nothing in ${esc(langFilter || NO_LANG)}</b>Pick another language, or <b style="display:inline">All</b>.</div>`
+          : `<div class="gstack">${socGroups}</div>`}
     </div>`;
 
   icons(m); wireLogos(m);
@@ -1328,12 +1777,13 @@ function renderMain(o, tot){
   m.querySelector("#qr").onclick = () => qrModal(o);
   m.querySelector("#emb").onclick = () => embedModal(o);
   m.querySelector("#chk").onclick = () => checkLinks(o);
-  m.querySelector("#cpall").onclick = () => copy([
-    o.name,
-    ...o.websites.map(w => `${w.label || "Website"}: ${safeUrl(w.url)}`),
-    ...o.socials.map(x => `${platform(x.platform).name}${x.handle ? " (" + x.handle + ")" : ""}: ${safeUrl(x.url)}`)
-  ].join("\n"), "All links copied");
+  m.querySelector("#cpall").onclick = () => copy(orgAsText(o), "All links copied");
   m.querySelectorAll("[data-cp]").forEach(b => b.onclick = () => copy(b.dataset.cp, "Link copied"));
+  /* filtering is a read-only action — it must work while the page is locked too */
+  m.querySelectorAll("[data-lang]").forEach(b => b.onclick = () => {
+    langFilter = b.dataset.lang === "*" ? null : b.dataset.lang;
+    render();
+  });
 
   if(!unlocked) return;
   m.querySelector("#eo").onclick = () => orgForm(o.id);
@@ -1350,6 +1800,9 @@ function renderMain(o, tot){
     const p = b.dataset.ed.split(":");
     p[0] === "w" ? siteForm(o.id, p[1]) : socialForm(o.id, p[1]);
   });
+  /* clicking the language pill jumps straight into the field it names */
+  m.querySelectorAll("[data-lang-edit]").forEach(b => b.onclick =
+    () => socialForm(o.id, b.dataset.langEdit, "[name=language]"));
   m.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
     const p = b.dataset.rm.split(":");
     if(p[0] === "w"){
@@ -1381,7 +1834,7 @@ function settingsModal2(){ unlocked ? settingsModal() : toast("Cloud storage con
 document.addEventListener("click", e => { if(e.target.closest("#new")) unlocked ? orgForm() : lockUI(); });
 addEventListener("hashchange", () => {
   const id = (location.hash || "").replace(/^#\/?/, "");
-  if(id && org(id)){ selected = id; render(); }
+  if(id && org(id)){ selected = id; langFilter = null; render(); }
 });
 
 icons(document.body);

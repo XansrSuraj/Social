@@ -89,6 +89,57 @@
       C.muted + ';margin:0 0 9px;">' + esc(t) + '</div>';
   }
 
+  /* The widget mirrors the directory itself: one block per platform, its channels
+     listed by language inside. Grouping happens here rather than server-side so an
+     embed on an old page picks the new shape up the moment this file is redeployed. */
+  function groupByPlatform(socials, plat, order) {
+    var groups = [], index = {};
+    socials.forEach(function (s) {
+      var p = plat(s.platform);
+      if (!(p.id in index)) { index[p.id] = groups.length; groups.push({ platform: p, items: [] }); }
+      groups[index[p.id]].items.push(s);
+    });
+    var rank = function (id) { var i = order.indexOf(id); return i < 0 ? 9e3 : i; };
+    groups.sort(function (a, b) { return rank(a.platform.id) - rank(b.platform.id); });
+    groups.forEach(function (g) {
+      g.items.sort(function (x, y) {
+        var a = String(x.language || "").trim(), b = String(y.language || "").trim();
+        if (!a !== !b) return a ? -1 : 1;
+        return a.localeCompare(b);
+      });
+    });
+    return groups;
+  }
+
+  /* Platform names and languages are free text, and this widget renders on somebody else's
+     page where we control nothing about the available width. Every text cell therefore caps
+     its own width and ellipsises, so one long value can never crowd out the link beside it
+     or get hard-clipped by the block's own overflow:hidden. */
+  var CLIP = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+
+  function platformBlock(g) {
+    return '<div style="margin-bottom:10px;border:1px solid ' + C.line + ';border-radius:12px;overflow:hidden;">' +
+        '<div style="display:flex;align-items:center;gap:9px;padding:9px 11px;border-bottom:1px solid ' + C.line + ';">' +
+          '<span style="width:9px;height:9px;flex:none;border-radius:3px;background:' + esc(g.platform.color || "#64748b") + ';"></span>' +
+          '<span style="min-width:0;flex:1;' + CLIP + 'font:700 13px/1.3 system-ui,sans-serif;color:' + C.text + ';">' +
+            esc(g.platform.name) + '</span>' +
+          '<span style="flex:none;font:700 11px/1 system-ui,sans-serif;color:' + C.muted + ';">' + g.items.length + '</span>' +
+        '</div>' +
+        g.items.map(function (s) {
+          var lang = String(s.language || "").trim();
+          return '<a href="' + esc(safeUrl(s.url)) + '" target="_blank" rel="noopener noreferrer nofollow" ' +
+            'style="all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:8px 11px;' +
+            'border-top:1px solid ' + C.line + ';box-sizing:border-box;">' +
+              '<span style="flex:none;min-width:74px;max-width:40%;' + CLIP +
+                'font:600 12px/1.35 system-ui,sans-serif;color:' + (lang ? C.text : C.muted) + ';">' +
+                esc(lang || "—") + '</span>' +
+              '<span style="min-width:0;flex:1;' + CLIP + 'font:400 12px/1.35 system-ui,sans-serif;color:' + C.muted + ';">' +
+                esc(s.handle || pretty(s.url)) + '</span>' +
+            '</a>';
+        }).join("") +
+      '</div>';
+  }
+
   fetch(base + "/api/data", { cache: "no-store" })
     .then(function (r) { return r.json(); })
     .then(function (res) {
@@ -99,10 +150,21 @@
       if (!org) throw new Error("org not found");
 
       var platforms = (data.settings && data.settings.platforms) || [];
+      /* A channel can name a platform that settings does not describe — a cloud row written
+         by an older version, or a platform deleted after the fact. One shared fallback would
+         collapse every such channel into a single nameless block, so key on the id itself and
+         make a readable name out of it. Facebook still groups as Facebook either way. */
+      var NAMES = { x: "X", gbp: "Google Business", tiktok: "TikTok", youtube: "YouTube",
+                    linkedin: "LinkedIn", whatsapp: "WhatsApp", other: "Other channel" };
+      var label = function (id) {
+        if (!id) return "Channel";
+        return NAMES[id] || (id.charAt(0).toUpperCase() + id.slice(1));
+      };
       var plat = function (id) {
         return platforms.filter(function (p) { return p.id === id; })[0] ||
-               { name: "Channel", color: "#64748b" };
+               { id: id || "other", name: label(id), color: "#64748b" };
       };
+      var order = platforms.map(function (p) { return p.id; });
 
       var html = "";
       if (wantTitle) {
@@ -115,10 +177,8 @@
         })) + '<div style="height:14px"></div>';
       }
       if (show !== "web" && (org.socials || []).length) {
-        html += heading("Social channels") + grid(org.socials.map(function (s) {
-          var p = plat(s.platform);
-          return link(s.url, p.color, p.name, s.handle || pretty(s.url));
-        }));
+        html += heading("Social channels") +
+          groupByPlatform(org.socials, plat, order).map(platformBlock).join("");
       }
       html += '<div style="font:400 11px/1.4 system-ui,sans-serif;color:' + C.muted +
         ';margin-top:14px;opacity:.75;">Official channels · kept up to date automatically</div>';
