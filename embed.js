@@ -6,6 +6,7 @@
  * Optional attributes:
  *   data-theme="light|dark"   colour scheme (default light)
  *   data-show="all|social|web"  which blocks to render (default all)
+ *   data-group="region|platform|language"  what the blocks are (default region)
  *   data-title="false"        hide the organization name
  *
  * Renders read-only. All styles are inline so nothing clashes with the host page.
@@ -22,7 +23,9 @@
   var orgId = script.getAttribute("data-org") || "";
   var dark  = (script.getAttribute("data-theme") || "light") === "dark";
   var show  = script.getAttribute("data-show") || "all";
+  var group = script.getAttribute("data-group") || "region";
   var wantTitle = script.getAttribute("data-title") !== "false";
+  if (["region", "platform", "language"].indexOf(group) === -1) group = "region";
 
   var base = "";
   try { base = new URL(script.src, location.href).origin; } catch (e) { base = ""; }
@@ -89,54 +92,131 @@
       C.muted + ';margin:0 0 9px;">' + esc(t) + '</div>';
   }
 
-  /* The widget mirrors the directory itself: one block per platform, its channels
-     listed by language inside. Grouping happens here rather than server-side so an
-     embed on an old page picks the new shape up the moment this file is redeployed. */
-  function groupByPlatform(socials, plat, order) {
-    var groups = [], index = {};
-    socials.forEach(function (s) {
-      var p = plat(s.platform);
-      if (!(p.id in index)) { index[p.id] = groups.length; groups.push({ platform: p, items: [] }); }
-      groups[index[p.id]].items.push(s);
+  /* Region names come out of the browser rather than off the wire — Intl already knows all
+     ~250 of them offline, so the widget stays a single file with no data to ship or refresh. */
+  var REGION = null;
+  try { REGION = new Intl.DisplayNames(["en"], { type: "region", fallback: "none" }); } catch (e) {}
+  function regionName(code) {
+    var cc = String(code || "").trim().toUpperCase();
+    if (!cc) return "";
+    var nm = "";
+    try { nm = (REGION && REGION.of(cc)) || ""; } catch (e) {}
+    return nm || cc;
+  }
+  /* an image, not an emoji flag: Windows ships no flag glyphs, so 🇻🇳 renders there as "VN" */
+  function flag(code) {
+    var cc = String(code || "").trim().toLowerCase();
+    if (!/^[a-z]{2}$/.test(cc)) return "";
+    return '<img src="https://flagcdn.com/w40/' + cc + '.png" alt="" loading="lazy" ' +
+      'style="width:19px;height:14px;flex:none;object-fit:cover;border-radius:2px;display:block;">';
+  }
+
+  /* The widget mirrors the directory itself: one block per region, its channels listed by
+     language inside. Grouping happens here rather than server-side, so an embed on an old
+     page picks the new shape up the moment this file is redeployed. */
+  var DIMS = {
+    region:   { key: function (s) { return String(s.region || "").trim().toUpperCase(); } },
+    language: { key: function (s) { return String(s.language || "").trim(); } },
+    platform: { key: function (s) { return s.platform || ""; } },
+  };
+  var SUBDIM = { region: "language", language: "region", platform: "region" };
+
+  function bucket(list, dim) {
+    var out = [], index = {};
+    list.forEach(function (s) {
+      var k = DIMS[dim].key(s);
+      if (!(k in index)) { index[k] = out.length; out.push({ value: k, items: [] }); }
+      out[index[k]].items.push(s);
     });
+    return out;
+  }
+  /* named values first and alphabetical; the unset ones sink to the bottom of every list */
+  function sortBy(list, label) {
+    return list.sort(function (a, b) {
+      var x = label(a.value), y = label(b.value);
+      if (!x !== !y) return x ? -1 : 1;
+      return String(x).localeCompare(String(y));
+    });
+  }
+
+  function cluster(socials, mode, plat, order) {
+    var sub = SUBDIM[mode];
     var rank = function (id) { var i = order.indexOf(id); return i < 0 ? 9e3 : i; };
-    groups.sort(function (a, b) { return rank(a.platform.id) - rank(b.platform.id); });
+    var label = function (dim) {
+      return dim === "region" ? regionName
+        : dim === "platform" ? function (v) { return plat(v).name; }
+        : function (v) { return v; };
+    };
+    var groups = bucket(socials, mode);
+    if (mode === "platform") groups.sort(function (a, b) { return rank(a.value) - rank(b.value); });
+    else sortBy(groups, label(mode));
+
     groups.forEach(function (g) {
-      g.items.sort(function (x, y) {
-        var a = String(x.language || "").trim(), b = String(y.language || "").trim();
-        if (!a !== !b) return a ? -1 : 1;
-        return a.localeCompare(b);
+      g.sections = sortBy(bucket(g.items, sub), label(sub));
+      g.sections.forEach(function (sec) {
+        sec.items.sort(function (x, y) { return rank(x.platform) - rank(y.platform); });
       });
     });
     return groups;
   }
 
-  /* Platform names and languages are free text, and this widget renders on somebody else's
-     page where we control nothing about the available width. Every text cell therefore caps
-     its own width and ellipsises, so one long value can never crowd out the link beside it
-     or get hard-clipped by the block's own overflow:hidden. */
+  /* Platform names, languages and country names are all free-width, and this widget renders on
+     somebody else's page where we control nothing about the space available. Every text cell
+     therefore caps its own width and ellipsises, so one long value can never crowd out the
+     link beside it or get hard-clipped by the block's own overflow:hidden. */
   var CLIP = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
 
-  function platformBlock(g) {
+  function block(g, mode, plat) {
+    var sub = SUBDIM[mode];
+    var head, dot = "";
+    if (mode === "region") {
+      head = regionName(g.value) || "No region";
+      dot = flag(g.value);
+    } else if (mode === "platform") {
+      var p = plat(g.value);
+      head = p.name;
+      dot = '<span style="width:9px;height:9px;flex:none;border-radius:3px;background:' +
+        esc(p.color || "#64748b") + ';"></span>';
+    } else {
+      head = g.value || "No language";
+    }
+
+    var body = g.sections.map(function (sec) {
+      var band = "";
+      /* one section is the whole block — its own band would only repeat the heading */
+      if (g.sections.length > 1) {
+        var t = sub === "region" ? (regionName(sec.value) || "No region") : (sec.value || "No language");
+        band = '<div style="display:flex;align-items:center;gap:7px;padding:7px 11px;' +
+          'border-top:1px solid ' + C.line + ';background:' + C.card + ';">' +
+          (sub === "region" ? flag(sec.value) : "") +
+          '<span style="min-width:0;flex:1;' + CLIP + 'font:700 11px/1.3 system-ui,sans-serif;color:' + C.muted + ';">' +
+            esc(t) + '</span>' +
+          '<span style="flex:none;font:700 11px/1 system-ui,sans-serif;color:' + C.muted + ';">' + sec.items.length + '</span>' +
+          '</div>';
+      }
+      return band + sec.items.map(function (s) {
+        /* whichever dimension the heading and the band have not already named */
+        var lead = (sub === "language" || mode === "language") ? plat(s.platform).name
+                 : String(s.language || "").trim();
+        return '<a href="' + esc(safeUrl(s.url)) + '" target="_blank" rel="noopener noreferrer nofollow" ' +
+          'style="all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:8px 11px;' +
+          'border-top:1px solid ' + C.line + ';box-sizing:border-box;">' +
+            '<span style="flex:none;min-width:74px;max-width:40%;' + CLIP +
+              'font:600 12px/1.35 system-ui,sans-serif;color:' + (lead ? C.text : C.muted) + ';">' +
+              esc(lead || "—") + '</span>' +
+            '<span style="min-width:0;flex:1;' + CLIP + 'font:400 12px/1.35 system-ui,sans-serif;color:' + C.muted + ';">' +
+              esc(s.handle || pretty(s.url)) + '</span>' +
+          '</a>';
+      }).join("");
+    }).join("");
+
     return '<div style="margin-bottom:10px;border:1px solid ' + C.line + ';border-radius:12px;overflow:hidden;">' +
         '<div style="display:flex;align-items:center;gap:9px;padding:9px 11px;border-bottom:1px solid ' + C.line + ';">' +
-          '<span style="width:9px;height:9px;flex:none;border-radius:3px;background:' + esc(g.platform.color || "#64748b") + ';"></span>' +
+          dot +
           '<span style="min-width:0;flex:1;' + CLIP + 'font:700 13px/1.3 system-ui,sans-serif;color:' + C.text + ';">' +
-            esc(g.platform.name) + '</span>' +
+            esc(head) + '</span>' +
           '<span style="flex:none;font:700 11px/1 system-ui,sans-serif;color:' + C.muted + ';">' + g.items.length + '</span>' +
-        '</div>' +
-        g.items.map(function (s) {
-          var lang = String(s.language || "").trim();
-          return '<a href="' + esc(safeUrl(s.url)) + '" target="_blank" rel="noopener noreferrer nofollow" ' +
-            'style="all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:8px 11px;' +
-            'border-top:1px solid ' + C.line + ';box-sizing:border-box;">' +
-              '<span style="flex:none;min-width:74px;max-width:40%;' + CLIP +
-                'font:600 12px/1.35 system-ui,sans-serif;color:' + (lang ? C.text : C.muted) + ';">' +
-                esc(lang || "—") + '</span>' +
-              '<span style="min-width:0;flex:1;' + CLIP + 'font:400 12px/1.35 system-ui,sans-serif;color:' + C.muted + ';">' +
-                esc(s.handle || pretty(s.url)) + '</span>' +
-            '</a>';
-        }).join("") +
+        '</div>' + body +
       '</div>';
   }
 
@@ -177,8 +257,13 @@
         })) + '<div style="height:14px"></div>';
       }
       if (show !== "web" && (org.socials || []).length) {
+        /* Region-grouped is the default, but an org that has not filled any region in would
+           get one nameless block holding everything — fall back to platform for those. */
+        var mode = group;
+        if (mode === "region" && !org.socials.some(function (s) { return String(s.region || "").trim(); }))
+          mode = "platform";
         html += heading("Social channels") +
-          groupByPlatform(org.socials, plat, order).map(platformBlock).join("");
+          cluster(org.socials, mode, plat, order).map(function (g) { return block(g, mode, plat); }).join("");
       }
       html += '<div style="font:400 11px/1.4 system-ui,sans-serif;color:' + C.muted +
         ';margin-top:14px;opacity:.75;">Official channels · kept up to date automatically</div>';

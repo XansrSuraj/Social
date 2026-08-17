@@ -12,6 +12,15 @@ a teammate's browser all show the same thing.
 
 - **Unlimited per organization** — any number of websites and social channels, including several
   pages on the same platform
+- **Region and language, kept apart** — every channel carries a country *and* a language, because
+  they are two different facts: Singapore runs four languages, Spanish runs across twenty
+  countries. Channels cluster by **Region › Language** by default, and one click regroups them by
+  platform or by language instead
+- **Countries and languages come from a dataset, not a list you maintain** — 250 countries, the
+  languages each one speaks, and its continent are fetched once and cached for a month. Choose
+  Vietnam and the language fills itself in as Vietnamese; choose Thailand and it becomes Thai
+- **Three-tier filtering** — area (continent) → region → language, each tier counting only what
+  the tier above it left, so every number on a chip is what clicking it actually gives you
 - **Shared cloud storage** — one Supabase row holds the whole directory; every device sees the same data
 - **Server-verified admin password** — the password is a Vercel environment variable, never in the
   browser and never in the repo. Writes are rejected without it
@@ -44,6 +53,23 @@ Front-end libraries load from a CDN and are all **optional** — if they're bloc
 works with text fallbacks: [Lucide](https://lucide.dev) (icons),
 [Simple Icons](https://simpleicons.org) (brand logos), [GSAP](https://gsap.com) (animation),
 [qrcodejs](https://github.com/davidshimjs/qrcodejs) (QR). `prefers-reduced-motion` is respected.
+
+### The country / language catalog
+
+Countries, their languages and their continents come from
+[`countries-list`](https://www.npmjs.com/package/countries-list) on jsDelivr — three JSON files,
+about 45 KB, fetched once and cached in `localStorage` for 30 days. No API key, nothing to
+maintain, and three fallbacks behind it so the directory is never uneditable:
+
+1. the cached copy, however old it is
+2. `Intl.DisplayNames` — every modern browser can already name all ~250 regions and every
+   language with no network at all; only the country⇒language mapping is missing, and a small
+   built-in alias table covers the common markets
+3. a short built-in language list
+
+Flags are images from [flagcdn.com](https://flagcdn.com) with the ISO code underneath as the
+fallback — **not** emoji, because Windows ships no country-flag glyphs and would render 🇻🇳 as
+a bare "VN".
 
 ---
 
@@ -116,7 +142,12 @@ HTTPS is automatic.
 |---|---|
 | `data-theme="dark"` | dark colours |
 | `data-show="social"` | only social channels (`"web"` = only websites) |
+| `data-group="platform"` | one block per platform (`"region"` is the default, `"language"` also works) |
 | `data-title="false"` | hide the organization name |
+
+The widget mirrors the directory: a block per region with its languages banded inside. It needs
+no catalog of its own — region names come from the browser's `Intl.DisplayNames`. An organization
+with no regions filled in falls back to platform blocks by itself.
 
 Grab the ready-made snippet from the **Embed** button on any organization.
 
