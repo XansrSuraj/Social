@@ -188,6 +188,10 @@ aside{position:sticky;top:82px}
 .tb-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .tb-l{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--tx3);font-weight:750;flex:none}
 .tb-n{margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2);font-weight:650}
+/* why the grouping on screen is not the one the switch says */
+.tb-fb{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--tx3);line-height:1.5;padding-top:5px}
+.tb-fb svg{width:14px;height:14px;flex:none;margin-top:2px;color:var(--amb)}
+.tb-fb b{color:var(--tx2)}
 .seg.gb button{display:inline-flex;align-items:center;gap:5px}
 .seg.gb button svg{width:13px;height:13px;opacity:.75}
 .seg.gb button.on svg{color:var(--a1);opacity:1}
@@ -1124,6 +1128,12 @@ function continentsOf(list){
 const languagesOf = o => facet(o.socials, "language").map(x => ({ lang:x.v, n:x.n }));
 const regionsOf   = o => facet(o.socials, "region");
 
+/* The grouping actually used for one organization. Region leads by default, but an
+   organization with nothing but empty regions would render as a single nameless card holding
+   every channel it has — strictly less than the platform view it replaced. Until somebody
+   fills a region in, fall back and say so rather than showing that card. */
+const effMode = o => (groupMode === "region" && !o.socials.some(s => regOf(s))) ? "platform" : groupMode;
+
 /* "Copy all" mirrors exactly what the page shows, in whatever grouping is on screen */
 function orgAsText(o){
   const out = [o.name];
@@ -1132,12 +1142,13 @@ function orgAsText(o){
     o.websites.forEach(w => out.push("  " + (w.label || pretty(w.url)) + " — " + safeUrl(w.url)));
   }
   if(o.socials.length){
-    out.push("", "SOCIAL CHANNELS  (by " + groupMode + ")");
-    clusters(o.socials, groupMode).forEach(g => {
-      out.push("", DIM[groupMode].label(g.value).toUpperCase());
+    const gm = effMode(o);
+    out.push("", "SOCIAL CHANNELS  (by " + gm + ")");
+    clusters(o.socials, gm).forEach(g => {
+      out.push("", DIM[gm].label(g.value).toUpperCase());
       g.sections.forEach(sec => {
         const many = g.sections.length > 1;
-        if(many) out.push("  " + DIM[SUBDIM[groupMode]].label(sec.value));
+        if(many) out.push("  " + DIM[SUBDIM[gm]].label(sec.value));
         sec.items.forEach(x => out.push((many ? "    " : "  ") +
           platform(x.platform).name + (x.handle ? " · " + x.handle : "") + " — " + safeUrl(x.url)));
       });
@@ -2389,6 +2400,7 @@ function renderMain(o, tot){
   const allLangs = languagesOf(o), allRegs = regionsOf(o);
   const nrNoReg = (allRegs.find(x => !x.v) || { n:0 }).n;
   const filtered = contFilter !== null || regFilter !== null || langFilter !== null;
+  const gm = effMode(o);                                // may differ from groupMode — see effMode
 
   const chip = (on, attr, val, label, n, lead) =>
     `<button class="lc ${on ? "on" : ""}" data-${attr}="${esc(val)}" title="${esc(label)}">${lead || ""}
@@ -2405,13 +2417,17 @@ function renderMain(o, tot){
       <div class="tb-top">
         <span class="tb-l">Group by</span>
         <div class="seg gb" id="gb">${GROUPS.map(g => `<button data-gb="${g.id}"
-          class="${groupMode === g.id ? "on" : ""}"><i data-lucide="${g.icon}"></i>${g.label}</button>`).join("")}</div>
+          class="${gm === g.id ? "on" : ""}"><i data-lucide="${g.icon}"></i>${g.label}</button>`).join("")}</div>
         <span class="tb-n">
           <span>${shown.length === o.socials.length ? `All ${o.socials.length} channels`
             : `${shown.length} of ${o.socials.length} channels`}</span>
           ${filtered ? `<button class="b g s" id="clrf"><i data-lucide="filter-x"></i> Clear</button>` : ""}
         </span>
       </div>
+      ${gm !== groupMode ? `<div class="frow"><span class="fl">Region</span><span class="tb-fb">
+        <i data-lucide="info"></i><span>No channel here has a region yet, so these are grouped by platform.
+        ${unlocked ? `<b style="display:inline">Settings</b> can work most of them out from the
+          channel's own domain, note or language.` : "An admin can fill them in."}</span></span></div>` : ""}
       ${tier("Area", "cont", contFilter, o.socials.length,
         conts.map(x => chip(contFilter === x.v, "cont", x.v, contName(x.v), x.n)))}
       ${tier("Region", "reg", regFilter, afterCont.length,
@@ -2425,10 +2441,10 @@ function renderMain(o, tot){
      The outer group names one dimension, the sub-band names a second, and each row carries
      whichever single dimension is left over. Region leads by default and is the sub-band
      under the other two, so it is never more than one level from the top. */
-  const sub = SUBDIM[groupMode];
+  const sub = SUBDIM[gm];
 
   const rowLead = x => {
-    if(sub === "language" || groupMode === "language"){
+    if(sub === "language" || gm === "language"){
       /* language is already accounted for above the row — show the platform instead */
       const p = platform(x.platform);
       return `<span class="plt"><span class="chip" style="--c:${esc(p.color)}">${
@@ -2447,11 +2463,13 @@ function renderMain(o, tot){
     const n = g.items.length, nsub = g.sections.length;
     const chans = `${n} channel${n === 1 ? "" : "s"}`;
     /* With one section there is no band inside the card to name it, so the header says it
-       instead — otherwise a Vietnam card full of Vietnamese never mentions Vietnamese. */
+       instead — otherwise a Vietnam card full of Vietnamese never mentions Vietnamese. An
+       unset one is worth no words at all: "No region · 2 channels" on every card of a
+       directory that has no regions yet is a fact already stated once, above the whole list. */
     const line = nsub === 1
-      ? `${subLabel(g.sections[0].value)} · ${chans}`
+      ? (g.sections[0].value ? `${subLabel(g.sections[0].value)} · ${chans}` : chans)
       : `${chans} · ${nsub} ${sub}s`;
-    if(groupMode === "region"){
+    if(gm === "region"){
       const cc = g.value;
       /* the continent is only known when the catalog loaded — without it, no dangling "· " */
       const area = cc ? contName(continentOf(cc)) : "";
@@ -2460,7 +2478,7 @@ function renderMain(o, tot){
         title:cc ? regionName(cc) : NO_REG,
         sub:(area ? area + " · " : "") + line };
     }
-    if(groupMode === "platform"){
+    if(gm === "platform"){
       const p = platform(g.value);
       return { color:p.color, mark:`<span class="chip lgc">${iconOf(p.icon, initials(p.name))}</span>`,
                title:p.name, sub:line };
@@ -2484,7 +2502,7 @@ function renderMain(o, tot){
       <span class="t${v ? "" : " none"}">${esc(v || NO_LANG)}</span><span class="n">${n}</span></div>`;
   };
 
-  const socGroups = clusters(shown, groupMode).map(g => {
+  const socGroups = clusters(shown, gm).map(g => {
     const h = groupHead(g);
     return `
     <div class="pg" style="--c:${esc(h.color)}">
