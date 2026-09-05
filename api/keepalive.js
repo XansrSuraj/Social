@@ -36,6 +36,40 @@ function safeEqual(a, b) {
   return crypto.timingSafeEqual(x, y);
 }
 
+/* One rolling snapshot per weekday: 101 = Sunday … 107 = Saturday. */
+const SLOT_BASE = 101;
+
+async function snap() {
+  const r = await fetch(
+    `${SB_URL}/rest/v1/${TABLE}?id=eq.${ROW_ID}&select=data,updated_at`,
+    { headers: { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY, Accept: "application/json" } }
+  );
+  if (!r.ok) throw new Error("read for snapshot failed (" + r.status + ")");
+  const rows = await r.json();
+  const live = Array.isArray(rows) && rows[0] ? rows[0].data : null;
+
+  /* Never let an empty directory become the backup. A wipe — a bad import, a Reset, an
+     overwrite — is exactly the thing these snapshots exist to undo, and copying it over them
+     every night for a week would quietly destroy the only way back. */
+  const orgs = (live && Array.isArray(live.orgs)) ? live.orgs.length : 0;
+  if (!orgs) return { ok: false, skipped: "live directory is empty — snapshot refused" };
+
+  const channels = live.orgs.reduce((n, o) => n + ((o.socials || []).length), 0);
+  const slot = SLOT_BASE + new Date().getUTCDay();
+  const w = await fetch(`${SB_URL}/rest/v1/${TABLE}`, {
+    method: "POST",
+    headers: {
+      apikey: SB_KEY,
+      Authorization: "Bearer " + SB_KEY,
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates",
+    },
+    body: JSON.stringify([{ id: slot, data: live, updated_at: new Date().toISOString() }]),
+  });
+  if (!w.ok) throw new Error("snapshot write failed (" + w.status + "): " + (await w.text()).slice(0, 200));
+  return { ok: true, slot, orgs, channels };
+}
+
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store, max-age=0");
 
@@ -82,11 +116,26 @@ module.exports = async (req, res) => {
     }
     const rows = await r.json();
     const row = Array.isArray(rows) ? rows[0] : null;
+
+    /* Same visit, second job: keep a week of daily snapshots.
+       They live in the same table under ids 101-107, one per weekday, so today overwrites the
+       copy from this day last week and the window rotates itself with no cleanup and no
+       migration. /api/data only ever reads and writes id=1, so it never sees them.
+       Failure here is not failure of the keep-alive — the ping has already done its job by the
+       time we get to this line, and reporting it as down would send somebody hunting a database
+       that is demonstrably awake. */
+    let snapshot = null;
+    if (row) {
+      try { snapshot = await snap(); }
+      catch (e) { snapshot = { ok: false, error: String((e && e.message) || e) }; }
+    }
+
     return res.status(200).json({
       ok: true,
       ms,
       pingedAt: new Date().toISOString(),
       updatedAt: row ? row.updated_at : null,
+      snapshot,
       note: row ? "database awake" : "database awake, row 1 not created yet",
     });
   } catch (err) {

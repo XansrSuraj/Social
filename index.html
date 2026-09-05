@@ -121,6 +121,10 @@ header{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:11px
 .sync.warn{color:var(--amb);border-color:color-mix(in srgb,var(--amb) 40%,transparent)}
 .sync.warn .d{background:var(--amb)}
 .sync.busy .d{background:var(--a1);animation:pulse 1s ease-in-out infinite}
+.sync.bad{color:var(--red);border-color:color-mix(in srgb,var(--red) 45%,transparent);
+  background:color-mix(in srgb,var(--red) 10%,transparent)}
+.sync.bad .d{background:var(--red);box-shadow:0 0 0 3px color-mix(in srgb,var(--red) 22%,transparent);
+  animation:pulse 1.6s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.25}}
 
 /* ═══════════════ layout ═══════════════ */
@@ -347,6 +351,8 @@ body:not(.si-ok) .chip i.si{display:none}
 .note{display:flex;align-items:flex-start;gap:10px;padding:12px 15px;border-radius:var(--rm);font-size:13.5px;line-height:1.55;
   background:color-mix(in srgb,var(--a1) 8%,transparent);border:1px solid color-mix(in srgb,var(--a1) 24%,transparent)}
 .note.warn{background:color-mix(in srgb,var(--amb) 10%,transparent);border-color:color-mix(in srgb,var(--amb) 34%,transparent)}
+.note.bad{background:color-mix(in srgb,var(--red) 9%,transparent);border-color:color-mix(in srgb,var(--red) 34%,transparent)}
+.note.bad svg{color:var(--red)}
 .note svg{width:16px;height:16px;flex:none;margin-top:2px;color:var(--a1)}
 .note.warn svg{color:var(--amb)}
 .note .b{margin-left:auto;flex:none}
@@ -953,18 +959,85 @@ try{ const h = JSON.parse(localStorage.getItem(HKEY) || "{}"); if(h && typeof h 
 const saveHealth = () => { try{ localStorage.setItem(HKEY, JSON.stringify(health)); }catch(e){} };
 
 /* ═══════════════════ cloud layer ═══════════════════ */
+/* The last directory the cloud actually handed us, kept per browser.
+   It exists for one reason: when the database cannot be reached, an empty page is a lie.
+   The data is still there, so anyone who has opened the site before should keep seeing it —
+   read-only, clearly labelled, and never mistaken for something they are allowed to edit.
+   Deliberately a different key from LKEY: local-mode data can be uploaded to the cloud, and
+   this must never end up anywhere near that path. */
+const CKEY = "orghub.lastgood.v1";
+function saveLastGood(updatedAt){
+  try{
+    localStorage.setItem(CKEY, JSON.stringify({ at:Date.now(), updatedAt, data:cloudPayload() }));
+  }catch(e){}                                         // a full quota must never break a save
+}
+function readLastGood(){
+  try{
+    const c = JSON.parse(localStorage.getItem(CKEY) || "null");
+    return (c && c.data && Array.isArray(c.data.orgs)) ? c : null;
+  }catch(e){ return null; }
+}
+
+/* Distinguishes the two failures that used to look identical:
+     backend:true   the server answered, its database did not  -> an outage
+     backend:false  we never reached the server at all         -> could be either  */
 async function pull(){
-  const r = await fetch("api/data", { cache:"no-store" });
-  const j = await r.json();
-  if(!j.ok) throw new Error(j.error || "read failed");
+  let j;
+  try{
+    const r = await fetch("api/data", { cache:"no-store" });
+    j = await r.json();
+  }catch(e){
+    throw Object.assign(new Error(String(e.message || e)), { backend:false });
+  }
+  if(!j.ok) throw Object.assign(new Error(j.error || "read failed"), { backend:true });
   cloud.configured = !!j.configured;
   cloud.adminReady = !!j.adminReady;
   if(j.configured){
-    cloud.mode = "cloud"; cloud.updatedAt = j.updatedAt || null;
+    cloud.mode = "cloud"; cloud.updatedAt = j.updatedAt || null; cloud.error = null;
     state = normalize(j.data);
+    saveLastGood(cloud.updatedAt);
   }else{
     cloud.mode = "local"; state = readLocal();
   }
+}
+
+/* A cold Supabase answers 521 for a few seconds before it is properly up, and a phone changing
+   networks drops one request. Neither is an outage, so do not present them as one — three
+   quick tries before the page commits to saying anything is wrong. */
+async function pullWithRetry(tries){
+  let last;
+  for(let i = 0; i < (tries || 3); i++){
+    try{ await pull(); return null; }
+    catch(e){
+      last = e;
+      if(i < (tries || 3) - 1) await new Promise(r => setTimeout(r, 700 * Math.pow(2, i)));
+    }
+  }
+  return last;
+}
+
+/* Everything the page needs to know about an unreachable database, decided in one place. */
+function goOffline(err){
+  const cached = readLastGood();
+  cloud.mode = "offline";
+  cloud.error = String((err && err.message) || err || "unreachable");
+  if(cached){
+    state = normalize(cached.data);
+    cloud.updatedAt = cached.updatedAt || null;
+    cloud.cachedAt = cached.at || null;
+  }else{
+    state = blank();
+    cloud.updatedAt = cloud.cachedAt = null;
+  }
+}
+
+/* Used by the Retry button and by the automatic re-check. Returns true once the cloud is back. */
+async function tryReconnect(){
+  const err = await pullWithRetry(2);
+  if(err){ goOffline(err); render(); return false; }
+  if(cloud.mode === "cloud"){ setUnlocked(false); toast("Database is back · showing live data", "cloud"); }
+  render();
+  return true;
 }
 
 /* GET /api/data is public, so the row must never carry the local password hash —
@@ -977,6 +1050,13 @@ function cloudPayload(){
 }
 
 async function persist(){
+  /* Offline means the cloud holds the real directory and we cannot see it. Writing to browser
+     storage here would build up a shadow copy that Settings would later offer to "upload to
+     cloud" — replacing 54 live channels with whatever was typed during the outage. */
+  if(cloud.mode === "offline"){
+    toast("Database is offline — nothing can be changed until it is back", "cloud-off");
+    return false;
+  }
   if(cloud.mode !== "cloud"){ writeLocal(); return true; }
   cloud.saving = true; cloud.error = null; paintSync();
   try{
@@ -1466,6 +1546,26 @@ function setUnlocked(v){
 }
 function lockUI(){
   if(unlocked){ setUnlocked(false); toast("Locked — the page is read-only now", "lock"); return; }
+  if(cloud.mode === "offline"){
+    openModal(`
+      <div class="mh"><h3><i data-lucide="cloud-off"></i>Database is offline</h3>${X}</div>
+      <div class="mb"><div class="note warn"><i data-lucide="info"></i><span>Editing is disabled until the
+        database is reachable again — not because anything is lost, but because a change saved now
+        could not be written to it, and a copy built up here could later overwrite the real
+        directory.<br><br><b>Nothing has been deleted.</b> ${cloud.cachedAt
+          ? "The page is showing the last copy this browser received."
+          : "This browser has no copy to show."}</span></div></div>
+      <div class="mf"><button class="b" data-close>Close</button>
+        <button class="b p" id="rc"><i data-lucide="refresh-cw"></i> Try again</button></div>`, { focus:null });
+    const rc = mo.querySelector("#rc");
+    rc.onclick = async () => {
+      rc.disabled = true; rc.innerHTML = `<i data-lucide="loader"></i> Checking…`; icons(rc);
+      if(await tryReconnect()) return closeModal();
+      rc.disabled = false; rc.innerHTML = `<i data-lucide="refresh-cw"></i> Try again`; icons(rc);
+      toast("Still cannot reach the database", "cloud-off");
+    };
+    return;
+  }
   if(cloud.mode === "cloud" && !cloud.adminReady){
     return openModal(`
       <div class="mh"><h3><i data-lucide="triangle-alert"></i>Admin password not set</h3>${X}</div>
@@ -1973,6 +2073,79 @@ function platformForm(pid, back){
   mo.querySelectorAll("[name=name],[name=color],[name=logo]").forEach(el => el.oninput = repaint);
 }
 
+/* The daily copies /api/keepalive leaves behind. Restoring one is a full overwrite, so it goes
+   through the same PUT that every other save uses — password, conflict check and all — and the
+   confirm shows both sides of the trade rather than asking an abstract question. */
+async function snapshotsModal(){
+  openModal(`
+    <div class="mh"><h3><i data-lucide="history"></i>Daily snapshots</h3>${X}</div>
+    <div class="mb"><div id="snaplist" class="hint">Loading…</div></div>
+    <div class="mf"><button class="b" data-close>Close</button></div>`, { wide:true, focus:null });
+
+  const box = mo.querySelector("#snaplist");
+  let list = [];
+  try{
+    const r = await fetch("api/snapshots", { cache:"no-store" });
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error || "could not read snapshots");
+    list = j.snapshots || [];
+  }catch(e){
+    box.innerHTML = `<div class="note warn"><i data-lucide="triangle-alert"></i><span>
+      Could not read the snapshots: ${esc(String(e.message || e))}</span></div>`;
+    return icons(box);
+  }
+
+  const live = state.orgs.reduce((a, o) => a + o.socials.length, 0);
+  box.className = "";
+  box.innerHTML = !list.length
+    ? `<div class="empty"><div class="e"><i data-lucide="history"></i></div><b>No snapshots yet</b>
+       The first one is written by the nightly job. Nothing is missing — this only means it has
+       not run since the feature went live.</div>`
+    : `<div class="hint" style="margin:0 0 12px">Live right now: <b style="color:var(--tx)">${state.orgs.length}</b>
+         organization(s) · <b style="color:var(--tx)">${live}</b> channel(s). Restoring replaces all of it.</div>`
+      + list.map(x => `<div class="pr" style="gap:12px">
+          <span style="flex:1;min-width:0">
+            <span style="display:block;font-weight:650;font-size:13.5px">${esc(x.day)}
+              <span style="color:var(--tx3);font-weight:500">· ${esc(new Date(x.updatedAt).toLocaleString())}</span></span>
+            <span style="display:block;font-size:12px;color:var(--tx2)">${x.orgs} org(s) · ${x.channels} channel(s)${
+              x.channels === live ? "" : ` · <b style="color:var(--amb)">${x.channels > live ? "+" : ""}${x.channels - live}</b> vs live`}</span>
+          </span>
+          <button class="b s" data-restore="${x.slot}"><i data-lucide="rotate-ccw"></i> Restore</button>
+        </div>`).join("");
+  icons(box);
+
+  box.querySelectorAll("[data-restore]").forEach(b => b.onclick = async () => {
+    const slot = b.dataset.restore, meta = list.find(x => String(x.slot) === String(slot));
+    b.disabled = true;
+    let snap;
+    try{
+      const r = await fetch("api/snapshots?slot=" + encodeURIComponent(slot), { cache:"no-store" });
+      const j = await r.json();
+      if(!j.ok) throw new Error(j.error || "could not read that snapshot");
+      snap = j;
+    }catch(e){ b.disabled = false; return toast(String(e.message || e), "triangle-alert"); }
+
+    const ok = await confirmBox("Restore this snapshot?",
+      `<div class="note bad" style="margin-bottom:12px"><i data-lucide="triangle-alert"></i><span>
+         This <b>replaces the live directory for everyone</b>. Anything added since
+         ${esc(new Date(meta.updatedAt).toLocaleString())} is lost.</span></div>
+       <table style="width:100%;font-size:13.5px;line-height:2">
+         <tr><td style="color:var(--tx2)">Live now</td>
+             <td align="right"><b>${state.orgs.length}</b> orgs · <b>${live}</b> channels</td></tr>
+         <tr><td style="color:var(--tx2)">${esc(meta.day)}'s snapshot</td>
+             <td align="right"><b>${meta.orgs}</b> orgs · <b>${meta.channels}</b> channels</td></tr>
+       </table>
+       <div class="hint">Export a backup first if you are unsure — tonight's snapshot will
+         overwrite this same weekday's copy.</div>`);
+    if(!ok){ b.disabled = false; return; }
+
+    state = normalize(snap.data);
+    selected = state.orgs.length ? state.orgs[0].id : null;
+    closeModal();
+    await commit(`Restored ${meta.day}'s snapshot`, "rotate-ccw");
+  });
+}
+
 function settingsModal(){
   const s = state.settings;
   const localCount = (() => { try{ const d = JSON.parse(localStorage.getItem(LKEY) || "null"); return d && d.orgs ? d.orgs.length : 0; }catch(e){ return 0; } })();
@@ -2053,6 +2226,9 @@ function settingsModal(){
           ? `<button class="b s" id="regeo"><i data-lucide="refresh-cw"></i> Refresh</button>` : ""}</div>
       <div class="sr"><div><div class="t1">Check every link</div><div class="d1">Test all websites and channels of all orgs</div></div>
         <button class="b s" id="ck"><i data-lucide="link-2"></i> Run check</button></div>
+      ${cloud.mode === "cloud" ? `<div class="sr"><div><div class="t1">Daily snapshots</div>
+        <div class="d1" id="snapd">A copy of the whole directory is kept for each of the last seven days</div></div>
+        <button class="b s" id="snapb"><i data-lucide="history"></i> View</button></div>` : ""}
       <div class="sr"><div><div class="t1">Backup</div><div class="d1">Download or restore everything as JSON</div></div>
         <div style="display:flex;gap:8px"><button class="b s" id="ex"><i data-lucide="download"></i> Export</button>
           <button class="b s" id="im"><i data-lucide="upload"></i> Import</button></div></div>
@@ -2126,6 +2302,7 @@ function settingsModal(){
     closeModal(); await commit("Settings saved", "check");
   };
   const setupBtn = mo.querySelector("#setup"); if(setupBtn) setupBtn.onclick = setupModal;
+  const snb = mo.querySelector("#snapb"); if(snb) snb.onclick = snapshotsModal;
   mo.querySelector("#pw").onclick = () => passwordModal(false);
   const fx = mo.querySelector("#fixlang");
   if(fx) fx.onclick = async () => {
@@ -2186,9 +2363,23 @@ function settingsModal(){
   const push = mo.querySelector("#push");
   if(push) push.onclick = async () => {
     const local = readLocal();
-    if(!await confirmBox("Upload local data to the cloud?",
-      `<b>${local.orgs.length}</b> organization(s) from this browser will replace the
-       <b>${state.orgs.length}</b> currently in the cloud.`, false)) return;
+    const lc = local.orgs.reduce((n2, o) => n2 + o.socials.length, 0);
+    const cc = state.orgs.reduce((n2, o) => n2 + o.socials.length, 0);
+    /* This is the only action in the app that can wipe a live directory in one click, and the
+       shape that does it is exactly the one an outage produces: a nearly empty browser copy
+       sitting next to a full cloud one. Refuse it outright rather than asking nicely. */
+    if(lc < cc){
+      return toast(`Refused: this browser has ${lc} channel(s), the cloud has ${cc}`, "shield-alert");
+    }
+    if(!await confirmBox("Replace the cloud directory?",
+      `<div class="note bad" style="margin-bottom:12px"><i data-lucide="triangle-alert"></i><span>
+         This <b>overwrites</b> what everyone else sees. It cannot be undone from here.</span></div>
+       <table style="width:100%;font-size:13.5px;line-height:2">
+         <tr><td style="color:var(--tx2)">In the cloud now</td>
+             <td align="right"><b>${state.orgs.length}</b> orgs · <b>${cc}</b> channels</td></tr>
+         <tr><td style="color:var(--tx2)">This browser will replace it with</td>
+             <td align="right"><b>${local.orgs.length}</b> orgs · <b>${lc}</b> channels</td></tr>
+       </table>`)) return;
     state = local; closeModal(); await commit("Uploaded to the cloud", "cloud-upload");
   };
   mo.querySelector("#ex").onclick = () => {
@@ -2232,6 +2423,12 @@ function paintSync(){
   if(!el) return;
   let cls = "sync", txt = "Local only", tip = "Data is saved in this browser only";
   if(cloud.saving){ cls += " busy"; txt = "Saving…"; tip = "Writing to the cloud"; }
+  else if(cloud.mode === "offline"){
+    cls += " bad"; txt = "Database offline";
+    tip = "The directory is safe in the database — this deployment just cannot reach it right now. "
+        + (cloud.cachedAt ? "Showing the last copy this browser received, from "
+            + new Date(cloud.cachedAt).toLocaleString() + "." : "Nothing cached in this browser yet.");
+  }
   else if(cloud.error){ cls += " warn"; txt = "Not saved"; tip = cloud.error; }
   else if(cloud.mode === "cloud"){ cls += " on"; txt = "Cloud"; tip = "Shared across all devices" + (cloud.updatedAt ? " · saved " + new Date(cloud.updatedAt).toLocaleString() : ""); }
   else{ cls += " warn"; }
@@ -2327,10 +2524,25 @@ function renderMain(o, tot){
   const m = document.getElementById("main");
   if(!m) return;
 
-  const setupBanner = (cloud.mode === "local" && location.protocol.startsWith("http"))
-    ? `<div class="note warn"><i data-lucide="cloud-off"></i><span><b>Not shared yet.</b> Data is saved only in
-        this browser, so your phone and your teammates see nothing. Connect a free database to fix it.</span>
-        <button class="b s p" id="setupB">Set up</button></div>` : "";
+  /* Three states that used to share one banner. "Not shared yet" is only true when the server
+     itself reports no database configured — saying it during an outage tells somebody their
+     directory was never saved anywhere, which is both false and frightening. */
+  const setupBanner =
+    cloud.mode === "offline"
+      ? `<div class="note bad"><i data-lucide="cloud-off"></i><span>
+          <b>The database cannot be reached right now — nothing has been deleted.</b><br>
+          ${cloud.cachedAt
+            ? "Below is the last copy this browser received, from <b>"
+              + esc(new Date(cloud.cachedAt).toLocaleString()) + "</b>. It is read-only."
+            : "This browser has no earlier copy to show, so the page is empty — the directory itself is not."}
+          <br><span style="color:var(--tx3)">If this is a free Supabase project it may have been paused;
+          restoring it in the Supabase dashboard brings everything straight back.</span></span>
+          <button class="b s p" id="retryB"><i data-lucide="refresh-cw"></i> Try again</button></div>`
+    : (cloud.mode === "local" && location.protocol.startsWith("http"))
+      ? `<div class="note warn"><i data-lucide="cloud-off"></i><span><b>Not shared yet.</b> Data is saved only in
+          this browser, so your phone and your teammates see nothing. Connect a free database to fix it.</span>
+          <button class="b s p" id="setupB">Set up</button></div>`
+    : "";
 
   if(!o){
     m.innerHTML = setupBanner + `<div class="card" style="padding:56px 24px">
@@ -2602,6 +2814,11 @@ function renderMain(o, tot){
   icons(m); wireLogos(m);
 
   const sb = m.querySelector("#setupB"); if(sb) sb.onclick = setupModal;
+  const rb = m.querySelector("#retryB");
+  if(rb) rb.onclick = async () => {
+    rb.disabled = true; rb.innerHTML = `<i data-lucide="loader"></i> Checking…`; icons(rb);
+    if(!await tryReconnect()) toast("Still cannot reach the database", "cloud-off");
+  };
   m.querySelector("#qr").onclick = () => qrModal(o);
   m.querySelector("#emb").onclick = () => embedModal(o);
   m.querySelector("#chk").onclick = () => checkLinks(o);
@@ -2700,8 +2917,15 @@ icons(document.body);
      renders as its bare code ("VN"), which is still the truth, just less of it. */
   const geoReady = loadGeo().catch(e => { try{ geoFromIntl(); }catch(e2){} });
 
-  try{ await pull(); }
-  catch(e){ cloud.mode = "local"; state = readLocal(); }
+  /* A failed read has two very different meanings and used to have one outcome. If the server
+     answered and only its database is down, this is an outage: keep the last copy we were given
+     and say so. Falling back to browser storage there would show an empty page and invite
+     somebody to type the whole directory back in. */
+  const bootErr = await pullWithRetry(3);
+  if(bootErr){
+    if(bootErr.backend || readLastGood()) goOffline(bootErr);
+    else { cloud.mode = "local"; state = readLocal(); }
+  }
 
   unlocked = false;                                   // always start locked
   sessionStorage.setItem("orghub.unlocked", "0");
@@ -2718,6 +2942,18 @@ icons(document.body);
      already played, and replaying it here would make the page visibly stutter for anyone
      whose catalog happened to arrive a moment after their data did. */
   geoReady.then(() => { quiet = true; render(); quiet = false; });
+
+  /* A paused Supabase comes back minutes after somebody restores it, and a laptop that was shut
+     while offline wakes with a stale page. Neither should need a manual refresh, so poll gently
+     while offline and check again the moment the tab is looked at or the network returns. */
+  let recon = null;
+  const recheck = async () => {
+    if(cloud.mode !== "offline" || document.hidden) return;
+    if(await tryReconnect() && recon){ clearInterval(recon); recon = null; }
+  };
+  recon = setInterval(recheck, 60e3);
+  document.addEventListener("visibilitychange", () => { if(!document.hidden) recheck(); });
+  addEventListener("online", recheck);
 })();
 })();
 </script>

@@ -34,11 +34,17 @@ a teammate's browser all show the same thing.
 - **Deep links** — `#/<org-id>` opens a specific organization
 - **Customizable** — site name, 7 accent themes + custom colour, light/dark, and your own social
   platforms with your own brand colours
+- **Survives an outage** — the last directory the cloud handed over is kept per browser, so if
+  the database is unreachable the page still shows it, clearly labelled and read-only, instead of
+  an empty screen that reads like everything was deleted. It retries by itself and recovers
+  without a refresh
+- **Daily snapshots** — a copy of the whole directory for each of the last seven days, written by
+  the same nightly job, restorable from Settings
 - **JSON export / import** for backups
 
 ## Stack
 
-Static HTML + CSS + vanilla JS, plus four tiny Vercel serverless functions.
+Static HTML + CSS + vanilla JS, plus five tiny Vercel serverless functions.
 **No npm dependencies** — the API talks to Supabase over plain REST.
 
 | | |
@@ -47,7 +53,8 @@ Static HTML + CSS + vanilla JS, plus four tiny Vercel serverless functions.
 | `api/data.js` | `GET` read state · `PUT` write state (needs `x-admin-key`) |
 | `api/auth.js` | `POST` verify the admin password (constant-time compare) |
 | `api/check.js` | `POST` link health probe |
-| `api/keepalive.js` | `GET` nightly read that stops Supabase pausing the project |
+| `api/keepalive.js` | `GET` nightly read that stops Supabase pausing the project, and writes that day's snapshot |
+| `api/snapshots.js` | `GET` list the daily snapshots, or read one back |
 | `embed.js` | the embeddable widget |
 
 Front-end libraries load from a CDN and are all **optional** — if they're blocked the app still
@@ -193,6 +200,46 @@ guard in `/api/data` compares against exactly that — a nightly write would han
 
 If you would rather not depend on this at all, [Upstash Redis](https://upstash.com) has no pause
 and the same REST-only integration style.
+
+## When the database is unreachable
+
+An outage and "no database configured yet" used to look identical: **Local only** in the header
+over an empty page, with a banner inviting you to connect a database. That is alarming and wrong —
+the directory is in Postgres the whole time.
+
+They are now separate states:
+
+| | Badge | What the page shows |
+|---|---|---|
+| Configured, reachable | **Cloud** | the live directory |
+| Configured, **unreachable** | **Database offline** (red) | the last copy this browser received, read-only, with a **Try again** button |
+| Genuinely not configured | **Local only** | the setup banner, as before |
+
+While offline the app **refuses to write anything** — admin cannot be unlocked and `persist()`
+returns early. That is not caution for its own sake. Browser-storage edits made during an outage
+would accumulate into a shadow directory, and Settings would later offer to **Upload to cloud** —
+replacing the live directory with whatever was typed while the database was away. That upload is
+now also refused outright whenever the browser holds fewer channels than the cloud.
+
+Recovery needs no refresh: three retries with backoff on load, then a check every minute, on tab
+focus, and on the `online` event.
+
+## Restoring a snapshot
+
+Settings → **Daily snapshots** lists what is available with each day's organization and channel
+counts and how they differ from what is live. Restoring goes through the same authenticated `PUT`
+as any other save, and the confirmation shows both sides before it overwrites anything.
+
+The snapshots live in the same table as the live directory, under ids 101–107, one per weekday —
+so today's copy overwrites this day last week and the window rotates itself with no cleanup and no
+migration. `/api/data` only ever touches id 1, so it never sees them.
+
+Two things worth knowing:
+
+- The job **refuses to snapshot an empty directory**. A wipe is exactly what these exist to undo,
+  and copying it over them nightly would destroy the only way back.
+- It is a **seven-day rolling window**. A bad change that goes unnoticed for a week will have
+  reached every slot. For anything you cannot afford to lose, take a JSON export as well.
 
 ## Local development
 
