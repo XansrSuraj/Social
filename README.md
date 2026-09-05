@@ -38,7 +38,7 @@ a teammate's browser all show the same thing.
 
 ## Stack
 
-Static HTML + CSS + vanilla JS, plus three tiny Vercel serverless functions.
+Static HTML + CSS + vanilla JS, plus four tiny Vercel serverless functions.
 **No npm dependencies** — the API talks to Supabase over plain REST.
 
 | | |
@@ -47,6 +47,7 @@ Static HTML + CSS + vanilla JS, plus three tiny Vercel serverless functions.
 | `api/data.js` | `GET` read state · `PUT` write state (needs `x-admin-key`) |
 | `api/auth.js` | `POST` verify the admin password (constant-time compare) |
 | `api/check.js` | `POST` link health probe |
+| `api/keepalive.js` | `GET` nightly read that stops Supabase pausing the project |
 | `embed.js` | the embeddable widget |
 
 Front-end libraries load from a CDN and are all **optional** — if they're blocked the app still
@@ -165,11 +166,33 @@ Grab the ready-made snippet from the **Embed** button on any organization.
 - If a save fails, the app says **Not saved** in the header and toasts the error — the change is
   still on screen but not stored. Retry once you're back online.
 
-## Free-tier caveat
+## Keeping the database awake
 
-Supabase pauses a free project after ~7 days with no activity; open the Supabase dashboard to
-resume it. A directory in daily use never hits this. If it becomes annoying,
-[Upstash Redis](https://upstash.com) has no pause and the same REST-only integration style.
+Supabase pauses a free project after ~7 days without activity. A paused project takes the whole
+directory offline: `/api/data` cannot reach Postgres, the app falls back to browser storage, and
+the header reads **Local only** over an empty page — which looks exactly like the data has been
+deleted. It has not; restoring the project in the Supabase dashboard brings it all back.
+
+Opening the site is not activity on its own. The page is static and only `/api/data` talks to
+Postgres, so a week in which nobody happens to open the directory is a week of silence.
+
+`api/keepalive.js` removes that dependency on somebody visiting. A Vercel cron calls it once a
+day (`vercel.json`) and it makes the cheapest real query there is — one indexed row, one small
+column, never the `data` column that holds the whole directory. Seven pings per pause window is
+a wide margin.
+
+It is a **read**, deliberately. A write would move `updated_at`, and the optimistic-concurrency
+guard in `/api/data` compares against exactly that — a nightly write would hand a spurious
+"changed on another device" conflict to anyone who happened to be mid-edit.
+
+| | |
+|---|---|
+| Schedule | `0 6 * * *` — 06:00 UTC daily. Vercel's Hobby plan runs cron jobs once a day, which is all this needs |
+| `CRON_SECRET` | optional. Set it and the endpoint requires `Authorization: Bearer <secret>`, which Vercel Cron sends automatically. Leave it unset and the endpoint stays open — it returns a timestamp and no data |
+| Check it | `curl https://YOUR-SITE.vercel.app/api/keepalive` → `{"ok":true,"ms":…,"updatedAt":…}`. Vercel → Project → **Cron Jobs** shows the run history |
+
+If you would rather not depend on this at all, [Upstash Redis](https://upstash.com) has no pause
+and the same REST-only integration style.
 
 ## Local development
 
