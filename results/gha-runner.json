@@ -1,11 +1,11 @@
 {
-  "ip": "52.176.137.221",
-  "city": "Des Moines",
-  "region": "Iowa",
+  "ip": "13.71.231.35",
+  "city": "Cheyenne",
+  "region": "Wyoming",
   "country": "US",
-  "loc": "41.6005,-93.6091",
+  "loc": "41.1400,-104.8203",
   "org": "AS8075 Microsoft Corporation",
-  "postal": "50309",
-  "timezone": "America/Chicago",
+  "postal": "82001",
+  "timezone": "America/Denver",
   "readme": "https://ipinfo.io/missingauth"
 }
