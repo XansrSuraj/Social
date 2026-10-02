@@ -1,6 +1,7 @@
 # Free-scraper experiments on a GitHub-hosted runner: a datacenter IP (unlike a home connection)
-# and a network where TikTok is reachable. Runs every experiment, then commits the scored results
-# (results/gha-*) back to this branch. Commits made with GITHUB_TOKEN do not start another run.
+# and a network where TikTok is reachable. lab-run.txt lists which experiments a push runs; the
+# scored results (results/gha-*) are committed back to this branch. Commits made with
+# GITHUB_TOKEN do not start another run.
 name: free-scraper-lab
 on:
   push:
@@ -12,7 +13,7 @@ concurrency: { group: free-scraper-lab, cancel-in-progress: true }
 jobs:
   experiments:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 55
     env:
       LAB_PREFIX: gha-
       PYTHONIOENCODING: utf-8
@@ -22,32 +23,47 @@ jobs:
         with: { node-version: 22 }
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
+      - name: Which experiments to run (lab-run.txt)
+        id: cfg
+        run: echo "run=$(tr '\n' ' ' < lab-run.txt)" >> "$GITHUB_OUTPUT"
       - name: Where is this runner (IP owner, country)
         run: curl -s https://ipinfo.io/json -o results/gha-runner.json || true; cat results/gha-runner.json || true
-      - name: Node deps + Playwright Chromium
+      - name: Node deps + Playwright browsers
         working-directory: node
         run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium firefox webkit
       - name: "Exp 1 · Crawlee (HTTP + browser)"
+        if: contains(steps.cfg.outputs.run, 'exp1')
         working-directory: node
         run: timeout 900 node exp1-crawlee.mjs both 2>&1 | tee ../results/gha-exp1.log || true
       - name: "Exp 2 · Playwright (plain / stealth / real Chrome)"
+        if: contains(steps.cfg.outputs.run, 'exp2')
         working-directory: node
         run: timeout 1200 node exp2-playwright.mjs all 2>&1 | tee ../results/gha-exp2.log || true
       - name: "Exp 5 · Instagram profile embed (plain HTTP)"
+        if: contains(steps.cfg.outputs.run, 'exp5')
         working-directory: node
         run: timeout 120 node exp5-ig-embed.mjs 2>&1 | tee ../results/gha-exp5.log || true
-      - name: "Exp 6 · TikTok — every free route"
+      - name: "Exp 6 · TikTok, every free route"
+        if: contains(steps.cfg.outputs.run, 'exp6')
         working-directory: node
         run: timeout 600 node exp6-tiktok.mjs 2>&1 | tee ../results/gha-exp6.log || true
       - name: "Exp 7 · X with Firefox and WebKit"
+        if: contains(steps.cfg.outputs.run, 'exp7')
         working-directory: node
         run: timeout 300 node exp7-x-engines.mjs 2>&1 | tee ../results/gha-exp7.log || true
+      - name: "Exp 8 · the free readers, 5 rounds (reliability)"
+        if: contains(steps.cfg.outputs.run, 'exp8')
+        working-directory: node
+        run: timeout 1500 node exp8-free-stack.mjs 5 150 2>&1 | tee ../results/gha-exp8.log || true
       - name: Python deps
+        if: contains(steps.cfg.outputs.run, 'exp3') || contains(steps.cfg.outputs.run, 'exp4')
         run: pip install --quiet selenium scrapy
       - name: "Exp 3 · Selenium (real Chrome)"
+        if: contains(steps.cfg.outputs.run, 'exp3')
         working-directory: python
         run: timeout 900 python exp3_selenium.py 2>&1 | tee ../results/gha-exp3.log || true
       - name: "Exp 4 · Scrapy (plain HTTP)"
+        if: contains(steps.cfg.outputs.run, 'exp4')
         working-directory: python
         run: timeout 300 python exp4_scrapy.py 2>&1 | tee ../results/gha-exp4.log || true
       - name: Commit results back to this branch
@@ -56,4 +72,5 @@ jobs:
           git config user.email "free-scraper-lab@users.noreply.github.com"
           git add results/gha-* || true
           git commit -m "results from GitHub Actions run ${{ github.run_number }} [skip ci]" || exit 0
+          git pull --rebase -q || true
           git push
