@@ -39,6 +39,38 @@ on 100 % of posts**.
    Apify — can see it. Only a logged-in session (an adult account) can.
 7. **TikTok cannot be tested from this network** (Indian ISPs block it at the TCP level).
 
-## Round 2 — GitHub Actions (datacenter IP, TikTok reachable)
+## Round 2 — GitHub Actions (Microsoft datacenter, US — the same kind of IP as Vercel)
 
-_Running — results land in `results/gha-*.json` / `.log`._
+| Channel | Browser tools (Crawlee / Playwright / Selenium) | Free side door, plain HTTP |
+|---|---|---|
+| Facebook ×2 | ✅ 6/6 | ✅ 6/6 — `/reels/` page + browser headers |
+| Instagram `sportsfc.vn` | ❌ redirected to login | ✅ 6/6 — `instagram.com/<user>/embed/` (feed widget) |
+| Instagram `sportsfc.fans` | ❌ | ❌ 18+ wall (needs a logged-in adult session, or remove the restriction) |
+| TikTok `@sportsfc.vn` | ❌ profile served with empty post lists | ✅ 6/6 — `tiktok.com/embed/@<user>` (creator widget), captions included |
+| X `Sportsfcvn` | ❌ "Performing security verification" (Chrome, Firefox, WebKit alike) | ❌ none found |
+
+## Round 3 — reliability (5 rounds, 2.5 min apart, GitHub Actions, plain fetch only)
+
+| Channel | Full recall | Time per read |
+|---|---|---|
+| Facebook `sportsfc.vn` | 5/5 | ~1.3 s |
+| Facebook `Sportsfc.fans` | 5/5 | ~1.1 s |
+| Instagram `sportsfc.vn` | 5/5 | ~0.8 s |
+| TikTok `@sportsfc.vn` | 5/5 | ~0.6 s |
+
+Every read: exact timestamps and captions on 100 % of posts. No browser, no login, no paid service.
+
+## Conclusion
+
+- **Free, server-side, no browser:** Facebook ×2, Instagram `sportsfc.vn`, TikTok — plain `fetch()`
+  that fits in the existing Vercel function. This is ~88 % of the Apify bill.
+- **Instagram `sportsfc.fans`:** free the moment its 18+ restriction is removed (the embed then works
+  like `sportsfc.vn`); otherwise only a logged-in adult session can read it (`node/login.mjs`).
+- **X:** free only from a home connection (real Chrome); from any datacenter it is bot-walled.
+  Apify reads it for ~$0.001 per check (~$0.03 a month) — not worth fighting.
+- **Tools:** Crawlee / Playwright / Selenium / Scrapy all got identical answers once they presented
+  the same request; the winners need none of them — the side doors are plain HTTP.
+- **Dead ends:** tikwm and other mirrors (Cloudflare), TikTok profile page from a datacenter
+  (empty lists), X from a datacenter with any engine.
+- **Caveat:** side doors are undocumented; any platform can change them. Keep Apify as the fallback
+  when a free read fails, so a change costs a few cents instead of a blank report.
