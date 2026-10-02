@@ -1,0 +1,385 @@
+{
+ "_about": "What each channel really had, read 2026-10-02 by Apify (and, for the age-restricted IG account, by the extension). Every free experiment is scored against this.",
+ "channels": {
+  "yt-vn": {
+   "platform": "youtube",
+   "target": "UCOn89EhBv7qavXWvXFKw1FA",
+   "source": "youtube data api (free, control)",
+   "posts": [
+    {
+     "id": "xtjnvK92tGU",
+     "ts": "2026-10-02T12:53:34.000Z",
+     "text": "https://sfc.my/r/DU0I0ruN ⚔️ Pháp có thể xuyên thủng bức tường phòng ngự của Ý? Ai sẽ là n",
+     "permalink": "https://www.youtube.com/shorts/xtjnvK92tGU"
+    },
+    {
+     "id": "dLVSepXn8xk",
+     "ts": "2026-10-02T11:02:13.000Z",
+     "text": "https://sfc.my/r/4cBRTJB0 🔥 3 trận đấu, 3 kịch bản hấp dẫn! Bạn sẽ chọn phe nào? 👀 📊 SP",
+     "permalink": "https://www.youtube.com/shorts/dLVSepXn8xk"
+    },
+    {
+     "id": "7-qv9wASbgo",
+     "ts": "2026-10-02T05:05:07.000Z",
+     "text": "https://sfc.my/r/nHfBaR4W ⚔️ Bỉ có thể phá vỡ bức tường phòng ngự của Thổ Nhĩ Kỳ? 🔥 📊 SP",
+     "permalink": "https://www.youtube.com/shorts/7-qv9wASbgo"
+    },
+    {
+     "id": "lC_t2PMMMIs",
+     "ts": "2026-10-02T00:03:08.000Z",
+     "text": "https://sfc.my/r/M7wZrIlr Liệu Việt Nam có đánh bại Pakistan? 🔥 📊 SPORTSFC.FANS 🏆 FIFA ",
+     "permalink": "https://www.youtube.com/shorts/lC_t2PMMMIs"
+    },
+    {
+     "id": "GbhH4A8fyFY",
+     "ts": "2026-10-01T15:01:54.000Z",
+     "text": "https://sfc.my/r/AgMzqPSM Liệu Bồ Đào Nha có thể thắng khi thiếu vắng Ronaldo? 👀 📊 SPORT",
+     "permalink": "https://www.youtube.com/shorts/GbhH4A8fyFY"
+    },
+    {
+     "id": "WqzFsjjnSeY",
+     "ts": "2026-10-01T13:09:02.000Z",
+     "text": "https://sfc.my/r/5B9ELZBu ⚔️ Hy Lạp có thể phá vỡ bức tường phòng ngự của Hà Lan? Ai sẽ là",
+     "permalink": "https://www.youtube.com/shorts/WqzFsjjnSeY"
+    },
+    {
+     "id": "VZYfC4XnWBQ",
+     "ts": "2026-10-01T11:03:23.000Z",
+     "text": "https://sfc.my/r/tVEuUrWz Đan Mạch có thể khuất phục Bồ Đào Nha trên sân nhà? 🔥 📊 SPORTS",
+     "permalink": "https://www.youtube.com/shorts/VZYfC4XnWBQ"
+    },
+    {
+     "id": "IM_HAktq7Yc",
+     "ts": "2026-10-01T07:09:59.000Z",
+     "text": "https://sfc.my/r/U1NFa4Lb AI MỚI LÀ GOAT BÓNG ĐÁ QUỐC TẾ? 146 BÀN THẮNG. 192 PHA GÂY SÁT T",
+     "permalink": "https://www.youtube.com/shorts/IM_HAktq7Yc"
+    }
+   ]
+  },
+  "tg-vn": {
+   "platform": "telegram",
+   "target": "sportsfc_vn",
+   "source": "t.me/s preview (free, control)",
+   "posts": [
+    {
+     "id": "sportsfc_vn/478",
+     "ts": "2026-10-02T12:53:39+00:00",
+     "text": "https://sfc.my/r/ybwIoCmx ⚔️ Pháp có thể phá vỡ bức tường phòng ngự của Ý? 🔥 👉 Xem phân ",
+     "permalink": "https://t.me/sportsfc_vn/478"
+    },
+    {
+     "id": "sportsfc_vn/477",
+     "ts": "2026-10-02T11:01:06+00:00",
+     "text": "https://sfc.my/r/lpxSDbpH 🔥 3 trận đấu, 3 kịch bản hấp dẫn! Bạn sẽ chọn phe nào? 👀 📊 SP",
+     "permalink": "https://t.me/sportsfc_vn/477"
+    },
+    {
+     "id": "sportsfc_vn/476",
+     "ts": "2026-10-02T05:01:24+00:00",
+     "text": "https://sfc.my/r/Nos5BtKq ⚔️ Bỉ có thể phá vỡ bức tường phòng ngự của Thổ Nhĩ Kỳ? 🔥 👉 Xe",
+     "permalink": "https://t.me/sportsfc_vn/476"
+    },
+    {
+     "id": "sportsfc_vn/475",
+     "ts": "2026-10-02T00:02:53+00:00",
+     "text": "https://sfc.my/r/QG19pbk3 Liệu Vietnam có thể đánh bại Pakistan? 🔥 👉 Xem đầy đủ nhận địn",
+     "permalink": "https://t.me/sportsfc_vn/475"
+    },
+    {
+     "id": "sportsfc_vn/474",
+     "ts": "2026-10-01T15:04:33+00:00",
+     "text": "https://sfc.my/r/mydZeD9x Liệu Bồ Đào Nha có thể thắng khi thiếu vắng Ronaldo? 👀 👉 Xem p",
+     "permalink": "https://t.me/sportsfc_vn/474"
+    },
+    {
+     "id": "sportsfc_vn/473",
+     "ts": "2026-10-01T13:09:39+00:00",
+     "text": "https://sfc.my/r/LQhPz0to ⚔️ Hy Lạp có thể phá vỡ bức tường phòng ngự của Hà Lan? 🔥 👉 Xe",
+     "permalink": "https://t.me/sportsfc_vn/473"
+    },
+    {
+     "id": "sportsfc_vn/472",
+     "ts": "2026-10-01T11:00:32+00:00",
+     "text": "https://sfc.my/r/IPLKpPYP Đan Mạch có thể khuất phục Bồ Đào Nha trên sân nhà? 🔥 📊 SPORTS",
+     "permalink": "https://t.me/sportsfc_vn/472"
+    },
+    {
+     "id": "sportsfc_vn/471",
+     "ts": "2026-10-01T07:09:46+00:00",
+     "text": "https://sfc.my/r/ssZSPqCD AI MỚI LÀ GOAT BÓNG ĐÁ QUỐC TẾ? 146 BÀN THẮNG. 192 PHA GÂY SÁT T",
+     "permalink": "https://t.me/sportsfc_vn/471"
+    }
+   ]
+  },
+  "x-vn": {
+   "platform": "x",
+   "target": "Sportsfcvn",
+   "source": "apify xquik/x-tweet-scraper",
+   "posts": [
+    {
+     "id": "2106004528071905449",
+     "ts": "2026-10-02T12:53:01.000Z",
+     "text": "https://t.co/xqpM0sIMyD ⚔️ Pháp có thể phá vỡ bức tường phòng ngự của Ý? 🔥 👉 Xem phân tí",
+     "permalink": "https://x.com/Sportsfcvn/status/2106004528071905449"
+    },
+    {
+     "id": "2105885992318087665",
+     "ts": "2026-10-02T05:02:00.000Z",
+     "text": "https://t.co/gCVPJ8nKIG ⚔️ Bỉ có thể phá vỡ bức tường phòng ngự của Thổ Nhĩ Kỳ? 🔥 👉 Xem ",
+     "permalink": "https://x.com/Sportsfcvn/status/2105885992318087665"
+    },
+    {
+     "id": "2105810600811008313",
+     "ts": "2026-10-02T00:02:25.000Z",
+     "text": "https://t.co/a0CvwRCVRO Liệu Vietnam có thể đánh bại Pakistan? 🔥 👉 Xem đầy đủ nhận định ",
+     "permalink": "https://x.com/Sportsfcvn/status/2105810600811008313"
+    },
+    {
+     "id": "2105674626218999872",
+     "ts": "2026-10-01T15:02:07.000Z",
+     "text": "https://t.co/lyjRTr4493 Liệu Bồ Đào Nha có thể thắng khi thiếu vắng Ronaldo? 👀 👉 Xem phâ",
+     "permalink": "https://x.com/Sportsfcvn/status/2105674626218999872"
+    },
+    {
+     "id": "2105646225139568827",
+     "ts": "2026-10-01T13:09:15.000Z",
+     "text": "https://t.co/W5C4RlTxnq ⚔️ Hy Lạp có thể phá vỡ bức tường phòng ngự của Hà Lan? 🔥 👉 Xem ",
+     "permalink": "https://x.com/Sportsfcvn/status/2105646225139568827"
+    },
+    {
+     "id": "2105613970769948760",
+     "ts": "2026-10-01T11:01:05.000Z",
+     "text": "https://t.co/NgSU1pxAtg Đan Mạch có thể khuất phục Bồ Đào Nha? Cuộc so tài hứa hẹn bùng nổ",
+     "permalink": "https://x.com/Sportsfcvn/status/2105613970769948760"
+    }
+   ]
+  },
+  "ig-vn": {
+   "platform": "instagram",
+   "target": "sportsfc.vn",
+   "source": "apify instagram-post-scraper",
+   "posts": [
+    {
+     "id": "Dd_hwMhigc-",
+     "ts": "2026-10-02T12:53:00.000Z",
+     "text": "⚔️ Pháp có thể xuyên thủng bức tường phòng ngự của Ý? Ai sẽ là người làm chủ trận đấu? 📊 ",
+     "permalink": "https://www.instagram.com/p/Dd_hwMhigc-/"
+    },
+    {
+     "id": "Dd_VRVUCYo6",
+     "ts": "2026-10-02T11:03:37.000Z",
+     "text": "🔥 3 trận đấu, 3 kịch bản hấp dẫn! Bạn sẽ chọn phe nào? 👀 📊 SPORTSFC.FANS 1️⃣ Bỉ 🆚 Thổ ",
+     "permalink": "https://www.instagram.com/p/Dd_VRVUCYo6/"
+    },
+    {
+     "id": "Dd-sCTEjAWY",
+     "ts": "2026-10-02T05:03:33.000Z",
+     "text": "⚔️ Bỉ có thể phá vỡ bức tường phòng ngự của Thổ Nhĩ Kỳ? 🔥 📊 SPORTSFC.FANS 🏆 UEFA Nation",
+     "permalink": "https://www.instagram.com/p/Dd-sCTEjAWY/"
+    },
+    {
+     "id": "Dd-JfKACUl3",
+     "ts": "2026-10-02T00:01:50.000Z",
+     "text": "Liệu Việt Nam có đánh bại Pakistan? 🔥 📊 SPORTSFC.FANS 🏆 FIFA ASEAN Cup 2026 📅 2 tháng ",
+     "permalink": "https://www.instagram.com/p/Dd-JfKACUl3/"
+    },
+    {
+     "id": "Dd9L7wgjuPG",
+     "ts": "2026-10-01T15:03:48.000Z",
+     "text": "Liệu Bồ Đào Nha có thể thắng khi thiếu vắng Ronaldo? 👀 📊 SPORTSFC.FANS 🏆 UEFA Nations L",
+     "permalink": "https://www.instagram.com/p/Dd9L7wgjuPG/"
+    },
+    {
+     "id": "Dd8-0amk0D4",
+     "ts": "2026-10-01T13:09:11.000Z",
+     "text": "⚔️ Hy Lạp có thể phá vỡ bức tường phòng ngự của Hà Lan? Ai sẽ là người làm chủ trận đấu? \ud83d",
+     "permalink": "https://www.instagram.com/p/Dd8-0amk0D4/"
+    }
+   ]
+  },
+  "fb-vn": {
+   "platform": "facebook",
+   "target": "sportsfc.vn",
+   "source": "apify facebook-reels-scraper",
+   "posts": [
+    {
+     "id": "2007732463267140",
+     "ts": "2026-10-02T12:52:30.000Z",
+     "text": "",
+     "permalink": "https://facebook.com/reel/2007732463267140/"
+    },
+    {
+     "id": "959363987217030",
+     "ts": "2026-10-02T11:00:31.000Z",
+     "text": "",
+     "permalink": "https://facebook.com/reel/959363987217030/"
+    },
+    {
+     "id": "4549471491992423",
+     "ts": "2026-10-02T05:00:53.000Z",
+     "text": "",
+     "permalink": "https://facebook.com/reel/4549471491992423/"
+    },
+    {
+     "id": "2227536321129573",
+     "ts": "2026-10-02T00:00:31.000Z",
+     "text": "",
+     "permalink": "https://facebook.com/reel/2227536321129573/"
+    },
+    {
+     "id": "28882575384696229",
+     "ts": "2026-10-01T15:01:03.000Z",
+     "text": "",
+     "permalink": "https://facebook.com/reel/28882575384696229/"
+    },
+    {
+     "id": "1445274677473891",
+     "ts": "2026-10-01T13:06:40.000Z",
+     "text": "",
+     "permalink": "https://facebook.com/reel/1445274677473891/"
+    }
+   ]
+  },
+  "fb-fans": {
+   "platform": "facebook",
+   "target": "Sportsfc.fans",
+   "source": "apify facebook-reels-scraper",
+   "posts": [
+    {
+     "id": "1974721379875837",
+     "ts": "2026-10-02T12:50:54.000Z",
+     "text": "",
+     "permalink": "https://facebook.com/reel/1974721379875837/"
+    },
+    {
+     "id": "1824450225667128",
+     "ts": "2026-10-02T11:02:07.000Z",
+     "text": "",
+     "permalink": "https://facebook.com/reel/1824450225667128/"
+    },
+    {
+     "id": "4474237812834884",
+     "ts": "2026-10-02T07:20:11.000Z",
+     "text": "",
+     "permalink": "https://facebook.com/reel/4474237812834884/"
+    },
+    {
+     "id": "1987476621942300",
+     "ts": "2026-10-02T05:02:41.000Z",
+     "text": "",
+     "permalink": "https://facebook.com/reel/1987476621942300/"
+    },
+    {
+     "id": "1579396900051676",
+     "ts": "2026-10-02T00:03:40.000Z",
+     "text": "",
+     "permalink": "https://facebook.com/reel/1579396900051676/"
+    },
+    {
+     "id": "1082496914643966",
+     "ts": "2026-10-01T15:00:28.000Z",
+     "text": "",
+     "permalink": "https://facebook.com/reel/1082496914643966/"
+    }
+   ]
+  },
+  "tt-vn": {
+   "platform": "tiktok",
+   "target": "sportsfc.vn",
+   "source": "apify clockworks/tiktok-scraper",
+   "posts": [
+    {
+     "id": "7692052842718301473",
+     "ts": "2026-10-02T12:53:18.000Z",
+     "text": "https://sfc.my/r/nv6ucWwT ⚔️ Pháp có thể xuyên thủng bức tường phòng ngự của Ý? Ai sẽ là n",
+     "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7692052842718301473"
+    },
+    {
+     "id": "7692023997462039841",
+     "ts": "2026-10-02T11:01:25.000Z",
+     "text": "https://sfc.my/r/Eq8EHaOs 🔥 3 trận đấu, 3 kịch bản hấp dẫn! Bạn sẽ chọn phe nào? 👀 📊 SP",
+     "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7692023997462039841"
+    },
+    {
+     "id": "7691931180924554528",
+     "ts": "2026-10-02T05:01:16.000Z",
+     "text": "https://sfc.my/r/mwIc9SXW ⚔️ Bỉ có thể phá vỡ bức tường phòng ngự của Thổ Nhĩ Kỳ? 🔥 📊 SP",
+     "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691931180924554528"
+    },
+    {
+     "id": "7691854002618731808",
+     "ts": "2026-10-02T00:01:55.000Z",
+     "text": "https://sfc.my/r/5NO7c7BT Liệu Việt Nam có đánh bại Pakistan? 🔥 📊 SPORTSFC.FANS 🏆 FIFA ",
+     "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691854002618731808"
+    },
+    {
+     "id": "7691715406117014816",
+     "ts": "2026-10-01T15:03:52.000Z",
+     "text": "https://sfc.my/r/WgYDnD0F Liệu Bồ Đào Nha có thể thắng khi thiếu vắng Ronaldo? 👀 📊 SPORT",
+     "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691715406117014816"
+    },
+    {
+     "id": "7691686402760756513",
+     "ts": "2026-10-01T13:11:21.000Z",
+     "text": "https://sfc.my/r/0A2yZ1In ⚔️ Hy Lạp có thể phá vỡ bức tường phòng ngự của Hà Lan? Ai sẽ là",
+     "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691686402760756513"
+    }
+   ]
+  },
+  "ig-fans": {
+   "platform": "instagram",
+   "target": "sportsfc.fans",
+   "source": "chrome extension (Apify cannot see this age-restricted account)",
+   "posts": [
+    {
+     "id": "Dd_hrO6FbEB",
+     "ts": "2026-10-02T12:52:12.000Z",
+     "text": "0 likes, 0 comments - sportsfc.fans on October 2, 2026: \"⚔️ Can France break Italy's defen",
+     "permalink": "https://www.instagram.com/reel/Dd_hrO6FbEB/"
+    },
+    {
+     "id": "Dd_VLRekuvs",
+     "ts": "2026-10-02T11:03:01.000Z",
+     "text": "3 likes, 0 comments - sportsfc.fans on October 2, 2026: \"🔥 3 matches. 3 predictions. Who ",
+     "permalink": "https://www.instagram.com/reel/Dd_VLRekuvs/"
+    },
+    {
+     "id": "Dd-7wa0iFaa",
+     "ts": "2026-10-02T07:20:54.000Z",
+     "text": "8 likes, 2 comments - sportsfc.fans on October 2, 2026: \"IS PORTUGAL BETTER WITHOUT RONALD",
+     "permalink": "https://www.instagram.com/reel/Dd-7wa0iFaa/"
+    },
+    {
+     "id": "Dd-sUXcEzY_",
+     "ts": "2026-10-02T05:05:54.000Z",
+     "text": "2 likes, 0 comments - sportsfc.fans on October 1, 2026: \"⚔️ Can Belgium break Turkiye's de",
+     "permalink": "https://www.instagram.com/reel/Dd-sUXcEzY_/"
+    },
+    {
+     "id": "Dd-JkP9kR35",
+     "ts": "2026-10-02T00:02:21.000Z",
+     "text": "1 likes, 0 comments - sportsfc.fans on October 1, 2026: \"Can Vietnam defeat Pakistan? 🔥 \ud83d",
+     "permalink": "https://www.instagram.com/reel/Dd-JkP9kR35/"
+    },
+    {
+     "id": "Dd9L0IkFR1i",
+     "ts": "2026-10-01T15:02:44.000Z",
+     "text": "1 likes, 0 comments - sportsfc.fans on October 1, 2026: \"Can Portugal win without Ronaldo?",
+     "permalink": "https://www.instagram.com/reel/Dd9L0IkFR1i/"
+    },
+    {
+     "id": "Dd8-sA1jUky",
+     "ts": "2026-10-01T13:08:02.000Z",
+     "text": "1 likes, 0 comments - sportsfc.fans on October 1, 2026: \"⚔️ Can Greece break Netherlands's",
+     "permalink": "https://www.instagram.com/reel/Dd8-sA1jUky/"
+    },
+    {
+     "id": "Dd8wRsZCgao",
+     "ts": "2026-10-01T11:02:06.000Z",
+     "text": "4 likes, 0 comments - sportsfc.fans on October 1, 2026: \"Can Denmark defeat Portugal? 🔥 \ud83d",
+     "permalink": "https://www.instagram.com/reel/Dd8wRsZCgao/"
+    }
+   ]
+  }
+ }
+}

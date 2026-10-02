@@ -1,0 +1,7 @@
+node/node_modules/
+python/.venv/
+python/__pycache__/
+# logged-in browser sessions are account credentials — never committed, never pushed
+sessions/
+storage/
+results/*.html

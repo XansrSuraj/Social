@@ -1,0 +1,10 @@
+{
+  "name": "free-scraper-lab",
+  "private": true,
+  "description": "Experiments: can a free tool replace Apify for the daily check? Separate from production.",
+  "type": "module",
+  "dependencies": {
+    "crawlee": "^3.18.2",
+    "playwright": "1.63"
+  }
+}

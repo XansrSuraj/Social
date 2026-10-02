@@ -1,0 +1,50 @@
+# Free-scraper experiments on a GitHub-hosted runner: a datacenter IP (unlike a home connection)
+# and a network where TikTok is reachable. Runs every experiment, then commits the scored results
+# (results/gha-*) back to this branch. Commits made with GITHUB_TOKEN do not start another run.
+name: free-scraper-lab
+on:
+  push:
+    branches: [free-scraper-lab]
+    paths-ignore: ["results/**", "*.md"]
+permissions:
+  contents: write
+concurrency: { group: free-scraper-lab, cancel-in-progress: true }
+jobs:
+  experiments:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      LAB_PREFIX: gha-
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Where is this runner (IP owner, country)
+        run: curl -s https://ipinfo.io/json -o results/gha-runner.json || true; cat results/gha-runner.json || true
+      - name: Node deps + Playwright Chromium
+        working-directory: node
+        run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: "Exp 1 · Crawlee (HTTP + browser)"
+        working-directory: node
+        run: timeout 900 node exp1-crawlee.mjs both 2>&1 | tee ../results/gha-exp1.log || true
+      - name: "Exp 2 · Playwright (plain / stealth / real Chrome)"
+        working-directory: node
+        run: timeout 1200 node exp2-playwright.mjs all 2>&1 | tee ../results/gha-exp2.log || true
+      - name: Python deps
+        run: pip install --quiet selenium scrapy
+      - name: "Exp 3 · Selenium (real Chrome)"
+        working-directory: python
+        run: timeout 900 python exp3_selenium.py 2>&1 | tee ../results/gha-exp3.log || true
+      - name: "Exp 4 · Scrapy (plain HTTP)"
+        working-directory: python
+        run: timeout 300 python exp4_scrapy.py 2>&1 | tee ../results/gha-exp4.log || true
+      - name: Commit results back to this branch
+        run: |
+          git config user.name "free-scraper-lab"
+          git config user.email "free-scraper-lab@users.noreply.github.com"
+          git add results/gha-* || true
+          git commit -m "results from GitHub Actions run ${{ github.run_number }} [skip ci]" || exit 0
+          git push
