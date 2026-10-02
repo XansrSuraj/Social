@@ -26,13 +26,22 @@ jobs:
         run: curl -s https://ipinfo.io/json -o results/gha-runner.json || true; cat results/gha-runner.json || true
       - name: Node deps + Playwright Chromium
         working-directory: node
-        run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
+        run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium firefox webkit
       - name: "Exp 1 · Crawlee (HTTP + browser)"
         working-directory: node
         run: timeout 900 node exp1-crawlee.mjs both 2>&1 | tee ../results/gha-exp1.log || true
       - name: "Exp 2 · Playwright (plain / stealth / real Chrome)"
         working-directory: node
         run: timeout 1200 node exp2-playwright.mjs all 2>&1 | tee ../results/gha-exp2.log || true
+      - name: "Exp 5 · Instagram profile embed (plain HTTP)"
+        working-directory: node
+        run: timeout 120 node exp5-ig-embed.mjs 2>&1 | tee ../results/gha-exp5.log || true
+      - name: "Exp 6 · TikTok — every free route"
+        working-directory: node
+        run: timeout 600 node exp6-tiktok.mjs 2>&1 | tee ../results/gha-exp6.log || true
+      - name: "Exp 7 · X with Firefox and WebKit"
+        working-directory: node
+        run: timeout 300 node exp7-x-engines.mjs 2>&1 | tee ../results/gha-exp7.log || true
       - name: Python deps
         run: pip install --quiet selenium scrapy
       - name: "Exp 3 · Selenium (real Chrome)"

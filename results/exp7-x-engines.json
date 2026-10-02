@@ -1,0 +1,11 @@
+{
+ "ranAt": "2026-10-02T18:19:45.099Z",
+ "firefox": {
+  "error": "browserType.launch: Executable doesn't exist at C:\\Users\\sag93\\AppData\\Local\\ms-playwright\\firefox-1543\\firefox\\firefox.exe",
+  "posts": []
+ },
+ "webkit": {
+  "error": "browserType.launch: Executable doesn't exist at C:\\Users\\sag93\\AppData\\Local\\ms-playwright\\webkit-2359\\Playwright.exe",
+  "posts": []
+ }
+}

@@ -1,0 +1,11 @@
+{
+ "ranAt": "2026-10-02T18:19:16.274Z",
+ "D": {
+  "finalUrl": "https://www.tikwm.com/api/user/posts?unique_id=sportsfc.vn&count=12&cursor=0",
+  "text": "www.tikwm.com Performing security verification This website uses a security service to protect against malicious bots. This page is displayed while the website verifies you are not a bot. Ray ID: a445b666f81cbd1e Perfo",
+  "calls": [],
+  "posts": [],
+  "raw": "www.tikwm.com\nPerforming security verification\n\nThis website uses a security service to protect against malicious bots. This page is displayed while the website verifies you are not a bot.\n\nRay ID: a445b666f81cbd1e\nPerformance and Security by Cloudflare\nPrivacy",
+  "tikwmParse": "not JSON: www.tikwm.com\nPerforming security verification\n\nThis website uses a security ser"
+ }
+}
