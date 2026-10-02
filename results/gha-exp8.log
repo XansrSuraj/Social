@@ -1,38 +1,38 @@
 
-round 1/5 at 2026-10-02T18:37:02.380Z
-  fb-vn    HTTP 200  1483ms  recall 6/6   (100%)  times 100%  captions 100%
-  fb-fans  HTTP 200  1346ms  recall 6/6   (100%)  times 100%  captions 100%
-  ig-vn    HTTP 200  1429ms  recall 6/6   (100%)  times 100%  captions 100%
-  ig-fans  HTTP 200   514ms  recall 0/7   (  0%)  times —  captions —
-  tt-vn    HTTP 200   572ms  recall 6/6   (100%)  times 100%  captions 100%
+round 1/5 at 2026-10-02T18:50:19.910Z
+  fb-vn    HTTP 200  1387ms  recall 6/6   (100%)  times 100%  captions 100%
+  fb-fans  HTTP 200  1035ms  recall 6/6   (100%)  times 100%  captions 100%
+  ig-vn    HTTP 200   476ms  recall 6/6   (100%)  times 100%  captions 100%
+  ig-fans  HTTP 200   158ms  recall 0/7   (  0%)  times —  captions —
+  tt-vn    HTTP 200   571ms  recall 6/6   (100%)  times 100%  captions 100%
 
-round 2/5 at 2026-10-02T18:39:37.938Z
-  fb-vn    HTTP 200  1305ms  recall 6/6   (100%)  times 100%  captions 100%
-  fb-fans  HTTP 200  1054ms  recall 6/6   (100%)  times 100%  captions 100%
-  ig-vn    HTTP 200   720ms  recall 6/6   (100%)  times 100%  captions 100%
-  ig-fans  HTTP 200   242ms  recall 0/7   (  0%)  times —  captions —
-  tt-vn    HTTP 200   769ms  recall 6/6   (100%)  times 100%  captions 100%
+round 2/5 at 2026-10-02T18:52:53.674Z
+  fb-vn    HTTP 200  1265ms  recall 6/6   (100%)  times 100%  captions 100%
+  fb-fans  HTTP 200   886ms  recall 6/6   (100%)  times 100%  captions 100%
+  ig-vn    HTTP 200   360ms  recall 6/6   (100%)  times 100%  captions 100%
+  ig-fans  HTTP 200   139ms  recall 0/7   (  0%)  times —  captions —
+  tt-vn    HTTP 200   553ms  recall 6/6   (100%)  times 100%  captions 100%
 
-round 3/5 at 2026-10-02T18:42:12.156Z
-  fb-vn    HTTP 200  1417ms  recall 6/6   (100%)  times 100%  captions 100%
-  fb-fans  HTTP 200  1081ms  recall 6/6   (100%)  times 100%  captions 100%
-  ig-vn    HTTP 200   685ms  recall 6/6   (100%)  times 100%  captions 100%
-  ig-fans  HTTP 200   231ms  recall 0/7   (  0%)  times —  captions —
-  tt-vn    HTTP 200   598ms  recall 6/6   (100%)  times 100%  captions 100%
+round 3/5 at 2026-10-02T18:55:27.018Z
+  fb-vn    HTTP 200  1029ms  recall 6/6   (100%)  times 100%  captions 100%
+  fb-fans  HTTP 200   908ms  recall 6/6   (100%)  times 100%  captions 100%
+  ig-vn    HTTP 200   329ms  recall 6/6   (100%)  times 100%  captions 100%
+  ig-fans  HTTP 200   137ms  recall 0/7   (  0%)  times —  captions —
+  tt-vn    HTTP 200   625ms  recall 6/6   (100%)  times 100%  captions 100%
 
-round 4/5 at 2026-10-02T18:44:46.284Z
-  fb-vn    HTTP 200  1275ms  recall 6/6   (100%)  times 100%  captions 100%
-  fb-fans  HTTP 200   985ms  recall 6/6   (100%)  times 100%  captions 100%
-  ig-vn    HTTP 200   639ms  recall 6/6   (100%)  times 100%  captions 100%
-  ig-fans  HTTP 200   374ms  recall 0/7   (  0%)  times —  captions —
-  tt-vn    HTTP 200   539ms  recall 6/6   (100%)  times 100%  captions 100%
+round 4/5 at 2026-10-02T18:58:00.183Z
+  fb-vn    HTTP 200  1255ms  recall 6/6   (100%)  times 100%  captions 100%
+  fb-fans  HTTP 200  1009ms  recall 6/6   (100%)  times 100%  captions 100%
+  ig-vn    HTTP 200   283ms  recall 6/6   (100%)  times 100%  captions 100%
+  ig-fans  HTTP 200   136ms  recall 0/7   (  0%)  times —  captions —
+  tt-vn    HTTP 200   485ms  recall 6/6   (100%)  times 100%  captions 100%
 
-round 5/5 at 2026-10-02T18:47:20.316Z
-  fb-vn    HTTP 200  1345ms  recall 6/6   (100%)  times 100%  captions 100%
-  fb-fans  HTTP 200   962ms  recall 6/6   (100%)  times 100%  captions 100%
-  ig-vn    HTTP 200   549ms  recall 6/6   (100%)  times 100%  captions 100%
-  ig-fans  HTTP 200   248ms  recall 0/7   (  0%)  times —  captions —
-  tt-vn    HTTP 200   551ms  recall 6/6   (100%)  times 100%  captions 100%
+round 5/5 at 2026-10-02T19:00:33.450Z
+  fb-vn    HTTP 200  1226ms  recall 6/6   (100%)  times 100%  captions 100%
+  fb-fans  HTTP 200   926ms  recall 6/6   (100%)  times 100%  captions 100%
+  ig-vn    HTTP 200   306ms  recall 6/6   (100%)  times 100%  captions 100%
+  ig-fans  HTTP 200   159ms  recall 0/7   (  0%)  times —  captions —
+  tt-vn    HTTP 200   496ms  recall 6/6   (100%)  times 100%  captions 100%
 
 ── reliability over 5 rounds · GitHub Actions
   fb-vn    full recall in 5/5 rounds

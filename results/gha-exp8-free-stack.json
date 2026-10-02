@@ -1,13 +1,13 @@
 {
- "ranAt": "2026-10-02T18:47:24.086Z",
+ "ranAt": "2026-10-02T19:00:36.655Z",
  "rounds": [
   {
-   "at": "2026-10-02T18:37:02.380Z",
+   "at": "2026-10-02T18:50:19.910Z",
    "channels": {
     "fb-vn": {
      "status": 200,
-     "ms": 1483,
-     "bytes": 10685150,
+     "ms": 1387,
+     "bytes": 10685090,
      "recall": "6/6",
      "pct": 100,
      "times": "100%",
@@ -17,8 +17,8 @@
     },
     "fb-fans": {
      "status": 200,
-     "ms": 1346,
-     "bytes": 10349404,
+     "ms": 1035,
+     "bytes": 10349856,
      "recall": "6/6",
      "pct": 100,
      "times": "100%",
@@ -28,8 +28,8 @@
     },
     "ig-vn": {
      "status": 200,
-     "ms": 1429,
-     "bytes": 278621,
+     "ms": 476,
+     "bytes": 278633,
      "recall": "6/6",
      "pct": 100,
      "times": "100%",
@@ -39,8 +39,8 @@
     },
     "ig-fans": {
      "status": 200,
-     "ms": 514,
-     "bytes": 233347,
+     "ms": 158,
+     "bytes": 233355,
      "recall": "0/7",
      "pct": 0,
      "times": "—",
@@ -49,8 +49,8 @@
     },
     "tt-vn": {
      "status": 200,
-     "ms": 572,
-     "bytes": 293876,
+     "ms": 571,
+     "bytes": 293880,
      "recall": "6/6",
      "pct": 100,
      "times": "100%",
@@ -62,12 +62,12 @@
    }
   },
   {
-   "at": "2026-10-02T18:39:37.938Z",
+   "at": "2026-10-02T18:52:53.674Z",
    "channels": {
     "fb-vn": {
      "status": 200,
-     "ms": 1305,
-     "bytes": 10683103,
+     "ms": 1265,
+     "bytes": 10685082,
      "recall": "6/6",
      "pct": 100,
      "times": "100%",
@@ -77,8 +77,8 @@
     },
     "fb-fans": {
      "status": 200,
-     "ms": 1054,
-     "bytes": 10341162,
+     "ms": 886,
+     "bytes": 10349566,
      "recall": "6/6",
      "pct": 100,
      "times": "100%",
@@ -88,8 +88,8 @@
     },
     "ig-vn": {
      "status": 200,
-     "ms": 720,
-     "bytes": 278322,
+     "ms": 360,
+     "bytes": 278330,
      "recall": "6/6",
      "pct": 100,
      "times": "100%",
@@ -99,8 +99,8 @@
     },
     "ig-fans": {
      "status": 200,
-     "ms": 242,
-     "bytes": 233348,
+     "ms": 139,
+     "bytes": 233655,
      "recall": "0/7",
      "pct": 0,
      "times": "—",
@@ -109,7 +109,127 @@
     },
     "tt-vn": {
      "status": 200,
-     "ms": 769,
+     "ms": 553,
+     "bytes": 293888,
+     "recall": "6/6",
+     "pct": 100,
+     "times": "100%",
+     "captions": "100%",
+     "returned": 10,
+     "newest": "2026-10-02T12:53:34.000Z",
+     "captionObjects": 10
+    }
+   }
+  },
+  {
+   "at": "2026-10-02T18:55:27.018Z",
+   "channels": {
+    "fb-vn": {
+     "status": 200,
+     "ms": 1029,
+     "bytes": 10683060,
+     "recall": "6/6",
+     "pct": 100,
+     "times": "100%",
+     "captions": "100%",
+     "returned": 10,
+     "newest": "2026-10-02T12:52:30.000Z"
+    },
+    "fb-fans": {
+     "status": 200,
+     "ms": 908,
+     "bytes": 10341651,
+     "recall": "6/6",
+     "pct": 100,
+     "times": "100%",
+     "captions": "100%",
+     "returned": 10,
+     "newest": "2026-10-02T12:50:54.000Z"
+    },
+    "ig-vn": {
+     "status": 200,
+     "ms": 329,
+     "bytes": 278329,
+     "recall": "6/6",
+     "pct": 100,
+     "times": "100%",
+     "captions": "100%",
+     "returned": 6,
+     "newest": "2026-10-02T12:53:00.000Z"
+    },
+    "ig-fans": {
+     "status": 200,
+     "ms": 137,
+     "bytes": 233355,
+     "recall": "0/7",
+     "pct": 0,
+     "times": "—",
+     "captions": "—",
+     "returned": 0
+    },
+    "tt-vn": {
+     "status": 200,
+     "ms": 625,
+     "bytes": 293940,
+     "recall": "6/6",
+     "pct": 100,
+     "times": "100%",
+     "captions": "100%",
+     "returned": 10,
+     "newest": "2026-10-02T12:53:34.000Z",
+     "captionObjects": 10
+    }
+   }
+  },
+  {
+   "at": "2026-10-02T18:58:00.183Z",
+   "channels": {
+    "fb-vn": {
+     "status": 200,
+     "ms": 1255,
+     "bytes": 10683605,
+     "recall": "6/6",
+     "pct": 100,
+     "times": "100%",
+     "captions": "100%",
+     "returned": 10,
+     "newest": "2026-10-02T12:52:30.000Z"
+    },
+    "fb-fans": {
+     "status": 200,
+     "ms": 1009,
+     "bytes": 10340355,
+     "recall": "6/6",
+     "pct": 100,
+     "times": "100%",
+     "captions": "100%",
+     "returned": 10,
+     "newest": "2026-10-02T12:50:54.000Z"
+    },
+    "ig-vn": {
+     "status": 200,
+     "ms": 283,
+     "bytes": 278633,
+     "recall": "6/6",
+     "pct": 100,
+     "times": "100%",
+     "captions": "100%",
+     "returned": 6,
+     "newest": "2026-10-02T12:53:00.000Z"
+    },
+    "ig-fans": {
+     "status": 200,
+     "ms": 136,
+     "bytes": 233355,
+     "recall": "0/7",
+     "pct": 0,
+     "times": "—",
+     "captions": "—",
+     "returned": 0
+    },
+    "tt-vn": {
+     "status": 200,
+     "ms": 485,
      "bytes": 293926,
      "recall": "6/6",
      "pct": 100,
@@ -122,12 +242,12 @@
    }
   },
   {
-   "at": "2026-10-02T18:42:12.156Z",
+   "at": "2026-10-02T19:00:33.450Z",
    "channels": {
     "fb-vn": {
      "status": 200,
-     "ms": 1417,
-     "bytes": 10685089,
+     "ms": 1226,
+     "bytes": 10683246,
      "recall": "6/6",
      "pct": 100,
      "times": "100%",
@@ -137,8 +257,8 @@
     },
     "fb-fans": {
      "status": 200,
-     "ms": 1081,
-     "bytes": 10353378,
+     "ms": 926,
+     "bytes": 10349309,
      "recall": "6/6",
      "pct": 100,
      "times": "100%",
@@ -148,8 +268,8 @@
     },
     "ig-vn": {
      "status": 200,
-     "ms": 685,
-     "bytes": 278322,
+     "ms": 306,
+     "bytes": 278329,
      "recall": "6/6",
      "pct": 100,
      "times": "100%",
@@ -159,8 +279,8 @@
     },
     "ig-fans": {
      "status": 200,
-     "ms": 231,
-     "bytes": 233348,
+     "ms": 159,
+     "bytes": 233355,
      "recall": "0/7",
      "pct": 0,
      "times": "—",
@@ -169,128 +289,8 @@
     },
     "tt-vn": {
      "status": 200,
-     "ms": 598,
-     "bytes": 293942,
-     "recall": "6/6",
-     "pct": 100,
-     "times": "100%",
-     "captions": "100%",
-     "returned": 10,
-     "newest": "2026-10-02T12:53:34.000Z",
-     "captionObjects": 10
-    }
-   }
-  },
-  {
-   "at": "2026-10-02T18:44:46.284Z",
-   "channels": {
-    "fb-vn": {
-     "status": 200,
-     "ms": 1275,
-     "bytes": 10683250,
-     "recall": "6/6",
-     "pct": 100,
-     "times": "100%",
-     "captions": "100%",
-     "returned": 10,
-     "newest": "2026-10-02T12:52:30.000Z"
-    },
-    "fb-fans": {
-     "status": 200,
-     "ms": 985,
-     "bytes": 10349400,
-     "recall": "6/6",
-     "pct": 100,
-     "times": "100%",
-     "captions": "100%",
-     "returned": 10,
-     "newest": "2026-10-02T12:50:54.000Z"
-    },
-    "ig-vn": {
-     "status": 200,
-     "ms": 639,
-     "bytes": 278321,
-     "recall": "6/6",
-     "pct": 100,
-     "times": "100%",
-     "captions": "100%",
-     "returned": 6,
-     "newest": "2026-10-02T12:53:00.000Z"
-    },
-    "ig-fans": {
-     "status": 200,
-     "ms": 374,
-     "bytes": 233347,
-     "recall": "0/7",
-     "pct": 0,
-     "times": "—",
-     "captions": "—",
-     "returned": 0
-    },
-    "tt-vn": {
-     "status": 200,
-     "ms": 539,
-     "bytes": 293936,
-     "recall": "6/6",
-     "pct": 100,
-     "times": "100%",
-     "captions": "100%",
-     "returned": 10,
-     "newest": "2026-10-02T12:53:34.000Z",
-     "captionObjects": 10
-    }
-   }
-  },
-  {
-   "at": "2026-10-02T18:47:20.316Z",
-   "channels": {
-    "fb-vn": {
-     "status": 200,
-     "ms": 1345,
-     "bytes": 10685392,
-     "recall": "6/6",
-     "pct": 100,
-     "times": "100%",
-     "captions": "100%",
-     "returned": 10,
-     "newest": "2026-10-02T12:52:30.000Z"
-    },
-    "fb-fans": {
-     "status": 200,
-     "ms": 962,
-     "bytes": 10349842,
-     "recall": "6/6",
-     "pct": 100,
-     "times": "100%",
-     "captions": "100%",
-     "returned": 10,
-     "newest": "2026-10-02T12:50:54.000Z"
-    },
-    "ig-vn": {
-     "status": 200,
-     "ms": 549,
-     "bytes": 278321,
-     "recall": "6/6",
-     "pct": 100,
-     "times": "100%",
-     "captions": "100%",
-     "returned": 6,
-     "newest": "2026-10-02T12:53:00.000Z"
-    },
-    "ig-fans": {
-     "status": 200,
-     "ms": 248,
-     "bytes": 233343,
-     "recall": "0/7",
-     "pct": 0,
-     "times": "—",
-     "captions": "—",
-     "returned": 0
-    },
-    "tt-vn": {
-     "status": 200,
-     "ms": 551,
-     "bytes": 293872,
+     "ms": 496,
+     "bytes": 293950,
      "recall": "6/6",
      "pct": 100,
      "times": "100%",

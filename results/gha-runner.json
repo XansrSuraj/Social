@@ -1,11 +1,11 @@
 {
-  "ip": "13.71.231.35",
-  "city": "Cheyenne",
-  "region": "Wyoming",
+  "ip": "134.33.77.41",
+  "city": "Phoenix",
+  "region": "Arizona",
   "country": "US",
-  "loc": "41.1400,-104.8203",
+  "loc": "33.4484,-112.0740",
   "org": "AS8075 Microsoft Corporation",
-  "postal": "82001",
-  "timezone": "America/Denver",
+  "postal": "85003",
+  "timezone": "America/Phoenix",
   "readme": "https://ipinfo.io/missingauth"
 }
