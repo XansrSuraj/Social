@@ -1,0 +1,14 @@
+
+── 5 Instagram profile embed · plain HTTP · GitHub Actions
+  ig-vn    instagram  returned  6  recall 6/6   (100%)  times 100%  captions 100%  newer 0
+  ig-fans  instagram  returned  0  recall 0/7   (  0%)  times —     captions —     newer 0
+     ig-vn: HTTP 200, 278620 bytes
+        2026-10-02T12:53:00.000Z Dd_hwMhigc- GraphVideo views=null "⚔️ Pháp có thể xuyên thủng bức tường phòng ngự của"
+        2026-10-02T11:03:37.000Z Dd_VRVUCYo6 GraphVideo views=null "🔥 3 trận đấu, 3 kịch bản hấp dẫn! Bạn sẽ chọn phe"
+        2026-10-02T05:03:33.000Z Dd-sCTEjAWY GraphVideo views=null "⚔️ Bỉ có thể phá vỡ bức tường phòng ngự của Thổ Nh"
+        2026-10-02T00:01:50.000Z Dd-JfKACUl3 GraphVideo views=null "Liệu Việt Nam có đánh bại Pakistan? 🔥 📊 SPORTSFC"
+        2026-10-01T15:03:48.000Z Dd9L7wgjuPG GraphVideo views=null "Liệu Bồ Đào Nha có thể thắng khi thiếu vắng Ronald"
+        2026-10-01T13:09:11.000Z Dd8-0amk0D4 GraphVideo views=null "⚔️ Hy Lạp có thể phá vỡ bức tường phòng ngự của Hà"
+     ig-fans: HTTP 200, 233342 bytes
+
+saved /home/runner/work/Social/Social/results/gha-exp5-ig-embed.json

@@ -6,6 +6,22 @@
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     at async CheerioCrawler._runRequestHandler (/home/runner/work/Social/Social/node/node_modules/@crawlee/cheerio/internals/cheerio-crawler.js:155:9)
     at async wrap (/home/runner/work/Social/Social/node/node_modules/@apify/timeout/cjs/index.cjs:56:21)[90m {"id":"WjmvplYiOO8XOZO","url":"https://x.com/Sportsfcvn","method":"GET","uniqueKey":"c:x-vn"}[39m
+[33mWARN[39m [33m CheerioCrawler:[39m Reclaiming failed request back to the list or queue. Request blocked - received 429 status code.
+[90m {"id":"NqsBRLZ5cO0ri3b","url":"https://www.instagram.com/sportsfc.fans/","retryCount":1}[39m
+[33mWARN[39m [33m CheerioCrawler:[39m Reclaiming failed request back to the list or queue. Request blocked - received 429 status code.
+[90m {"id":"y2V7ikDmEWatYwD","url":"https://www.instagram.com/sportsfc.vn/","retryCount":1}[39m
+[31mERROR[39m[33m CheerioCrawler:[39m Request failed and reached maximum retries. Error: Request blocked - received 429 status code.
+    at CheerioCrawler._throwOnBlockedRequest (/home/runner/work/Social/Social/node/node_modules/@crawlee/basic/internals/basic-crawler.js:954:19)
+    at CheerioCrawler._runRequestHandler (/home/runner/work/Social/Social/node/node_modules/@crawlee/http/internals/http-crawler.js:324:22)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async CheerioCrawler._runRequestHandler (/home/runner/work/Social/Social/node/node_modules/@crawlee/cheerio/internals/cheerio-crawler.js:155:9)
+    at async wrap (/home/runner/work/Social/Social/node/node_modules/@apify/timeout/cjs/index.cjs:56:21)[90m {"id":"y2V7ikDmEWatYwD","url":"https://www.instagram.com/sportsfc.vn/","method":"GET","uniqueKey":"c:ig-vn"}[39m
+[31mERROR[39m[33m CheerioCrawler:[39m Request failed and reached maximum retries. Error: Request blocked - received 429 status code.
+    at CheerioCrawler._throwOnBlockedRequest (/home/runner/work/Social/Social/node/node_modules/@crawlee/basic/internals/basic-crawler.js:954:19)
+    at CheerioCrawler._runRequestHandler (/home/runner/work/Social/Social/node/node_modules/@crawlee/http/internals/http-crawler.js:324:22)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async CheerioCrawler._runRequestHandler (/home/runner/work/Social/Social/node/node_modules/@crawlee/cheerio/internals/cheerio-crawler.js:155:9)
+    at async wrap (/home/runner/work/Social/Social/node/node_modules/@apify/timeout/cjs/index.cjs:56:21)[90m {"id":"NqsBRLZ5cO0ri3b","url":"https://www.instagram.com/sportsfc.fans/","method":"GET","uniqueKey":"c:ig-fans"}[39m
 
 ── 1A  Crawlee CheerioCrawler (HTTP only, logged out, this machine)
   ig-vn    instagram  returned  0  recall 0/6   (  0%)  times —     captions —     newer 0
@@ -14,16 +30,34 @@
   fb-fans  facebook   returned 10  recall 6/6   (100%)  times 100%  captions 100%  newer 0
   x-vn     x          returned  0  recall 0/5   (  0%)  times —     captions —     newer 0
   tt-vn    tiktok     returned  0  recall 0/6   (  0%)  times —     captions —     newer 0
-     ig-vn: HTTP 200, 510387 bytes, login wall text
-     ig-fans: HTTP 200, 507370 bytes, login wall text
-     fb-vn: HTTP 200, 10683461 bytes
-     fb-fans: HTTP 200, 10349700 bytes
+     ig-vn: Request blocked - received 429 status code.
+     ig-fans: Request blocked - received 429 status code.
+     fb-vn: HTTP 200, 10683237 bytes
+     fb-fans: HTTP 200, 7378601 bytes
      x-vn: Request blocked - received 403 status code.
-     tt-vn: HTTP 200, 387287 bytes, login wall text
+     tt-vn: HTTP 200, 369520 bytes, login wall text
+[31mERROR[39m[33m PlaywrightCrawler:[39m Request failed and reached maximum retries. Error: Request blocked - received 429 status code.
+    at PlaywrightCrawler._throwOnBlockedRequest (/home/runner/work/Social/Social/node/node_modules/@crawlee/basic/internals/basic-crawler.js:954:19)
+    at PlaywrightCrawler._responseHandler (/home/runner/work/Social/Social/node/node_modules/@crawlee/browser/internals/browser-crawler.js:395:22)
+    at PlaywrightCrawler._runRequestHandler (/home/runner/work/Social/Social/node/node_modules/@crawlee/browser/internals/browser-crawler.js:270:24)
+    at async PlaywrightCrawler._runRequestHandler (/home/runner/work/Social/Social/node/node_modules/@crawlee/playwright/internals/playwright-crawler.js:120:9)
+    at async wrap (/home/runner/work/Social/Social/node/node_modules/@apify/timeout/cjs/index.cjs:56:21)[90m {"id":"VdLU5opEbuYlebZ","url":"https://www.instagram.com/sportsfc.fans/","method":"GET","uniqueKey":"b:ig-fans"}[39m
+[31mERROR[39m[33m PlaywrightCrawler:[39m Request failed and reached maximum retries. Error: Request blocked - received 429 status code.
+    at PlaywrightCrawler._throwOnBlockedRequest (/home/runner/work/Social/Social/node/node_modules/@crawlee/basic/internals/basic-crawler.js:954:19)
+    at PlaywrightCrawler._responseHandler (/home/runner/work/Social/Social/node/node_modules/@crawlee/browser/internals/browser-crawler.js:395:22)
+    at PlaywrightCrawler._runRequestHandler (/home/runner/work/Social/Social/node/node_modules/@crawlee/browser/internals/browser-crawler.js:270:24)
+    at runNextTicks (node:internal/process/task_queues:64:5)
+    at process.processImmediate (node:internal/timers:452:9)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+    at async PlaywrightCrawler._runRequestHandler (/home/runner/work/Social/Social/node/node_modules/@crawlee/playwright/internals/playwright-crawler.js:120:9)
+    at async wrap (/home/runner/work/Social/Social/node/node_modules/@apify/timeout/cjs/index.cjs:56:21)[90m {"id":"BILS3RfZst2V2RB","url":"https://www.instagram.com/sportsfc.vn/","method":"GET","uniqueKey":"b:ig-vn"}[39m
 [31mERROR[39m[33m PlaywrightCrawler:[39m Request failed and reached maximum retries. Error: Request blocked - received 403 status code.
     at PlaywrightCrawler._throwOnBlockedRequest (/home/runner/work/Social/Social/node/node_modules/@crawlee/basic/internals/basic-crawler.js:954:19)
     at PlaywrightCrawler._responseHandler (/home/runner/work/Social/Social/node/node_modules/@crawlee/browser/internals/browser-crawler.js:395:22)
     at PlaywrightCrawler._runRequestHandler (/home/runner/work/Social/Social/node/node_modules/@crawlee/browser/internals/browser-crawler.js:270:24)
+    at runNextTicks (node:internal/process/task_queues:64:5)
+    at process.processImmediate (node:internal/timers:452:9)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
     at async PlaywrightCrawler._runRequestHandler (/home/runner/work/Social/Social/node/node_modules/@crawlee/playwright/internals/playwright-crawler.js:120:9)
     at async wrap (/home/runner/work/Social/Social/node/node_modules/@apify/timeout/cjs/index.cjs:56:21)[90m {"id":"A9pQyyMVq2unVMg","url":"https://x.com/Sportsfcvn","method":"GET","uniqueKey":"b:x-vn"}[39m
 
@@ -34,14 +68,12 @@
   fb-fans  facebook   returned 10  recall 6/6   (100%)  times 100%  captions 100%  newer 0
   x-vn     x          returned  0  recall 0/5   (  0%)  times —     captions —     newer 0
   tt-vn    tiktok     returned  0  recall 0/6   (  0%)  times —     captions —     newer 0
-     ig-vn: via permalinks, 10 JSON answers, 0 grid links, ended at https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Fsportsfc.vn%2F&is_from_rle (LOGIN WALL)
-        page said: "See everyday moments from your close friends. Log into Instagram Mobile number, username or email Password Log in Forgot password? Log in with Facebook Create new account Meta About Blog Jobs Help API"
-     ig-fans: via permalinks, 9 JSON answers, 0 grid links, ended at https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Fsportsfc.fans%2F&is_from_rle (LOGIN WALL)
-        page said: "See everyday moments from your close friends. Log into Instagram Mobile number, username or email Password Log in Forgot password? Log in with Facebook Create new account Meta About Blog Jobs Help API"
+     ig-vn: Request blocked - received 429 status code.
+     ig-fans: Request blocked - received 429 status code.
      fb-vn: via network, 13 JSON answers, ended at https://www.facebook.com/sportsfc.vn/reels/
      fb-fans: via network, 13 JSON answers, ended at https://www.facebook.com/Sportsfc.fans/reels/
      x-vn: Request blocked - received 403 status code.
-     tt-vn: via dom + video-id time, 68 JSON answers, ended at https://www.tiktok.com/@sportsfc.vn
-        page said: "TikTok Search For You Shop Explore Following Short dramas LIVE Upload Profile More Log in Company Program Terms & Policies © 2026 TikTok SportsFC Vietnam sportsfc.vn 4 Following 47 Followers 367 Likes"
+     tt-vn: via dom + video-id time, 70 JSON answers, ended at https://www.tiktok.com/@sportsfc.vn
+        page said: "TikTok Search For You Shop Explore Following Short dramas LIVE Upload Profile More Log in Company Program Terms & Policies © 2026 TikTok SportsFC Vietnam sportsfc.vn 4 Following 47 Followers 368 Likes"
 
 saved /home/runner/work/Social/Social/results/gha-exp1-crawlee-both.json

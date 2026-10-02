@@ -1,31 +1,27 @@
 {
- "ranAt": "2026-10-02T18:09:32.584Z",
+ "ranAt": "2026-10-02T18:21:26.008Z",
  "cheerio": {
   "x-vn": {
    "error": "Request blocked - received 403 status code.",
    "posts": []
   },
-  "tt-vn": {
-   "status": 200,
-   "bytes": 387287,
-   "posts": [],
-   "loginWall": true
-  },
   "ig-vn": {
-   "status": 200,
-   "bytes": 510387,
-   "posts": [],
-   "loginWall": true
+   "error": "Request blocked - received 429 status code.",
+   "posts": []
   },
   "ig-fans": {
+   "error": "Request blocked - received 429 status code.",
+   "posts": []
+  },
+  "tt-vn": {
    "status": 200,
-   "bytes": 507370,
+   "bytes": 369520,
    "posts": [],
    "loginWall": true
   },
   "fb-fans": {
    "status": 200,
-   "bytes": 10349700,
+   "bytes": 7378601,
    "posts": [
     {
      "id": "122113930173329767",
@@ -92,7 +88,7 @@
   },
   "fb-vn": {
    "status": 200,
-   "bytes": 10683461,
+   "bytes": 10683237,
    "posts": [
     {
      "id": "122143189095350058",
@@ -160,22 +156,81 @@
  },
  "browser": {
   "ig-fans": {
-   "finalUrl": "https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Fsportsfc.fans%2F&is_from_rle",
-   "via": "permalinks",
-   "posts": [],
-   "loginWall": true,
-   "bodyText": "See everyday moments from your close friends. Log into Instagram Mobile number, username or email Password Log in Forgot password? Log in with Facebook Create new account Meta About Blog Jobs Help API",
-   "gridLinks": 0,
-   "jsonBodies": 9
+   "error": "Request blocked - received 429 status code.",
+   "posts": []
   },
   "ig-vn": {
-   "finalUrl": "https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Fsportsfc.vn%2F&is_from_rle",
-   "via": "permalinks",
-   "posts": [],
-   "loginWall": true,
-   "bodyText": "See everyday moments from your close friends. Log into Instagram Mobile number, username or email Password Log in Forgot password? Log in with Facebook Create new account Meta About Blog Jobs Help API",
-   "gridLinks": 0,
-   "jsonBodies": 10
+   "error": "Request blocked - received 429 status code.",
+   "posts": []
+  },
+  "fb-fans": {
+   "finalUrl": "https://www.facebook.com/Sportsfc.fans/reels/",
+   "via": "network",
+   "posts": [
+    {
+     "id": "122113930173329767",
+     "ts": "2026-10-02T12:50:54.000Z",
+     "text": "https://sfc.my/r/x7jZ5OLw\n\n⚔️ Can France break Italy's defense? 🔥\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Fri 02 Oct 2026\n🕢 6:45 pm UTC\n📍 Stade de France\n⚔️ France Attack: 1.6 goals scored | 1.8 xG\n🛡️ Italy Defense: 1.6 goals conceded | 2.4 saves\n⚔️ Italy Attack: 1.6 goals scored | 1 xG\n🛡️ France Defense: 1.6 goals conceded | 2.2 saves\n⭐ Players to watch: France : Kylian Mbappe, Michael Olise\nItaly : Francesco Pio Esposito, Nicolo Barella\n👉 Full insights and stats on sportsfc.fans. \n#UEFANationsLeague #KylianMbappe #FrancescoPioEsposito #football #FrancevsItaly",
+     "permalink": ""
+    },
+    {
+     "id": "122113921587329767",
+     "ts": "2026-10-02T11:02:07.000Z",
+     "text": "https://sfc.my/r/yXUqyzgS\n\n🔥 3 matches. 3 predictions. Who are you backing? 👀\n📊 SPORTSFC.FANS\n1️⃣ Belgium 🆚 Turkiye\n🔮 Belgium | ⚽ 3 or fewer goals | 🥅 Yes\n2️⃣ France 🆚 Italy\n🔮 France | ⚽ 2+ goals | 🥅 No\n3️⃣ Hungary 🆚 Georgia\n🔮 Hungary | ⚽ 3 or fewer goals | 🥅 No\n⭐ Watch: De Cuyper, Uzun, Olise, Esposito\n👉 More insights: sportsfc.fans | Link above or in bio 👆\n(UEFA Nations League, Belgium, Turkiye, Belgium vs Turkiye, France, Italy, France vs Italy, Hungary, Georgia, Hungary vs Georgia, De Cuyper, Uzun, Olise, Esposito)\n#UEFANationsLeague #BelgiumvsTurkiye #FrancevsItaly #HungaryvsGeorgia",
+     "permalink": ""
+    },
+    {
+     "id": "122113906155329767",
+     "ts": "2026-10-02T07:20:11.000Z",
+     "text": "https://sfc.my/r/o3LjjI71\n\nIS PORTUGAL BETTER WITHOUT RONALDO?\nSince the 2022 World Cup, Portugal have a 70% win rate without CR7 compared to 68.4% with him. The loss rate is also lower without Ronaldo. \nDoes Portugal need Ronaldo? YES or NO? Comment below 👇\nPortugal, Cristiano Ronaldo, Ronaldo, Nations League, UEFA Nations League, Portugal without Ronaldo, Ronaldo stats, Portugal football, CR7, Portugal national team, Football\n#CristianoRonaldo #Portugal #CR7 #NationsLeague #Football",
+     "permalink": ""
+    },
+    {
+     "id": "122113897845329767",
+     "ts": "2026-10-02T05:02:41.000Z",
+     "text": "https://sfc.my/r/nRqlZQnZ\n\n⚔️ Can Belgium break Turkiye's defense? 🔥\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Fri 02 Oct 2026\n🕢 6:45 pm UTC\n📍 Stade Maurice Dufrasne\n⚔️ Belgium Attack: 2 goals scored | 1.4 xG\n🛡️ Turkiye Defense: 2 goals conceded | 2.6 saves\n⚔️ Turkiye Attack: 0.8 goals scored | 1.7 xG\n🛡️ Belgium Defense: 1.2 goals conceded | 4.4 saves\n⭐ Players to watch: Belgium : Charles De Ketelaere\nTurkiye : Baris Alper Yilmaz, Oguz Aydin\n👉 Full insights and stats on sportsfc.fans. Link above or in bio 👆\n(UEFA Nations League, Charles De Ketelaere, Baris Alper Yilmaz, Turkiye, Belgium, Belgium vs Turkiye, Kevin De Bruyne, Arda Guler)\n#UEFANationsLeague #Debruyne #Ardaguler #football #BelgiumvsTurkiye",
+     "permalink": ""
+    },
+    {
+     "id": "122113877427329767",
+     "ts": "2026-10-02T00:03:40.000Z",
+     "text": "https://sfc.my/r/Oth4D3fN\n\nCan Vietnam defeat Pakistan? 🔥\n📊 SPORTSFC.FANS\n🏆 FIFA ASEAN Cup\n📅 Fri 02 Oct 2026\n🕢 9:00 am UTC\n🔮 58% chance of Vietnam winning this match\n⚽ 51% likelihood of both teams scoring\n📈 60% chance of 3 or fewer goals\n👉 Full insights and stats on sportsfc.fans.\nClick on the link above or in bio to know more👆\n(FIFA ASEAN Cup, Rafaelson, Pakistan, Vietnam, Vietnam vs Pakistan)\n#FIFAASEANCup #Rafaelson #bongda #VietnamvsPakistan #vietnam",
+     "permalink": ""
+    },
+    {
+     "id": "122113837413329767",
+     "ts": "2026-10-01T15:00:28.000Z",
+     "text": "https://sfc.my/r/VBABMKpb\n\nCan Portugal win without Ronaldo? 👀\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Thu 01 Oct 2026\n🕢 6:45 pm UTC\n📍 Parken Stadium\n👉 Full insights and stats on sportsfc.fans. Link above or in bio 👆\n(UEFA Nations League, Ronaldo, CR7, Joao Felix, Portugal, Denmark, Denmark vs Portugal, Ronaldo leaving Portugal)\n#UEFANationsLeague #ronaldo #cr7 #bongda #DenmarkvsPortugal",
+     "permalink": ""
+    },
+    {
+     "id": "122113825863329767",
+     "ts": "2026-10-01T13:10:56.000Z",
+     "text": "https://sfc.my/r/CWbTd8r7\n\n⚔️ Can Greece break Netherlands's defense? 🔥\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Thu 01 Oct 2026\n🕢 6:45 pm UTC\n📍 Toumba Stadium\n⚔️ Greece Attack: 1.4 goals scored | 1.3 xG\n🛡️ Netherlands Defense: 1 goals conceded | 4.2 saves\n⚔️ Netherlands Attack: 2.4 goals scored | 1.9 xG\n🛡️ Greece Defense: 1.2 goals conceded | 3.8 saves\n⭐ Players to watch:\nGreece : Christos Tzolis, Tasos Bakasetas\nNetherlands : Cody Gakpo, Denzel Dumfries\n#UEFANationsLeague #ChristosTzolis #CodyGakpo #football #GreecevsNetherlands",
+     "permalink": ""
+    },
+    {
+     "id": "122113817793329767",
+     "ts": "2026-10-01T11:02:24.000Z",
+     "text": "https://sfc.my/r/453CWOG3\n\nCan Denmark defeat Portugal? 🔥\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Thu 01 Oct 2026\n🕢 6:45 pm UTC\n📍 Parken Stadium\n🔮 44% chance of Denmark winning this match\n⚽ 51% likelihood of both teams scoring\n📈 59% chance of 2 or more goals\n👉 Full insights and stats on sportsfc.fans.\nClick on the link above or in bio to know more👆\n(UEFA Nations League, Gronbaek, Cristiano Ronaldo, Portugal, Denmark, Denmark vs Portugal)\n#UEFANationsLeague #RasmusHoejlund #JoaoFelix #football #DenmarkvsPortugal",
+     "permalink": ""
+    },
+    {
+     "id": "122113800879329767",
+     "ts": "2026-10-01T07:07:07.000Z",
+     "text": "https://sfc.my/r/CE1GB0ug\n\nWHO’S THE INTERNATIONAL FOOTBALL GOAT?\n146 GOALS. 192 G/A. 4 TROPHIES. 3 TROPHIES.\nRonaldo has the goals. Messi has the G/A. The numbers are NOT making this debate any easier. \nNow settle it: RONALDO or MESSI? Comment below 👇\nCristiano Ronaldo, Lionel Messi, Ronaldo vs Messi, international GOAT, international football, CR7, Messi stats, Ronaldo stats, football GOAT debate\n#CristianoRonaldo #LionelMessi #RonaldoVsMessi #Football #GOAT",
+     "permalink": ""
+    },
+    {
+     "id": "122113791591329767",
+     "ts": "2026-10-01T05:02:44.000Z",
+     "text": "https://sfc.my/r/eZOIcxPB\n\n🌍🏆 Matchday 3 is bringing some serious Nations League action! 🔥⚽\nThree big European clashes take centre stage as the league phase heats up! 👀\n🇬🇷 Greece 🆚 Netherlands 🇳🇱\n📍 Toumba Stadium, Thessaloniki\n🇩🇪 Germany 🆚 Serbia 🇷🇸\n📍 Allianz Arena, Munich\n🏴 Wales 🆚 Norway 🇳🇴\n📍 Cardiff City Stadium, Cardiff\n⚡ Three matches. Six nations. Plenty at stake.\n🔥 Which game are you tuning in for?\n#UEFANationsLeague #GermanyvsSerbia #Burkardt #Jovic #football",
+     "permalink": ""
+    }
+   ],
+   "loginWall": false,
+   "bodyText": "Log In Forgot Account? Sports FC 6.6K followers • 0 following More Posts About Reels Photos Reels More Sports FC's reels 283 975 54K 27 43 696 88 36 302K 3.1K See more on Facebook Email or phone numb",
+   "jsonBodies": 13
   },
   "fb-vn": {
    "finalUrl": "https://www.facebook.com/sportsfc.vn/reels/",
@@ -246,75 +301,6 @@
    "bodyText": "Log In Forgot Account? Sportsfc Vietnam 348 followers • 0 following More Posts About Reels Photos Reels More Sportsfc Vietnam's reels 6 8 28 15 14 1.3K 36 27 32 777 See more on Facebook Email or phon",
    "jsonBodies": 13
   },
-  "fb-fans": {
-   "finalUrl": "https://www.facebook.com/Sportsfc.fans/reels/",
-   "via": "network",
-   "posts": [
-    {
-     "id": "122113930173329767",
-     "ts": "2026-10-02T12:50:54.000Z",
-     "text": "https://sfc.my/r/x7jZ5OLw\n\n⚔️ Can France break Italy's defense? 🔥\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Fri 02 Oct 2026\n🕢 6:45 pm UTC\n📍 Stade de France\n⚔️ France Attack: 1.6 goals scored | 1.8 xG\n🛡️ Italy Defense: 1.6 goals conceded | 2.4 saves\n⚔️ Italy Attack: 1.6 goals scored | 1 xG\n🛡️ France Defense: 1.6 goals conceded | 2.2 saves\n⭐ Players to watch: France : Kylian Mbappe, Michael Olise\nItaly : Francesco Pio Esposito, Nicolo Barella\n👉 Full insights and stats on sportsfc.fans. \n#UEFANationsLeague #KylianMbappe #FrancescoPioEsposito #football #FrancevsItaly",
-     "permalink": ""
-    },
-    {
-     "id": "122113921587329767",
-     "ts": "2026-10-02T11:02:07.000Z",
-     "text": "https://sfc.my/r/yXUqyzgS\n\n🔥 3 matches. 3 predictions. Who are you backing? 👀\n📊 SPORTSFC.FANS\n1️⃣ Belgium 🆚 Turkiye\n🔮 Belgium | ⚽ 3 or fewer goals | 🥅 Yes\n2️⃣ France 🆚 Italy\n🔮 France | ⚽ 2+ goals | 🥅 No\n3️⃣ Hungary 🆚 Georgia\n🔮 Hungary | ⚽ 3 or fewer goals | 🥅 No\n⭐ Watch: De Cuyper, Uzun, Olise, Esposito\n👉 More insights: sportsfc.fans | Link above or in bio 👆\n(UEFA Nations League, Belgium, Turkiye, Belgium vs Turkiye, France, Italy, France vs Italy, Hungary, Georgia, Hungary vs Georgia, De Cuyper, Uzun, Olise, Esposito)\n#UEFANationsLeague #BelgiumvsTurkiye #FrancevsItaly #HungaryvsGeorgia",
-     "permalink": ""
-    },
-    {
-     "id": "122113906155329767",
-     "ts": "2026-10-02T07:20:11.000Z",
-     "text": "https://sfc.my/r/o3LjjI71\n\nIS PORTUGAL BETTER WITHOUT RONALDO?\nSince the 2022 World Cup, Portugal have a 70% win rate without CR7 compared to 68.4% with him. The loss rate is also lower without Ronaldo. \nDoes Portugal need Ronaldo? YES or NO? Comment below 👇\nPortugal, Cristiano Ronaldo, Ronaldo, Nations League, UEFA Nations League, Portugal without Ronaldo, Ronaldo stats, Portugal football, CR7, Portugal national team, Football\n#CristianoRonaldo #Portugal #CR7 #NationsLeague #Football",
-     "permalink": ""
-    },
-    {
-     "id": "122113897845329767",
-     "ts": "2026-10-02T05:02:41.000Z",
-     "text": "https://sfc.my/r/nRqlZQnZ\n\n⚔️ Can Belgium break Turkiye's defense? 🔥\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Fri 02 Oct 2026\n🕢 6:45 pm UTC\n📍 Stade Maurice Dufrasne\n⚔️ Belgium Attack: 2 goals scored | 1.4 xG\n🛡️ Turkiye Defense: 2 goals conceded | 2.6 saves\n⚔️ Turkiye Attack: 0.8 goals scored | 1.7 xG\n🛡️ Belgium Defense: 1.2 goals conceded | 4.4 saves\n⭐ Players to watch: Belgium : Charles De Ketelaere\nTurkiye : Baris Alper Yilmaz, Oguz Aydin\n👉 Full insights and stats on sportsfc.fans. Link above or in bio 👆\n(UEFA Nations League, Charles De Ketelaere, Baris Alper Yilmaz, Turkiye, Belgium, Belgium vs Turkiye, Kevin De Bruyne, Arda Guler)\n#UEFANationsLeague #Debruyne #Ardaguler #football #BelgiumvsTurkiye",
-     "permalink": ""
-    },
-    {
-     "id": "122113877427329767",
-     "ts": "2026-10-02T00:03:40.000Z",
-     "text": "https://sfc.my/r/Oth4D3fN\n\nCan Vietnam defeat Pakistan? 🔥\n📊 SPORTSFC.FANS\n🏆 FIFA ASEAN Cup\n📅 Fri 02 Oct 2026\n🕢 9:00 am UTC\n🔮 58% chance of Vietnam winning this match\n⚽ 51% likelihood of both teams scoring\n📈 60% chance of 3 or fewer goals\n👉 Full insights and stats on sportsfc.fans.\nClick on the link above or in bio to know more👆\n(FIFA ASEAN Cup, Rafaelson, Pakistan, Vietnam, Vietnam vs Pakistan)\n#FIFAASEANCup #Rafaelson #bongda #VietnamvsPakistan #vietnam",
-     "permalink": ""
-    },
-    {
-     "id": "122113837413329767",
-     "ts": "2026-10-01T15:00:28.000Z",
-     "text": "https://sfc.my/r/VBABMKpb\n\nCan Portugal win without Ronaldo? 👀\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Thu 01 Oct 2026\n🕢 6:45 pm UTC\n📍 Parken Stadium\n👉 Full insights and stats on sportsfc.fans. Link above or in bio 👆\n(UEFA Nations League, Ronaldo, CR7, Joao Felix, Portugal, Denmark, Denmark vs Portugal, Ronaldo leaving Portugal)\n#UEFANationsLeague #ronaldo #cr7 #bongda #DenmarkvsPortugal",
-     "permalink": ""
-    },
-    {
-     "id": "122113825863329767",
-     "ts": "2026-10-01T13:10:56.000Z",
-     "text": "https://sfc.my/r/CWbTd8r7\n\n⚔️ Can Greece break Netherlands's defense? 🔥\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Thu 01 Oct 2026\n🕢 6:45 pm UTC\n📍 Toumba Stadium\n⚔️ Greece Attack: 1.4 goals scored | 1.3 xG\n🛡️ Netherlands Defense: 1 goals conceded | 4.2 saves\n⚔️ Netherlands Attack: 2.4 goals scored | 1.9 xG\n🛡️ Greece Defense: 1.2 goals conceded | 3.8 saves\n⭐ Players to watch:\nGreece : Christos Tzolis, Tasos Bakasetas\nNetherlands : Cody Gakpo, Denzel Dumfries\n#UEFANationsLeague #ChristosTzolis #CodyGakpo #football #GreecevsNetherlands",
-     "permalink": ""
-    },
-    {
-     "id": "122113817793329767",
-     "ts": "2026-10-01T11:02:24.000Z",
-     "text": "https://sfc.my/r/453CWOG3\n\nCan Denmark defeat Portugal? 🔥\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Thu 01 Oct 2026\n🕢 6:45 pm UTC\n📍 Parken Stadium\n🔮 44% chance of Denmark winning this match\n⚽ 51% likelihood of both teams scoring\n📈 59% chance of 2 or more goals\n👉 Full insights and stats on sportsfc.fans.\nClick on the link above or in bio to know more👆\n(UEFA Nations League, Gronbaek, Cristiano Ronaldo, Portugal, Denmark, Denmark vs Portugal)\n#UEFANationsLeague #RasmusHoejlund #JoaoFelix #football #DenmarkvsPortugal",
-     "permalink": ""
-    },
-    {
-     "id": "122113800879329767",
-     "ts": "2026-10-01T07:07:07.000Z",
-     "text": "https://sfc.my/r/CE1GB0ug\n\nWHO’S THE INTERNATIONAL FOOTBALL GOAT?\n146 GOALS. 192 G/A. 4 TROPHIES. 3 TROPHIES.\nRonaldo has the goals. Messi has the G/A. The numbers are NOT making this debate any easier. \nNow settle it: RONALDO or MESSI? Comment below 👇\nCristiano Ronaldo, Lionel Messi, Ronaldo vs Messi, international GOAT, international football, CR7, Messi stats, Ronaldo stats, football GOAT debate\n#CristianoRonaldo #LionelMessi #RonaldoVsMessi #Football #GOAT",
-     "permalink": ""
-    },
-    {
-     "id": "122113791591329767",
-     "ts": "2026-10-01T05:02:44.000Z",
-     "text": "https://sfc.my/r/eZOIcxPB\n\n🌍🏆 Matchday 3 is bringing some serious Nations League action! 🔥⚽\nThree big European clashes take centre stage as the league phase heats up! 👀\n🇬🇷 Greece 🆚 Netherlands 🇳🇱\n📍 Toumba Stadium, Thessaloniki\n🇩🇪 Germany 🆚 Serbia 🇷🇸\n📍 Allianz Arena, Munich\n🏴 Wales 🆚 Norway 🇳🇴\n📍 Cardiff City Stadium, Cardiff\n⚡ Three matches. Six nations. Plenty at stake.\n🔥 Which game are you tuning in for?\n#UEFANationsLeague #GermanyvsSerbia #Burkardt #Jovic #football",
-     "permalink": ""
-    }
-   ],
-   "loginWall": false,
-   "bodyText": "Log In Forgot Account? Sports FC 6.6K followers • 0 following More Posts About Reels Photos Reels More Sports FC's reels 274 953 52K 27 42 696 88 36 302K 3.1K See more on Facebook Email or phone numb",
-   "jsonBodies": 13
-  },
   "x-vn": {
    "error": "Request blocked - received 403 status code.",
    "posts": []
@@ -324,8 +310,8 @@
    "via": "dom + video-id time",
    "posts": [],
    "loginWall": false,
-   "bodyText": "TikTok Search For You Shop Explore Following Short dramas LIVE Upload Profile More Log in Company Program Terms & Policies © 2026 TikTok SportsFC Vietnam sportsfc.vn 4 Following 47 Followers 367 Likes",
-   "jsonBodies": 68
+   "bodyText": "TikTok Search For You Shop Explore Following Short dramas LIVE Upload Profile More Log in Company Program Terms & Policies © 2026 TikTok SportsFC Vietnam sportsfc.vn 4 Following 47 Followers 368 Likes",
+   "jsonBodies": 70
   }
  }
 }

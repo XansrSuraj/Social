@@ -6,8 +6,8 @@
   fb-fans  facebook   returned 10  recall 6/6   (100%)  times 100%  captions 100%
   x-vn     x          returned  0  recall 0/5   (  0%)  times -     captions -
   tt-vn    tiktok     returned  0  recall 0/6   (  0%)  times -     captions -
-     ig-vn: via permalinks (0) — page said "See everyday moments from your close friends. Log into Instagram Mobile number, username or email Password Log in Forgot password? Log in with Facebook Create n"
-     ig-fans: via permalinks (0) — page said "See everyday moments from your close friends. Log into Instagram Mobile number, username or email Password Log in Forgot password? Log in with Facebook Create n"
+     ig-vn: via permalinks (0) — page said "This page isn’t working If the problem continues, contact the site owner. HTTP ERROR 429 Reload"
+     ig-fans: via permalinks (0) — page said "This page isn’t working If the problem continues, contact the site owner. HTTP ERROR 429 Reload"
      fb-vn: via network
      fb-fans: via network
      x-vn: via dom + snowflake — page said "x.com Performing security verification This website uses a security service to protect against malicious bots. This page is displayed while the website verifies"

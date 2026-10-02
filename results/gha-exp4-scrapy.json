@@ -1,5 +1,5 @@
 {
- "ranAt": "2026-10-02T18:14:45.790238+00:00",
+ "ranAt": "2026-10-02T18:27:06.921949+00:00",
  "scrapy": {
   "x-vn": {
    "error": "HttpError('Ignoring non-200 response')",
@@ -7,78 +7,20 @@
   },
   "tt-vn": {
    "status": 200,
-   "bytes": 388026,
-   "posts": []
-  },
-  "ig-vn": {
-   "status": 200,
-   "bytes": 507181,
+   "bytes": 370648,
    "posts": []
   },
   "ig-fans": {
-   "status": 200,
-   "bytes": 507366,
+   "error": "HttpError('Ignoring non-200 response')",
    "posts": []
   },
-  "fb-vn": {
-   "status": 200,
-   "bytes": 10683824,
-   "posts": [
-    {
-     "id": "122143189095350058",
-     "ts": "2026-10-02T12:52:30Z",
-     "text": "https://sfc.my/r/EdfFJkHb\n\n⚔️ Pháp có thể xuyên thủng bức tường phòng ngự của Ý? Ai sẽ là người làm chủ trận đấu?\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Sat 03 Oct 2026\n🕢 1:45 am ICT\n📍 Stade de France\n⚔️ Pháp tấn công: trung bình 1,6 bàn thắng | 1,8 xG\n🛡️ Ý phòng ngự: trung bình thủng lưới 1,6 bàn | 2,4 pha cứu thua\n⚔️ Ý tấn công: trung bình 1,6 bàn thắng | 1 xG\n🛡️ Pháp phòng ngự: trung bình thủng lưới 1,6 bàn | 2,2 pha cứu thua\n⭐ Ngôi sao đáng chú ý: Pháp có Kylian Mbappe, Michael Olise\nÝ có Francesco Pio Esposito, Nicolo Barella\n👉 Xem phân tích chi tiết và số liệu đầy đủ tại sportsfc.fans. \n#UEFANationsLeague #KylianMbappe #FrancescoPioEsposito #football #FrancevsItaly"
-    },
-    {
-     "id": "122143163127350058",
-     "ts": "2026-10-02T11:00:31Z",
-     "text": "https://sfc.my/r/2S4Alv5u\n\n🔥 3 trận đấu, 3 kịch bản hấp dẫn! Bạn sẽ chọn phe nào? 👀\n📊 SPORTSFC.FANS\n1️⃣ Bỉ 🆚 Thổ Nhĩ Kỳ\n🔮 Bỉ thắng | Dưới hoặc bằng 3 bàn thắng | Cả hai đội đều có bàn\n2️⃣ Pháp 🆚 Ý\n🔮 Pháp thắng | Ít nhất 2 bàn thắng | Một đội giữ sạch lưới\n3️⃣ Hungary 🆚 Georgia\n🔮 Hungary thắng | Dưới hoặc bằng 3 bàn thắng | Một đội giữ sạch lưới\n⭐ Đừng bỏ lỡ màn trình diễn của De Cuyper, Uzun, Olise và Esposito!\n👉 Xem thêm phân tích chi tiết tại sportsfc.fans | Link trên bio hoặc ở trên cùng 👆\n#UEFANationsLeague #BelgiumvsTurkiye #FrancevsItaly #HungaryvsGeorgia"
-    },
-    {
-     "id": "122143073439350058",
-     "ts": "2026-10-02T05:00:53Z",
-     "text": "https://sfc.my/r/V6r1nWdm\n\n⚔️ Bỉ có thể phá vỡ bức tường phòng ngự của Thổ Nhĩ Kỳ? 🔥\n📊 SPORTSFC.FANS \n🏆 UEFA Nations League \n📅 Sat 03 Oct 2026 \n🕢 1:45 am ICT \n📍 Stade Maurice Dufrasne \n⚔️ Hàng công Belgium: 2 bàn thắng | 1,4 xG \n🛡️ Hàng thủ Turkiye: 2 bàn thua | 2,6 pha cứu thua \n⚔️ Hàng công Turkiye: 0,8 bàn thắng | 1,7 xG \n🛡️ Hàng thủ Belgium: 1,2 bàn thua | 4,4 pha cứu thua \n⭐ Những ngôi sao đáng chú ý: Belgium: Charles De Ketelaere \nTurkiye: Baris Alper Yilmaz, Oguz Aydin \n👉 Xem phân tích chi tiết và số liệu đầy đủ tại sportsfc.fans. Link trên hoặc trong bio 👆 \n(UEFA Nations League, Charles De Ketelaere, Baris Alper Yilmaz, Turkiye, Belgium, Belgium vs Turkiye, Kevin De Bruyne, Arda Guler)\n#UEFANationsLeague #Debruyne #Ardaguler #football #BelgiumvsTurkiye"
-    },
-    {
-     "id": "122143016355350058",
-     "ts": "2026-10-02T00:00:31Z",
-     "text": "https://sfc.my/r/xou1rHkF\n\nLiệu Việt Nam có đánh bại Pakistan? 🔥\n📊 SPORTSFC.FANS\n🏆 FIFA ASEAN Cup 2026\n📅 2 tháng 10, 2026\n🕢 16:00 ICT\n🔮 58% khả năng Vietnam thắng trận này\n⚽ 51% khả năng cả hai đội cùng ghi bàn\n📈 53% khả năng trận đấu có dưới 2.5 bàn thắng\n👉 Xem đầy đủ nhận định và thống kê tại sportsfc.fans.\nNhấn vào liên kết phía trên để biết thêm 👆\n#FIFAASEANCup2026 #BongDa #VietnamVsPakistan #vietnam #vietnamfootball"
-    },
-    {
-     "id": "122142939321350058",
-     "ts": "2026-10-01T15:01:03Z",
-     "text": "https://sfc.my/r/Iot06Yp7\n\nLiệu Bồ Đào Nha có thể thắng khi thiếu vắng Ronaldo? 👀\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Fri 02 Oct 2026\n🕢 1:45 am ICT\n📍 Parken Stadium\n👉 Xem phân tích chi tiết và thống kê tại sportsfc.fans. Link trên hoặc trong bio 👆\n(UEFA Nations League, Ronaldo, CR7, Joao Felix, Portugal, Denmark, Denmark vs Portugal, Ronaldo leaving Portugal)\n#UEFANationsLeague #ronaldo #cr7 #bongda #DenmarkvsPortugal"
-    },
-    {
-     "id": "122142918363350058",
-     "ts": "2026-10-01T13:06:40Z",
-     "text": "https://sfc.my/r/3aIKqHFr\n\n⚔️ Hy Lạp có thể phá vỡ bức tường phòng ngự của Hà Lan? Ai sẽ là người làm chủ trận đấu? 🔥\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Fri 02 Oct 2026\n🕢 1:45 am ICT\n📍 Toumba Stadium\n⚔️ Hàng công Hy Lạp: 1,4 bàn/trận | 1,3 xG\n🛡️ Hàng thủ Hà Lan: 1 bàn thua/trận | 4,2 pha cứu thua\n⚔️ Hàng công Hà Lan: 2,4 bàn/trận | 1,9 xG\n🛡️ Hàng thủ Hy Lạp: 1,2 bàn thua/trận | 3,8 pha cứu thua\n⭐ Những ngôi sao đáng chú ý:\nHy Lạp: Christos Tzolis, Tasos Bakasetas\nHà Lan: Cody Gakpo, Denzel Dumfries\n#UEFANationsLeague #ChristosTzolis #CodyGakpo #football #GreecevsNetherlands"
-    },
-    {
-     "id": "122142846483350058",
-     "ts": "2026-10-01T07:09:33Z",
-     "text": "https://sfc.my/r/MIHtxppp\n\nAI MỚI LÀ GOAT BÓNG ĐÁ QUỐC TẾ?\n146 BÀN THẮNG. 192 PHA GÂY SÁT THƯƠNG. 4 CHIẾC CÚP. 3 CHIẾC CÚP.\nCristiano Ronaldo là cỗ máy săn bàn, Lionel Messi là vua kiến tạo. Những con số này càng làm cuộc tranh luận thêm phần gay cấn.\nBạn chọn ai? RONALDO hay MESSI? Bình luận ngay bên dưới 👇\nCristiano Ronaldo, Lionel Messi, Ronaldo vs Messi, international GOAT, international football, CR7, Messi stats, Ronaldo stats, football GOAT debate\n#CristianoRonaldo #LionelMessi #RonaldoVsMessi #Football #GOAT"
-    },
-    {
-     "id": "122142826143350058",
-     "ts": "2026-10-01T05:12:59Z",
-     "text": "https://sfc.my/r/ol6Q3skV\n\n🌍🏆 Matchday 3 mang đến loạt trận Nations League cực hấp dẫn! 🔥⚽\nBa cuộc đối đầu đáng chú ý sẽ diễn ra khi vòng đấu bảng ngày càng nóng lên! 👀\n🇬🇷 Greece 🆚 Netherlands 🇳🇱\n📍 Toumba Stadium, Thessaloniki\n🇩🇪 Germany 🆚 Serbia 🇷🇸\n📍 Allianz Arena, Munich\n🏴 Wales 🆚 Norway 🇳🇴\n📍 Cardiff City Stadium, Cardiff\n⚡ 3 trận đấu. 6 đội tuyển. Và rất nhiều điều để chờ đợi.\n🔥 Bạn sẽ theo dõi trận nào?\n#UEFANationsLeague #GermanyvsSerbia #Burkardt #Jovic #football"
-    },
-    {
-     "id": "122142624657350058",
-     "ts": "2026-09-30T13:00:29Z",
-     "text": "https://sfc.my/r/GdTUh4Z0\n\nArgentina có thể khuất phục Bolivia không? 🔥\n📊 SPORTSFC.FANS\n🏆 Int. Friendly Games\n📅 Thu 01 Oct 2026\n🕢 7:00 am ICT\n🔮 Argentina có 43% cơ hội giành chiến thắng\n⚽ 52% khả năng cả hai đội cùng ghi bàn\n📈 66% trận đấu sẽ có từ 2 bàn thắng trở lên\n👉 Xem phân tích chi tiết và số liệu tại sportsfc.fans.\nNhấn vào link trên hoặc trong bio để biết thêm 👆\n#IntFriendlyGames #Martinez #Paniagua #football #ArgentinavsBolivia"
-    },
-    {
-     "id": "122142605709350058",
-     "ts": "2026-09-30T11:22:40Z",
-     "text": "https://sfc.my/r/jfGDN0D9\n\nMessi có thể ghi bàn đêm nay không? 🔥\n📊 SPORTSFC.FANS\n🏆 Int. Friendly Games\n📅 Thu 01 Oct 2026\n🕢 7:00 am ICT\n⚔️ Argentina trên hàng công: 2,2 bàn/trận | 1,7 xG\n🛡️ Bolivia phòng ngự: 1,2 bàn thua/trận | 2 pha cứu thua\n⚔️ Bolivia trên hàng công: 1,2 bàn/trận\n🛡️ Argentina phòng ngự: 1,4 bàn thua/trận | 3,8 pha cứu thua\n⭐ Ngôi sao đáng chú ý: Argentina: Enzo Fernandez, Lionel Messi\nBolivia: Miguelito, Diego Medina\n👉 Xem phân tích chi tiết và thống kê đầy đủ tại sportsfc.fans. Link trên hoặc trong bio 👆\n(Int. Friendly Games, Enzo Fernandez, Miguelito, Bolivia, Argentina, Argentina vs Bolivia, Lionel Messi)\n#IntFriendlyGames #messi #enzofernandez #football #ArgentinavsBolivia"
-    }
-   ]
+  "ig-vn": {
+   "error": "HttpError('Ignoring non-200 response')",
+   "posts": []
   },
   "fb-fans": {
    "status": 200,
-   "bytes": 10349745,
+   "bytes": 10343629,
    "posts": [
     {
      "id": "122113930173329767",
@@ -129,6 +71,62 @@
      "id": "122113791591329767",
      "ts": "2026-10-01T05:02:44Z",
      "text": "https://sfc.my/r/eZOIcxPB\n\n🌍🏆 Matchday 3 is bringing some serious Nations League action! 🔥⚽\nThree big European clashes take centre stage as the league phase heats up! 👀\n🇬🇷 Greece 🆚 Netherlands 🇳🇱\n📍 Toumba Stadium, Thessaloniki\n🇩🇪 Germany 🆚 Serbia 🇷🇸\n📍 Allianz Arena, Munich\n🏴 Wales 🆚 Norway 🇳🇴\n📍 Cardiff City Stadium, Cardiff\n⚡ Three matches. Six nations. Plenty at stake.\n🔥 Which game are you tuning in for?\n#UEFANationsLeague #GermanyvsSerbia #Burkardt #Jovic #football"
+    }
+   ]
+  },
+  "fb-vn": {
+   "status": 200,
+   "bytes": 10683314,
+   "posts": [
+    {
+     "id": "122143189095350058",
+     "ts": "2026-10-02T12:52:30Z",
+     "text": "https://sfc.my/r/EdfFJkHb\n\n⚔️ Pháp có thể xuyên thủng bức tường phòng ngự của Ý? Ai sẽ là người làm chủ trận đấu?\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Sat 03 Oct 2026\n🕢 1:45 am ICT\n📍 Stade de France\n⚔️ Pháp tấn công: trung bình 1,6 bàn thắng | 1,8 xG\n🛡️ Ý phòng ngự: trung bình thủng lưới 1,6 bàn | 2,4 pha cứu thua\n⚔️ Ý tấn công: trung bình 1,6 bàn thắng | 1 xG\n🛡️ Pháp phòng ngự: trung bình thủng lưới 1,6 bàn | 2,2 pha cứu thua\n⭐ Ngôi sao đáng chú ý: Pháp có Kylian Mbappe, Michael Olise\nÝ có Francesco Pio Esposito, Nicolo Barella\n👉 Xem phân tích chi tiết và số liệu đầy đủ tại sportsfc.fans. \n#UEFANationsLeague #KylianMbappe #FrancescoPioEsposito #football #FrancevsItaly"
+    },
+    {
+     "id": "122143163127350058",
+     "ts": "2026-10-02T11:00:31Z",
+     "text": "https://sfc.my/r/2S4Alv5u\n\n🔥 3 trận đấu, 3 kịch bản hấp dẫn! Bạn sẽ chọn phe nào? 👀\n📊 SPORTSFC.FANS\n1️⃣ Bỉ 🆚 Thổ Nhĩ Kỳ\n🔮 Bỉ thắng | Dưới hoặc bằng 3 bàn thắng | Cả hai đội đều có bàn\n2️⃣ Pháp 🆚 Ý\n🔮 Pháp thắng | Ít nhất 2 bàn thắng | Một đội giữ sạch lưới\n3️⃣ Hungary 🆚 Georgia\n🔮 Hungary thắng | Dưới hoặc bằng 3 bàn thắng | Một đội giữ sạch lưới\n⭐ Đừng bỏ lỡ màn trình diễn của De Cuyper, Uzun, Olise và Esposito!\n👉 Xem thêm phân tích chi tiết tại sportsfc.fans | Link trên bio hoặc ở trên cùng 👆\n#UEFANationsLeague #BelgiumvsTurkiye #FrancevsItaly #HungaryvsGeorgia"
+    },
+    {
+     "id": "122143073439350058",
+     "ts": "2026-10-02T05:00:53Z",
+     "text": "https://sfc.my/r/V6r1nWdm\n\n⚔️ Bỉ có thể phá vỡ bức tường phòng ngự của Thổ Nhĩ Kỳ? 🔥\n📊 SPORTSFC.FANS \n🏆 UEFA Nations League \n📅 Sat 03 Oct 2026 \n🕢 1:45 am ICT \n📍 Stade Maurice Dufrasne \n⚔️ Hàng công Belgium: 2 bàn thắng | 1,4 xG \n🛡️ Hàng thủ Turkiye: 2 bàn thua | 2,6 pha cứu thua \n⚔️ Hàng công Turkiye: 0,8 bàn thắng | 1,7 xG \n🛡️ Hàng thủ Belgium: 1,2 bàn thua | 4,4 pha cứu thua \n⭐ Những ngôi sao đáng chú ý: Belgium: Charles De Ketelaere \nTurkiye: Baris Alper Yilmaz, Oguz Aydin \n👉 Xem phân tích chi tiết và số liệu đầy đủ tại sportsfc.fans. Link trên hoặc trong bio 👆 \n(UEFA Nations League, Charles De Ketelaere, Baris Alper Yilmaz, Turkiye, Belgium, Belgium vs Turkiye, Kevin De Bruyne, Arda Guler)\n#UEFANationsLeague #Debruyne #Ardaguler #football #BelgiumvsTurkiye"
+    },
+    {
+     "id": "122143016355350058",
+     "ts": "2026-10-02T00:00:31Z",
+     "text": "https://sfc.my/r/xou1rHkF\n\nLiệu Việt Nam có đánh bại Pakistan? 🔥\n📊 SPORTSFC.FANS\n🏆 FIFA ASEAN Cup 2026\n📅 2 tháng 10, 2026\n🕢 16:00 ICT\n🔮 58% khả năng Vietnam thắng trận này\n⚽ 51% khả năng cả hai đội cùng ghi bàn\n📈 53% khả năng trận đấu có dưới 2.5 bàn thắng\n👉 Xem đầy đủ nhận định và thống kê tại sportsfc.fans.\nNhấn vào liên kết phía trên để biết thêm 👆\n#FIFAASEANCup2026 #BongDa #VietnamVsPakistan #vietnam #vietnamfootball"
+    },
+    {
+     "id": "122142939321350058",
+     "ts": "2026-10-01T15:01:03Z",
+     "text": "https://sfc.my/r/Iot06Yp7\n\nLiệu Bồ Đào Nha có thể thắng khi thiếu vắng Ronaldo? 👀\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Fri 02 Oct 2026\n🕢 1:45 am ICT\n📍 Parken Stadium\n👉 Xem phân tích chi tiết và thống kê tại sportsfc.fans. Link trên hoặc trong bio 👆\n(UEFA Nations League, Ronaldo, CR7, Joao Felix, Portugal, Denmark, Denmark vs Portugal, Ronaldo leaving Portugal)\n#UEFANationsLeague #ronaldo #cr7 #bongda #DenmarkvsPortugal"
+    },
+    {
+     "id": "122142918363350058",
+     "ts": "2026-10-01T13:06:40Z",
+     "text": "https://sfc.my/r/3aIKqHFr\n\n⚔️ Hy Lạp có thể phá vỡ bức tường phòng ngự của Hà Lan? Ai sẽ là người làm chủ trận đấu? 🔥\n📊 SPORTSFC.FANS\n🏆 UEFA Nations League\n📅 Fri 02 Oct 2026\n🕢 1:45 am ICT\n📍 Toumba Stadium\n⚔️ Hàng công Hy Lạp: 1,4 bàn/trận | 1,3 xG\n🛡️ Hàng thủ Hà Lan: 1 bàn thua/trận | 4,2 pha cứu thua\n⚔️ Hàng công Hà Lan: 2,4 bàn/trận | 1,9 xG\n🛡️ Hàng thủ Hy Lạp: 1,2 bàn thua/trận | 3,8 pha cứu thua\n⭐ Những ngôi sao đáng chú ý:\nHy Lạp: Christos Tzolis, Tasos Bakasetas\nHà Lan: Cody Gakpo, Denzel Dumfries\n#UEFANationsLeague #ChristosTzolis #CodyGakpo #football #GreecevsNetherlands"
+    },
+    {
+     "id": "122142846483350058",
+     "ts": "2026-10-01T07:09:33Z",
+     "text": "https://sfc.my/r/MIHtxppp\n\nAI MỚI LÀ GOAT BÓNG ĐÁ QUỐC TẾ?\n146 BÀN THẮNG. 192 PHA GÂY SÁT THƯƠNG. 4 CHIẾC CÚP. 3 CHIẾC CÚP.\nCristiano Ronaldo là cỗ máy săn bàn, Lionel Messi là vua kiến tạo. Những con số này càng làm cuộc tranh luận thêm phần gay cấn.\nBạn chọn ai? RONALDO hay MESSI? Bình luận ngay bên dưới 👇\nCristiano Ronaldo, Lionel Messi, Ronaldo vs Messi, international GOAT, international football, CR7, Messi stats, Ronaldo stats, football GOAT debate\n#CristianoRonaldo #LionelMessi #RonaldoVsMessi #Football #GOAT"
+    },
+    {
+     "id": "122142826143350058",
+     "ts": "2026-10-01T05:12:59Z",
+     "text": "https://sfc.my/r/ol6Q3skV\n\n🌍🏆 Matchday 3 mang đến loạt trận Nations League cực hấp dẫn! 🔥⚽\nBa cuộc đối đầu đáng chú ý sẽ diễn ra khi vòng đấu bảng ngày càng nóng lên! 👀\n🇬🇷 Greece 🆚 Netherlands 🇳🇱\n📍 Toumba Stadium, Thessaloniki\n🇩🇪 Germany 🆚 Serbia 🇷🇸\n📍 Allianz Arena, Munich\n🏴 Wales 🆚 Norway 🇳🇴\n📍 Cardiff City Stadium, Cardiff\n⚡ 3 trận đấu. 6 đội tuyển. Và rất nhiều điều để chờ đợi.\n🔥 Bạn sẽ theo dõi trận nào?\n#UEFANationsLeague #GermanyvsSerbia #Burkardt #Jovic #football"
+    },
+    {
+     "id": "122142624657350058",
+     "ts": "2026-09-30T13:00:29Z",
+     "text": "https://sfc.my/r/GdTUh4Z0\n\nArgentina có thể khuất phục Bolivia không? 🔥\n📊 SPORTSFC.FANS\n🏆 Int. Friendly Games\n📅 Thu 01 Oct 2026\n🕢 7:00 am ICT\n🔮 Argentina có 43% cơ hội giành chiến thắng\n⚽ 52% khả năng cả hai đội cùng ghi bàn\n📈 66% trận đấu sẽ có từ 2 bàn thắng trở lên\n👉 Xem phân tích chi tiết và số liệu tại sportsfc.fans.\nNhấn vào link trên hoặc trong bio để biết thêm 👆\n#IntFriendlyGames #Martinez #Paniagua #football #ArgentinavsBolivia"
+    },
+    {
+     "id": "122142605709350058",
+     "ts": "2026-09-30T11:22:40Z",
+     "text": "https://sfc.my/r/jfGDN0D9\n\nMessi có thể ghi bàn đêm nay không? 🔥\n📊 SPORTSFC.FANS\n🏆 Int. Friendly Games\n📅 Thu 01 Oct 2026\n🕢 7:00 am ICT\n⚔️ Argentina trên hàng công: 2,2 bàn/trận | 1,7 xG\n🛡️ Bolivia phòng ngự: 1,2 bàn thua/trận | 2 pha cứu thua\n⚔️ Bolivia trên hàng công: 1,2 bàn/trận\n🛡️ Argentina phòng ngự: 1,4 bàn thua/trận | 3,8 pha cứu thua\n⭐ Ngôi sao đáng chú ý: Argentina: Enzo Fernandez, Lionel Messi\nBolivia: Miguelito, Diego Medina\n👉 Xem phân tích chi tiết và thống kê đầy đủ tại sportsfc.fans. Link trên hoặc trong bio 👆\n(Int. Friendly Games, Enzo Fernandez, Miguelito, Bolivia, Argentina, Argentina vs Bolivia, Lionel Messi)\n#IntFriendlyGames #messi #enzofernandez #football #ArgentinavsBolivia"
     }
    ]
   }

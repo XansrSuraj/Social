@@ -1,0 +1,28 @@
+
+── 6 TikTok routes · GitHub Actions
+  A         recall 0/6 (0%) times — captions — | HTTP 200 statusCode=0 videoCount=419 itemList=null
+  B         recall 0/6 (0%) times — captions — | ended https://www.tiktok.com/@sportsfc.vn
+              200 https://www.tiktok.com/api/post/item_list/ 
+              200 https://mcs.tiktokw.us/v1/user/webid e,ssid,web_id
+              200 https://www.tiktok.com/api/user/playlist/ cursor,extra,hasMore,log_pb,statusCode
+              200 https://www.tiktok.com/api/post/item_list/ 
+              200 https://www.tiktok.com/api/story/item_list/ AllViewed,CurrentPosition,HasMoreAfter,HasMoreBefore,MaxCursor
+              200 https://mcs.tiktokw.us/v1/user/webid e,ssid,web_id
+              200 https://www.tiktok.com/api/user/list/ 
+              200 https://www.tiktok.com/api/user/collection_list/ cursor,extra,hasMore,log_pb,statusCode
+              200 https://www.tiktok.com/api/repost/item_list/ cursor,extra,hasMore,log_pb,statusCode
+              200 https://www.tiktok.com/api/prefetch/explore/item_list/ channelId,extra,hasMore,log_pb,statusCode
+              page said: "TikTok Search For You Shop Explore Following Short dramas LIVE Upload Profile More Log in Company Program Terms & Policies © 2026 TikTok SportsFC Vietnam sportsfc.vn 4 Following 47 Followers 368 Likes Follow Message Yêu "
+  C_plain   recall 6/6 (100%) times 100% captions 0% | HTTP 200 293870B
+  C_chrome  recall 6/6 (100%) times 100% captions 100% | ended https://www.tiktok.com/embed/@sportsfc.vn
+              200 https://mcs.tiktokv.us/v1/user/webid e,ssid,web_id
+              200 https://mcs.tiktokw.us/v1/user/webid e,ssid,web_id
+              200 https://mcs.tiktokw.us/v1/user/webid e,ssid,web_id
+              200 https://mcs.tiktokw.us/v1/user/webid e,ssid,web_id
+  D         recall 0/6 (0%) times — captions — | tikwm code=undefined not JSON: www.tikwm.com
+Performing security verification
+
+This website uses a security ser
+              page said: "www.tikwm.com Performing security verification This website uses a security service to protect against malicious bots. This page is displayed while the website verifies you are not a bot. Ray ID: a445bf6d6c5336cb Perfo"
+
+saved /home/runner/work/Social/Social/results/gha-exp6-tiktok.json

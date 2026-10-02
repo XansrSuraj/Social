@@ -1,18 +1,18 @@
 {
- "ranAt": "2026-10-02T18:13:14.076Z",
+ "ranAt": "2026-10-02T18:24:38.581Z",
  "plain": {
   "ig-vn": {
    "via": "permalinks (0)",
    "finalUrl": "https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Fsportsfc.vn%2F&is_from_rle",
    "posts": [],
-   "pageSaid": "See everyday moments from your close friends. Log into Instagram Mobile number, username or email Password Log in Forgot password? Log in with Facebook Create n",
+   "pageSaid": "",
    "loggedIn": false
   },
   "ig-fans": {
    "via": "permalinks (0)",
    "finalUrl": "https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Fsportsfc.fans%2F&is_from_rle",
    "posts": [],
-   "pageSaid": "See everyday moments from your close friends. Log into Instagram Mobile number, username or email Password Log in Forgot password? Log in with Facebook Create n",
+   "pageSaid": "",
    "loggedIn": false
   },
   "fb-vn": {
@@ -169,14 +169,14 @@
    "via": "permalinks (0)",
    "finalUrl": "https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Fsportsfc.vn%2F&is_from_rle",
    "posts": [],
-   "pageSaid": "See everyday moments from your close friends. Log into Instagram Mobile number, username or email Password Log in Forgot password? Log in with Facebook Create n",
+   "pageSaid": "",
    "loggedIn": false
   },
   "ig-fans": {
    "via": "permalinks (0)",
    "finalUrl": "https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Fsportsfc.fans%2F&is_from_rle",
    "posts": [],
-   "pageSaid": "See everyday moments from your close friends. Log into Instagram Mobile number, username or email Password Log in Forgot password? Log in with Facebook Create n",
+   "pageSaid": "",
    "loggedIn": false
   },
   "fb-vn": {
@@ -330,17 +330,15 @@
  },
  "chrome": {
   "ig-vn": {
-   "via": "permalinks (0)",
-   "finalUrl": "https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Fsportsfc.vn%2F&is_from_rle",
+   "via": "network",
+   "error": "page.goto: net::ERR_HTTP_RESPONSE_CODE_FAILURE at https://www.instagram.com/sportsfc.vn/",
    "posts": [],
-   "pageSaid": "See everyday moments from your close friends. Log into Instagram Mobile number, username or email Password Log in Forgot password? Log in with Facebook Create n",
    "loggedIn": false
   },
   "ig-fans": {
-   "via": "permalinks (0)",
-   "finalUrl": "https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Fsportsfc.fans%2F&is_from_rle",
+   "via": "network",
+   "error": "page.goto: net::ERR_HTTP_RESPONSE_CODE_FAILURE at https://www.instagram.com/sportsfc.fans/",
    "posts": [],
-   "pageSaid": "See everyday moments from your close friends. Log into Instagram Mobile number, username or email Password Log in Forgot password? Log in with Facebook Create n",
    "loggedIn": false
   },
   "fb-vn": {

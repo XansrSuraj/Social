@@ -1,0 +1,245 @@
+{
+ "ranAt": "2026-10-02T18:25:22.830Z",
+ "A": {
+  "status": 200,
+  "statusCode": 0,
+  "videoCount": 419,
+  "itemList": null,
+  "posts": []
+ },
+ "B": {
+  "finalUrl": "https://www.tiktok.com/@sportsfc.vn",
+  "text": "TikTok Search For You Shop Explore Following Short dramas LIVE Upload Profile More Log in Company Program Terms & Policies © 2026 TikTok SportsFC Vietnam sportsfc.vn 4 Following 47 Followers 368 Likes Follow Message Yêu ",
+  "calls": [
+   {
+    "s": 200,
+    "u": "https://www.tiktok.com/api/post/item_list/",
+    "items": 0,
+    "keys": ""
+   },
+   {
+    "s": 200,
+    "u": "https://mcs.tiktokw.us/v1/user/webid",
+    "items": 0,
+    "keys": "e,ssid,web_id"
+   },
+   {
+    "s": 200,
+    "u": "https://www.tiktok.com/api/user/playlist/",
+    "items": 0,
+    "keys": "cursor,extra,hasMore,log_pb,statusCode"
+   },
+   {
+    "s": 200,
+    "u": "https://www.tiktok.com/api/post/item_list/",
+    "items": 0,
+    "keys": ""
+   },
+   {
+    "s": 200,
+    "u": "https://www.tiktok.com/api/story/item_list/",
+    "items": 0,
+    "keys": "AllViewed,CurrentPosition,HasMoreAfter,HasMoreBefore,MaxCursor"
+   },
+   {
+    "s": 200,
+    "u": "https://mcs.tiktokw.us/v1/user/webid",
+    "items": 0,
+    "keys": "e,ssid,web_id"
+   },
+   {
+    "s": 200,
+    "u": "https://www.tiktok.com/api/user/list/",
+    "items": 0,
+    "keys": ""
+   },
+   {
+    "s": 200,
+    "u": "https://www.tiktok.com/api/user/collection_list/",
+    "items": 0,
+    "keys": "cursor,extra,hasMore,log_pb,statusCode"
+   },
+   {
+    "s": 200,
+    "u": "https://www.tiktok.com/api/repost/item_list/",
+    "items": 0,
+    "keys": "cursor,extra,hasMore,log_pb,statusCode"
+   },
+   {
+    "s": 200,
+    "u": "https://www.tiktok.com/api/prefetch/explore/item_list/",
+    "items": 0,
+    "keys": "channelId,extra,hasMore,log_pb,statusCode"
+   }
+  ],
+  "posts": [],
+  "raw": "TikTok\nSearch\nFor You\nShop\nExplore\nFollowing\nShort dramas\nLIVE\nUpload\nProfile\nMore\nLog in\nCompany\nProgram\nTerms & Policies\n© 2026 TikTok\nSportsFC Vietnam\nsportsfc.vn\n4\nFollowing\n47\nFollowers\n368\nLikes\nFollow\nMessage\nYêu bóng đá?\n\nĐăng ký ngay: sportsfc.fans\n\nSuggested accounts\n\nView all\n\nVideos\n\nLiked\n\nLatest\nPopular\nOldest\n\nSomething went wrong\n\nSorry about that! Please try again later.\n\nRefresh\nLog in"
+ },
+ "C_plain": {
+  "status": 200,
+  "bytes": 293870,
+  "posts": [
+   {
+    "id": "7692052842718301473",
+    "ts": "2026-10-02T12:53:34.000Z",
+    "text": "",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7692052842718301473"
+   },
+   {
+    "id": "7692023997462039841",
+    "ts": "2026-10-02T11:01:38.000Z",
+    "text": "",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7692023997462039841"
+   },
+   {
+    "id": "7691931180924554528",
+    "ts": "2026-10-02T05:01:27.000Z",
+    "text": "",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691931180924554528"
+   },
+   {
+    "id": "7691854002618731808",
+    "ts": "2026-10-02T00:01:58.000Z",
+    "text": "",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691854002618731808"
+   },
+   {
+    "id": "7691715406117014816",
+    "ts": "2026-10-01T15:04:08.000Z",
+    "text": "",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691715406117014816"
+   },
+   {
+    "id": "7691686402760756513",
+    "ts": "2026-10-01T13:11:35.000Z",
+    "text": "",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691686402760756513"
+   },
+   {
+    "id": "7691653229758680352",
+    "ts": "2026-10-01T11:02:52.000Z",
+    "text": "",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691653229758680352"
+   },
+   {
+    "id": "7691593132227513632",
+    "ts": "2026-10-01T07:09:39.000Z",
+    "text": "",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691593132227513632"
+   },
+   {
+    "id": "7691560660890651937",
+    "ts": "2026-10-01T05:03:39.000Z",
+    "text": "",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691560660890651937"
+   },
+   {
+    "id": "7691312537396186400",
+    "ts": "2026-09-30T13:00:48.000Z",
+    "text": "",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691312537396186400"
+   }
+  ]
+ },
+ "C_chrome": {
+  "finalUrl": "https://www.tiktok.com/embed/@sportsfc.vn",
+  "text": "sportsfc.vn 4 Following 47 Followers 368 Likes Yêu bóng đá?... See more 303 194 15 472 620 366 226 292 618 422 See more View Privacy Policy Open TikTok Yêu bóng đá?... See more",
+  "calls": [
+   {
+    "s": 200,
+    "u": "https://mcs.tiktokv.us/v1/user/webid",
+    "items": 0,
+    "keys": "e,ssid,web_id"
+   },
+   {
+    "s": 200,
+    "u": "https://mcs.tiktokw.us/v1/user/webid",
+    "items": 0,
+    "keys": "e,ssid,web_id"
+   },
+   {
+    "s": 200,
+    "u": "https://mcs.tiktokw.us/v1/user/webid",
+    "items": 0,
+    "keys": "e,ssid,web_id"
+   },
+   {
+    "s": 200,
+    "u": "https://mcs.tiktokw.us/v1/user/webid",
+    "items": 0,
+    "keys": "e,ssid,web_id"
+   }
+  ],
+  "posts": [
+   {
+    "id": "7692052842718301473",
+    "ts": "2026-10-02T12:53:34.000Z",
+    "text": "play-button",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7692052842718301473"
+   },
+   {
+    "id": "7692023997462039841",
+    "ts": "2026-10-02T11:01:38.000Z",
+    "text": "play-button",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7692023997462039841"
+   },
+   {
+    "id": "7691931180924554528",
+    "ts": "2026-10-02T05:01:27.000Z",
+    "text": "play-button",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691931180924554528"
+   },
+   {
+    "id": "7691854002618731808",
+    "ts": "2026-10-02T00:01:58.000Z",
+    "text": "play-button",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691854002618731808"
+   },
+   {
+    "id": "7691715406117014816",
+    "ts": "2026-10-01T15:04:08.000Z",
+    "text": "play-button",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691715406117014816"
+   },
+   {
+    "id": "7691686402760756513",
+    "ts": "2026-10-01T13:11:35.000Z",
+    "text": "play-button",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691686402760756513"
+   },
+   {
+    "id": "7691653229758680352",
+    "ts": "2026-10-01T11:02:52.000Z",
+    "text": "play-button",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691653229758680352"
+   },
+   {
+    "id": "7691593132227513632",
+    "ts": "2026-10-01T07:09:39.000Z",
+    "text": "play-button",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691593132227513632"
+   },
+   {
+    "id": "7691560660890651937",
+    "ts": "2026-10-01T05:03:39.000Z",
+    "text": "play-button",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691560660890651937"
+   },
+   {
+    "id": "7691312537396186400",
+    "ts": "2026-09-30T13:00:48.000Z",
+    "text": "play-button",
+    "permalink": "https://www.tiktok.com/@sportsfc.vn/video/7691312537396186400"
+   }
+  ],
+  "raw": "sportsfc.vn\n4\nFollowing\n47\nFollowers\n368\nLikes\nYêu bóng đá?... See more\n303\n194\n15\n472\n620\n366\n226\n292\n618\n422\n\nSee more\n\nView Privacy Policy\nOpen TikTok\nYêu bóng đá?... See more"
+ },
+ "D": {
+  "finalUrl": "https://www.tikwm.com/api/user/posts?unique_id=sportsfc.vn&count=12&cursor=0",
+  "text": "www.tikwm.com Performing security verification This website uses a security service to protect against malicious bots. This page is displayed while the website verifies you are not a bot. Ray ID: a445bf6d6c5336cb Perfo",
+  "calls": [],
+  "posts": [],
+  "raw": "www.tikwm.com\nPerforming security verification\n\nThis website uses a security service to protect against malicious bots. This page is displayed while the website verifies you are not a bot.\n\nRay ID: a445bf6d6c5336cb\nPerformance and Security by Cloudflare\nPrivacy",
+  "tikwmParse": "not JSON: www.tikwm.com\nPerforming security verification\n\nThis website uses a security ser"
+ }
+}

@@ -1,5 +1,5 @@
-2026-10-02 18:14:43 [scrapy.utils.log] INFO: Scrapy 2.19.0 started (bot: scrapybot)
-2026-10-02 18:14:43 [scrapy.utils.log] INFO: Versions:
+2026-10-02 18:27:05 [scrapy.utils.log] INFO: Scrapy 2.19.0 started (bot: scrapybot)
+2026-10-02 18:27:05 [scrapy.utils.log] INFO: Versions:
 {'lxml': '6.1.3',
  'libxml2': '2.14.6',
  'cssselect': '1.5.0',
@@ -10,7 +10,9 @@
  'pyOpenSSL': '26.4.0 (OpenSSL 4.0.3 29 Sep 2026)',
  'cryptography': '50.0.2',
  'Platform': 'Linux-6.17.0-1022-azure-x86_64-with-glibc2.39'}
-2026-10-02 18:14:43 [scrapy.crawler] DEBUG: Using CrawlerProcess
+2026-10-02 18:27:05 [scrapy.crawler] DEBUG: Using CrawlerProcess
+2026-10-02 18:27:05 [scrapy.downloadermiddlewares.retry] ERROR: Gave up retrying <GET https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Fsportsfc.fans%2F&is_from_rle> (failed 2 times): 429 Unknown Status
+2026-10-02 18:27:05 [scrapy.downloadermiddlewares.retry] ERROR: Gave up retrying <GET https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Fsportsfc.vn%2F&is_from_rle> (failed 2 times): 429 Unknown Status
 
 ── 4 Scrapy · plain HTTP · this machine
   ig-vn    instagram  returned  0  recall 0/6   (  0%)  times -     captions -
@@ -19,11 +21,11 @@
   fb-fans  facebook   returned 10  recall 6/6   (100%)  times 100%  captions 100%
   x-vn     x          returned  0  recall 0/5   (  0%)  times -     captions -
   tt-vn    tiktok     returned  0  recall 0/6   (  0%)  times -     captions -
-     ig-vn: HTTP 200, 507181 bytes
-     ig-fans: HTTP 200, 507366 bytes
-     fb-vn: HTTP 200, 10683824 bytes
-     fb-fans: HTTP 200, 10349745 bytes
+     ig-vn: HttpError('Ignoring non-200 response')
+     ig-fans: HttpError('Ignoring non-200 response')
+     fb-vn: HTTP 200, 10683314 bytes
+     fb-fans: HTTP 200, 10343629 bytes
      x-vn: HttpError('Ignoring non-200 response')
-     tt-vn: HTTP 200, 388026 bytes
+     tt-vn: HTTP 200, 370648 bytes
 
 saved /home/runner/work/Social/Social/results/gha-exp4-scrapy.json
