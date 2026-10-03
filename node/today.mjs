@@ -34,7 +34,10 @@ const CHANNELS = [
   } },
 ];
 
-const ICT = 7 * 3600e3;
+/* the calendar day and clock to report in: TZ_HOURS=5.5 for India, default 7 (Vietnam) */
+const TZH = Number(process.env.TZ_HOURS || 7);
+const ICT = TZH * 3600e3;
+const ZONE = TZH === 5.5 ? "IST" : TZH === 7 ? "ICT" : "UTC" + (TZH >= 0 ? "+" : "") + TZH;
 const dayOf = ts => new Date(new Date(ts).getTime() + ICT).toISOString().slice(0, 10);
 const today = dayOf(Date.now());
 const out = { today, readAt: new Date().toISOString(), channels: {} };
@@ -46,7 +49,7 @@ for (const c of CHANNELS.filter(c => which.includes(c.p))) {
   console.log(`\n${c.name} (${c.lang}) — ${error ? "ERROR " + error : posts.length ? todays.length + " post(s) today" : "nothing read (blocked / restricted)"}`);
   for (const p of todays) {
     const t = new Date(new Date(p.ts).getTime() + ICT).toISOString().slice(11, 16);
-    console.log(`  ${t} ICT  ${String(p.text || "").replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim().slice(0, 110)}`);
+    console.log(`  ${t} ${ZONE}  ${String(p.text || "").replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim().slice(0, 110)}`);
   }
 }
-fs.writeFileSync(path.join(LAB, "results", `${process.env.LAB_PREFIX || ""}today-${today}.json`), JSON.stringify(out, null, 1));
+fs.writeFileSync(path.join(LAB, "results", `${process.env.LAB_PREFIX || ""}today-${today}-${ZONE}.json`), JSON.stringify(out, null, 1));
