@@ -1,11 +1,7 @@
 {
-  "ip": "20.168.137.7",
-  "city": "San Jose",
-  "region": "California",
-  "country": "US",
-  "loc": "37.3394,-121.8950",
-  "org": "AS8075 Microsoft Corporation",
-  "postal": "95110",
-  "timezone": "America/Los_Angeles",
-  "readme": "https://ipinfo.io/missingauth"
+  "status": 429,
+  "error": {
+    "title": "Rate limit hit",
+    "message": "Sign up at ipinfo.io"
+  }
 }
