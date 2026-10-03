@@ -74,3 +74,18 @@ Every read: exact timestamps and captions on 100 % of posts. No browser, no logi
   (empty lists), X from a datacenter with any engine.
 - **Caveat:** side doors are undocumented; any platform can change them. Keep Apify as the fallback
   when a free read fails, so a change costs a few cents instead of a blank report.
+
+## Round 4 — context.dev (prepared, waiting for an API key)
+
+context.dev is a scraping API (YC S26): `POST api.context.dev/v1/web/scrape` returns a page's HTML
+rendered in a real browser behind "stealth proxies". Free plan: 1,000 credits a month on a
+work-email account (250 once on a personal email); 1 credit per page; custom request headers allowed.
+Its docs say nothing about Instagram, X or logged-in content.
+
+`node/exp9-contextdev.mjs` reads, through it: X `Sportsfcvn`; Instagram `sportsfc.fans` (profile and
+embed, logged out — and with a session cookie only if `IG_COOKIE` is set in `.env`); controls
+Instagram `sportsfc.vn` and TikTok. About 7 credits per run.
+
+Expectations before running: X has a fair chance (a real browser on a non-datacenter IP is exactly
+what got X to render from a home connection); the 18+ Instagram account almost certainly stays
+closed logged out — the wall is a property of the account, which no proxy changes.

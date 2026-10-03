@@ -5,3 +5,6 @@ python/__pycache__/
 sessions/
 storage/
 results/*.html
+
+# API keys and session cookies for the experiments — never committed
+.env
