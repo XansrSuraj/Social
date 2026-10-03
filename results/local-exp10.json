@@ -1,0 +1,125 @@
+{
+ "at": "2026-10-03T19:38:12.816Z",
+ "rounds": 1,
+ "results": [
+  {
+   "round": 1,
+   "name": "X · FxTwitter v2 statuses · Sportsfcvn",
+   "ok": true,
+   "status": 200,
+   "n": 20,
+   "timed": 20,
+   "newest": "4.7 h",
+   "note": "views/likes/thumb: 6/0/true",
+   "sample": [
+    {
+     "t": "2026-10-03T14:58:44.000Z",
+     "text": "https://sfc.my/r/6r03Nmsb ⚔️ Tây Ban Nha có thể phá vỡ bức tường phòng"
+    },
+    {
+     "t": "2026-10-03T12:56:32.000Z",
+     "text": "https://sfc.my/r/Qk8IJqXT Croatia liệu có thể khuất phục được Anh trên"
+    }
+   ]
+  },
+  {
+   "round": 1,
+   "name": "X · guest token + GraphQL UserTweets",
+   "ok": false,
+   "status": 422,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "guest token ok, uid 2087055148338262016; timeline 422 172B",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "X · Nitter / XCancel RSS",
+   "ok": false,
+   "status": 0,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "rss.xcancel.com:451 xcancel.com:451 nitter.net:ETIMEDOUT nitter.poast.org:ENOTFOUND nitter.privacyredirect.com:404",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "X · syndication timeline widget",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "IG 18+ · sportsfc.fans embed",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "age/login wall",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "IG 18+ · sportsfc.fans mobile API",
+   "ok": false,
+   "status": 400,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "SecFetch Policy violation.",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "IG vn · mobile API (2nd route)",
+   "ok": false,
+   "status": 400,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "SecFetch Policy violation.",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "FB vn · Page Plugin (2nd route)",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "54470B, 0 text blocks",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "FB vn · m.facebook.com (2nd route)",
+   "ok": false,
+   "status": 0,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "0B",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "TT vn · tikwm (2nd route)",
+   "ok": false,
+   "status": 403,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "<!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"C",
+   "sample": []
+  }
+ ]
+}

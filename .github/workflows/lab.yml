@@ -32,7 +32,7 @@ jobs:
         working-directory: node
         run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium firefox webkit
       - name: "Exp 1 · Crawlee (HTTP + browser)"
-        if: contains(steps.cfg.outputs.run, 'exp1')
+        if: contains(steps.cfg.outputs.run, 'exp1 ')
         working-directory: node
         run: timeout 900 node exp1-crawlee.mjs both 2>&1 | tee ../results/gha-exp1.log || true
       - name: "Exp 2 · Playwright (plain / stealth / real Chrome)"
@@ -55,6 +55,10 @@ jobs:
         if: contains(steps.cfg.outputs.run, 'exp8')
         working-directory: node
         run: timeout 1500 node exp8-free-stack.mjs 5 150 2>&1 | tee ../results/gha-exp8.log || true
+      - name: "Exp 10 · new free routes (FxTwitter, Nitter RSS, guest GraphQL, IG/FB/TT second routes), 6 rounds"
+        if: contains(steps.cfg.outputs.run, 'exp10')
+        working-directory: node
+        run: timeout 1500 node exp10-new-routes.mjs 6 120 2>&1 | tee ../results/gha-exp10.log || true
       - name: "Today · what went out on Facebook, Instagram, TikTok (free readers)"
         if: contains(steps.cfg.outputs.run, 'today')
         working-directory: node
