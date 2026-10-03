@@ -1,11 +1,11 @@
 {
-  "ip": "134.33.77.41",
-  "city": "Phoenix",
-  "region": "Arizona",
+  "ip": "132.196.55.96",
+  "city": "Des Moines",
+  "region": "Iowa",
   "country": "US",
-  "loc": "33.4484,-112.0740",
+  "loc": "41.6005,-93.6091",
   "org": "AS8075 Microsoft Corporation",
-  "postal": "85003",
-  "timezone": "America/Phoenix",
+  "postal": "50309",
+  "timezone": "America/Chicago",
   "readme": "https://ipinfo.io/missingauth"
 }
