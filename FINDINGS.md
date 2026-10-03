@@ -89,3 +89,44 @@ Instagram `sportsfc.vn` and TikTok. About 7 credits per run.
 Expectations before running: X has a fair chance (a real browser on a non-datacenter IP is exactly
 what got X to render from a home connection); the 18+ Instagram account almost certainly stays
 closed logged out — the wall is a property of the account, which no proxy changes.
+
+## Round 5 — new free routes for what still uses Apify (2026-10-04)
+
+Searched for techniques new since round 3, then ran every candidate keyless and logged out — once from
+this machine (home ISP, India) and **6 rounds, 2 minutes apart, from GitHub Actions** (Microsoft, San
+Jose — the same kind of datacenter IP as Vercel). `node/exp10-new-routes.mjs`, results in
+`results/gha-exp10.*` and `results/local-exp10.json`.
+
+| Route | Home ISP | Datacenter (6 rounds) | What came back |
+|---|---|---|---|
+| **X · FxTwitter API v2** `api.fxtwitter.com/2/profile/<handle>/statuses` | ✅ | **✅ 6/6** | 20 newest posts, exact time, full text with t.co links already expanded, views/likes/replies/reposts/quotes/bookmarks, video length + thumbnail, a cursor for older pages |
+| X · guest token + GraphQL UserTweets | ❌ 422 | ❌ 0/6 | the guest token and the user lookup work; the timeline is refused |
+| X · Nitter / XCancel RSS | ❌ | ❌ 0/6 | XCancel answers **451** (unavailable for legal reasons); nitter.net refused/timed out; others gone |
+| X · syndication timeline widget | ❌ empty | ❌ 429 | still deprecated |
+| IG 18+ `sportsfc.fans` · embed | ❌ | ❌ 0/6 | age/login wall |
+| IG 18+ / IG vn · mobile-app API | ❌ 400 | ❌ 429 | refused |
+| FB vn · Page Plugin, m.facebook.com | ❌ | ❌ 0/6 | no posts / redirected to login |
+| TikTok vn · tikwm | ❌ 403 | ❌ 0/6 | Cloudflare challenge |
+
+**X has a free server-side route.** FxTwitter (FxEmbed, MIT-licensed, the service behind
+fxtwitter.com link previews) fetches from X itself and hands back JSON to anyone, no key, no login — so
+it works from a datacenter where x.com shows "security verification". It returns 20 posts to Apify's
+6, plus the expanded `sfc.my` links. Checked against the other channels: its times line up with the
+VN drops (20:28 vs the 20:26 drop, 18:26 vs 18:23, 16:34 vs 16:30). `node/x-fx-reader.mjs` maps it
+to exactly the post shape production's `xParseApify()` returns, so it can sit in front of Apify the
+way Facebook/Instagram/TikTok already do (free first, Apify only if it fails).
+
+Caveats, honestly: it is a free community service, not X's API — no published rate limit or SLA,
+and X could break it as it broke Nitter. One request per check is negligible load, and keeping Apify
+as the fallback means an outage costs ~$0.001 a check rather than a missing channel.
+
+**Instagram `sportsfc.fans` (18+) has no free logged-out route — confirmed again.** Meta's own docs say
+age-gated accounts are excluded even from the Graph API's Business Discovery. The one clean route is
+the **official Instagram API with Instagram Login**: the account owner logs in once, gets a 60-day
+token (refreshable), and `graph.instagram.com/me/media` returns the account's own posts — free,
+official, no scraping, no Facebook Page needed; the account must be professional (Business/Creator).
+`node/exp11-ig-official.mjs` is ready: put `IG_TOKEN_FANS=…` in `.env` (gitignored) and run it.
+Or remove the account's age restriction — the free embed reader then works with no token at all.
+
+**No second free route was found for Facebook, Instagram vn or TikTok.** Their current free readers
+stay the only free route; Apify remains their fallback.
