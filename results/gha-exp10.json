@@ -1,0 +1,720 @@
+{
+ "at": "2026-10-03T19:52:55.740Z",
+ "rounds": 6,
+ "results": [
+  {
+   "round": 1,
+   "name": "X · FxTwitter v2 statuses · Sportsfcvn",
+   "ok": true,
+   "status": 200,
+   "n": 20,
+   "timed": 20,
+   "newest": "4.7 h",
+   "note": "views/likes/thumb: 6/0/true",
+   "sample": [
+    {
+     "t": "2026-10-03T14:58:44.000Z",
+     "text": "https://sfc.my/r/6r03Nmsb ⚔️ Tây Ban Nha có thể phá vỡ bức tường phòng"
+    },
+    {
+     "t": "2026-10-03T12:56:32.000Z",
+     "text": "https://sfc.my/r/Qk8IJqXT Croatia liệu có thể khuất phục được Anh trên"
+    }
+   ]
+  },
+  {
+   "round": 1,
+   "name": "X · guest token + GraphQL UserTweets",
+   "ok": false,
+   "status": 422,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "guest token ok, uid 2087055148338262016; timeline 422 172B",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "X · Nitter / XCancel RSS",
+   "ok": false,
+   "status": 0,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "rss.xcancel.com:451 xcancel.com:451 nitter.net:ECONNREFUSED nitter.poast.org:ENOTFOUND nitter.privacyredirect.com:404",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "X · syndication timeline widget",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "no __NEXT_DATA__",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "IG 18+ · sportsfc.fans embed",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "age/login wall",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "IG 18+ · sportsfc.fans mobile API",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "IG vn · mobile API (2nd route)",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "FB vn · Page Plugin (2nd route)",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "54408B, 0 text blocks",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "FB vn · m.facebook.com (2nd route)",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "168971B, redirected to login",
+   "sample": []
+  },
+  {
+   "round": 1,
+   "name": "TT vn · tikwm (2nd route)",
+   "ok": false,
+   "status": 403,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "<!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"C",
+   "sample": []
+  },
+  {
+   "round": 2,
+   "name": "X · FxTwitter v2 statuses · Sportsfcvn",
+   "ok": true,
+   "status": 200,
+   "n": 20,
+   "timed": 20,
+   "newest": "4.8 h",
+   "note": "views/likes/thumb: 7/0/true",
+   "sample": [
+    {
+     "t": "2026-10-03T14:58:44.000Z",
+     "text": "https://sfc.my/r/6r03Nmsb ⚔️ Tây Ban Nha có thể phá vỡ bức tường phòng"
+    },
+    {
+     "t": "2026-10-03T12:56:32.000Z",
+     "text": "https://sfc.my/r/Qk8IJqXT Croatia liệu có thể khuất phục được Anh trên"
+    }
+   ]
+  },
+  {
+   "round": 2,
+   "name": "X · guest token + GraphQL UserTweets",
+   "ok": false,
+   "status": 422,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "guest token ok, uid 2087055148338262016; timeline 422 172B",
+   "sample": []
+  },
+  {
+   "round": 2,
+   "name": "X · Nitter / XCancel RSS",
+   "ok": false,
+   "status": 0,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "rss.xcancel.com:451 xcancel.com:451 nitter.net:ECONNREFUSED nitter.poast.org:ENOTFOUND nitter.privacyredirect.com:404",
+   "sample": []
+  },
+  {
+   "round": 2,
+   "name": "X · syndication timeline widget",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "no __NEXT_DATA__",
+   "sample": []
+  },
+  {
+   "round": 2,
+   "name": "IG 18+ · sportsfc.fans embed",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "age/login wall",
+   "sample": []
+  },
+  {
+   "round": 2,
+   "name": "IG 18+ · sportsfc.fans mobile API",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "",
+   "sample": []
+  },
+  {
+   "round": 2,
+   "name": "IG vn · mobile API (2nd route)",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "",
+   "sample": []
+  },
+  {
+   "round": 2,
+   "name": "FB vn · Page Plugin (2nd route)",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "53040B, 0 text blocks",
+   "sample": []
+  },
+  {
+   "round": 2,
+   "name": "FB vn · m.facebook.com (2nd route)",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "169255B, redirected to login",
+   "sample": []
+  },
+  {
+   "round": 2,
+   "name": "TT vn · tikwm (2nd route)",
+   "ok": false,
+   "status": 403,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "<!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"C",
+   "sample": []
+  },
+  {
+   "round": 3,
+   "name": "X · FxTwitter v2 statuses · Sportsfcvn",
+   "ok": true,
+   "status": 200,
+   "n": 20,
+   "timed": 20,
+   "newest": "4.8 h",
+   "note": "views/likes/thumb: 7/0/true",
+   "sample": [
+    {
+     "t": "2026-10-03T14:58:44.000Z",
+     "text": "https://sfc.my/r/6r03Nmsb ⚔️ Tây Ban Nha có thể phá vỡ bức tường phòng"
+    },
+    {
+     "t": "2026-10-03T12:56:32.000Z",
+     "text": "https://sfc.my/r/Qk8IJqXT Croatia liệu có thể khuất phục được Anh trên"
+    }
+   ]
+  },
+  {
+   "round": 3,
+   "name": "X · guest token + GraphQL UserTweets",
+   "ok": false,
+   "status": 422,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "guest token ok, uid 2087055148338262016; timeline 422 172B",
+   "sample": []
+  },
+  {
+   "round": 3,
+   "name": "X · Nitter / XCancel RSS",
+   "ok": false,
+   "status": 0,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "rss.xcancel.com:451 xcancel.com:451 nitter.net:ECONNREFUSED nitter.poast.org:ENOTFOUND nitter.privacyredirect.com:404",
+   "sample": []
+  },
+  {
+   "round": 3,
+   "name": "X · syndication timeline widget",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "no __NEXT_DATA__",
+   "sample": []
+  },
+  {
+   "round": 3,
+   "name": "IG 18+ · sportsfc.fans embed",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "age/login wall",
+   "sample": []
+  },
+  {
+   "round": 3,
+   "name": "IG 18+ · sportsfc.fans mobile API",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "",
+   "sample": []
+  },
+  {
+   "round": 3,
+   "name": "IG vn · mobile API (2nd route)",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "",
+   "sample": []
+  },
+  {
+   "round": 3,
+   "name": "FB vn · Page Plugin (2nd route)",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "53041B, 0 text blocks",
+   "sample": []
+  },
+  {
+   "round": 3,
+   "name": "FB vn · m.facebook.com (2nd route)",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "169070B, redirected to login",
+   "sample": []
+  },
+  {
+   "round": 3,
+   "name": "TT vn · tikwm (2nd route)",
+   "ok": false,
+   "status": 403,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "<!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"C",
+   "sample": []
+  },
+  {
+   "round": 4,
+   "name": "X · FxTwitter v2 statuses · Sportsfcvn",
+   "ok": true,
+   "status": 200,
+   "n": 20,
+   "timed": 20,
+   "newest": "4.8 h",
+   "note": "views/likes/thumb: 7/0/true",
+   "sample": [
+    {
+     "t": "2026-10-03T14:58:44.000Z",
+     "text": "https://sfc.my/r/6r03Nmsb ⚔️ Tây Ban Nha có thể phá vỡ bức tường phòng"
+    },
+    {
+     "t": "2026-10-03T12:56:32.000Z",
+     "text": "https://sfc.my/r/Qk8IJqXT Croatia liệu có thể khuất phục được Anh trên"
+    }
+   ]
+  },
+  {
+   "round": 4,
+   "name": "X · guest token + GraphQL UserTweets",
+   "ok": false,
+   "status": 422,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "guest token ok, uid 2087055148338262016; timeline 422 172B",
+   "sample": []
+  },
+  {
+   "round": 4,
+   "name": "X · Nitter / XCancel RSS",
+   "ok": false,
+   "status": 0,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "rss.xcancel.com:451 xcancel.com:451 nitter.net:ECONNREFUSED nitter.poast.org:ENOTFOUND nitter.privacyredirect.com:404",
+   "sample": []
+  },
+  {
+   "round": 4,
+   "name": "X · syndication timeline widget",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "no __NEXT_DATA__",
+   "sample": []
+  },
+  {
+   "round": 4,
+   "name": "IG 18+ · sportsfc.fans embed",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "age/login wall",
+   "sample": []
+  },
+  {
+   "round": 4,
+   "name": "IG 18+ · sportsfc.fans mobile API",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "",
+   "sample": []
+  },
+  {
+   "round": 4,
+   "name": "IG vn · mobile API (2nd route)",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "",
+   "sample": []
+  },
+  {
+   "round": 4,
+   "name": "FB vn · Page Plugin (2nd route)",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "54400B, 0 text blocks",
+   "sample": []
+  },
+  {
+   "round": 4,
+   "name": "FB vn · m.facebook.com (2nd route)",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "169079B, redirected to login",
+   "sample": []
+  },
+  {
+   "round": 4,
+   "name": "TT vn · tikwm (2nd route)",
+   "ok": false,
+   "status": 403,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "<!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"C",
+   "sample": []
+  },
+  {
+   "round": 5,
+   "name": "X · FxTwitter v2 statuses · Sportsfcvn",
+   "ok": true,
+   "status": 200,
+   "n": 20,
+   "timed": 20,
+   "newest": "4.9 h",
+   "note": "views/likes/thumb: 7/0/true",
+   "sample": [
+    {
+     "t": "2026-10-03T14:58:44.000Z",
+     "text": "https://sfc.my/r/6r03Nmsb ⚔️ Tây Ban Nha có thể phá vỡ bức tường phòng"
+    },
+    {
+     "t": "2026-10-03T12:56:32.000Z",
+     "text": "https://sfc.my/r/Qk8IJqXT Croatia liệu có thể khuất phục được Anh trên"
+    }
+   ]
+  },
+  {
+   "round": 5,
+   "name": "X · guest token + GraphQL UserTweets",
+   "ok": false,
+   "status": 422,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "guest token ok, uid 2087055148338262016; timeline 422 172B",
+   "sample": []
+  },
+  {
+   "round": 5,
+   "name": "X · Nitter / XCancel RSS",
+   "ok": false,
+   "status": 0,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "rss.xcancel.com:451 xcancel.com:451 nitter.net:ECONNREFUSED nitter.poast.org:ENOTFOUND nitter.privacyredirect.com:404",
+   "sample": []
+  },
+  {
+   "round": 5,
+   "name": "X · syndication timeline widget",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "no __NEXT_DATA__",
+   "sample": []
+  },
+  {
+   "round": 5,
+   "name": "IG 18+ · sportsfc.fans embed",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "age/login wall",
+   "sample": []
+  },
+  {
+   "round": 5,
+   "name": "IG 18+ · sportsfc.fans mobile API",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "",
+   "sample": []
+  },
+  {
+   "round": 5,
+   "name": "IG vn · mobile API (2nd route)",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "",
+   "sample": []
+  },
+  {
+   "round": 5,
+   "name": "FB vn · Page Plugin (2nd route)",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "53037B, 0 text blocks",
+   "sample": []
+  },
+  {
+   "round": 5,
+   "name": "FB vn · m.facebook.com (2nd route)",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "169032B, redirected to login",
+   "sample": []
+  },
+  {
+   "round": 5,
+   "name": "TT vn · tikwm (2nd route)",
+   "ok": false,
+   "status": 403,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "<!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"C",
+   "sample": []
+  },
+  {
+   "round": 6,
+   "name": "X · FxTwitter v2 statuses · Sportsfcvn",
+   "ok": true,
+   "status": 200,
+   "n": 20,
+   "timed": 20,
+   "newest": "4.9 h",
+   "note": "views/likes/thumb: 7/0/true",
+   "sample": [
+    {
+     "t": "2026-10-03T14:58:44.000Z",
+     "text": "https://sfc.my/r/6r03Nmsb ⚔️ Tây Ban Nha có thể phá vỡ bức tường phòng"
+    },
+    {
+     "t": "2026-10-03T12:56:32.000Z",
+     "text": "https://sfc.my/r/Qk8IJqXT Croatia liệu có thể khuất phục được Anh trên"
+    }
+   ]
+  },
+  {
+   "round": 6,
+   "name": "X · guest token + GraphQL UserTweets",
+   "ok": false,
+   "status": 422,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "guest token ok, uid 2087055148338262016; timeline 422 172B",
+   "sample": []
+  },
+  {
+   "round": 6,
+   "name": "X · Nitter / XCancel RSS",
+   "ok": false,
+   "status": 0,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "rss.xcancel.com:451 xcancel.com:451 nitter.net:ECONNREFUSED nitter.poast.org:ENOTFOUND nitter.privacyredirect.com:404",
+   "sample": []
+  },
+  {
+   "round": 6,
+   "name": "X · syndication timeline widget",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "no __NEXT_DATA__",
+   "sample": []
+  },
+  {
+   "round": 6,
+   "name": "IG 18+ · sportsfc.fans embed",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "age/login wall",
+   "sample": []
+  },
+  {
+   "round": 6,
+   "name": "IG 18+ · sportsfc.fans mobile API",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "",
+   "sample": []
+  },
+  {
+   "round": 6,
+   "name": "IG vn · mobile API (2nd route)",
+   "ok": false,
+   "status": 429,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "",
+   "sample": []
+  },
+  {
+   "round": 6,
+   "name": "FB vn · Page Plugin (2nd route)",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "53034B, 0 text blocks",
+   "sample": []
+  },
+  {
+   "round": 6,
+   "name": "FB vn · m.facebook.com (2nd route)",
+   "ok": false,
+   "status": 200,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "169066B, redirected to login",
+   "sample": []
+  },
+  {
+   "round": 6,
+   "name": "TT vn · tikwm (2nd route)",
+   "ok": false,
+   "status": 403,
+   "n": 0,
+   "timed": 0,
+   "newest": "—",
+   "note": "<!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"C",
+   "sample": []
+  }
+ ]
+}
