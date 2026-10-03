@@ -55,6 +55,10 @@ jobs:
         if: contains(steps.cfg.outputs.run, 'exp8')
         working-directory: node
         run: timeout 1500 node exp8-free-stack.mjs 5 150 2>&1 | tee ../results/gha-exp8.log || true
+      - name: "Today · what went out on Facebook, Instagram, TikTok (free readers)"
+        if: contains(steps.cfg.outputs.run, 'today')
+        working-directory: node
+        run: timeout 180 node today.mjs 2>&1 | tee ../results/gha-today.log || true
       - name: Python deps
         if: contains(steps.cfg.outputs.run, 'exp3') || contains(steps.cfg.outputs.run, 'exp4')
         run: pip install --quiet selenium scrapy
