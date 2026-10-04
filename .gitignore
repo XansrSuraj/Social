@@ -10,3 +10,7 @@ org-hub-backup.json
 
 # the built React app
 dist/
+
+# pipeline state when run without Supabase (local development)
+.pipeline.json
+.report-local.json

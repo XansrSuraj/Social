@@ -21,6 +21,14 @@
  */
 
 const ingest = require("../ingest-store.js");
+const { AsyncLocalStorage } = require("async_hooks");
+
+/* The automatic pipeline (api/pipeline.js) reads channels every few minutes. Letting each of those
+   reads fall back to a paid Apify run would drain the month's credit in a day, so it asks for
+   { noPaid: true }: free readers only, and a free read that fails is reported as failed instead of
+   paid for. Held per request (AsyncLocalStorage) so two requests sharing an instance never mix. */
+const policy = new AsyncLocalStorage();
+const noPaid = () => !!(policy.getStore() && policy.getStore().noPaid);
 
 const TIMEOUT = 12000;
 const MAX_CHANNELS = 40;
@@ -986,6 +994,50 @@ async function collectXTwitterApi(handle) {
   return { posts: apiPosts, source: "x-api", note: "read server-side via twitterapi.io" };
 }
 
+/* 0) FxTwitter (FxEmbed, the open-source service behind fxtwitter.com link previews) — free, keyless,
+   and it answers a datacenter IP, where x.com itself shows "security verification". One request
+   returns the newest 20 posts with the exact time, the text with every t.co link already expanded,
+   views/likes/replies/reposts/quotes/bookmarks, and the video's length and cover. Measured
+   2026-10-04 from a GitHub Actions runner: 6 of 6 rounds, 20 posts each (free-scraper-lab round 5).
+   It is a community service, not X's API — so Apify stays behind it as the fallback. */
+function xParseFx(json, handle) {
+  const me = handle.toLowerCase();
+  const res = json && Array.isArray(json.results) ? json.results : [];
+  return res.map(s => {
+    const ms = Number(s && s.created_timestamp) * 1000;
+    if (!s || !s.id || !isFinite(ms) || ms <= 0) return null;
+    if (s.reposted_by || s.replying_to) return null;                    // a repost or a reply
+    const who = String((s.author && s.author.screen_name) || me).toLowerCase();
+    if (who !== me) return null;
+    const m0 = ((s.media && s.media.all) || [])[0] || {};
+    const facets = (s.raw_text && s.raw_text.facets) || [];
+    const text = String(s.text || "");
+    return {
+      externalId: String(s.id), ts: new Date(ms).toISOString(),
+      kind: /video|gif/.test(String(m0.type || "")) ? "video" : m0.type ? "photo" : "text",
+      text,
+      views: num(s.views), likes: num(s.likes), comments: num(s.replies), reposts: num(s.reposts),
+      quotes: num(s.quotes), saves: num(s.bookmarks),
+      duration: m0.duration ? Math.round(m0.duration) : null,
+      thumb: m0.thumbnail_url || (m0.type === "photo" ? m0.url : "") || "",
+      link: (facets.find(x => x.type === "url") || {}).replacement || firstLink(text),
+      hashtags: tagList(facets.filter(x => x.type === "hashtag").map(x => x.original)),
+      author: (s.author && s.author.name) || "", platformLang: s.lang || "",
+      permalink: s.url || ("https://x.com/" + handle + "/status/" + s.id),
+    };
+  }).filter(Boolean).sort((a, b) => new Date(b.ts) - new Date(a.ts));
+}
+async function collectXFree(handle) {
+  const r = await get("https://api.fxtwitter.com/2/profile/" + encodeURIComponent(handle) + "/statuses",
+    { Accept: "application/json" });
+  if (r.status !== 200) throw new Error("FxTwitter returned HTTP " + r.status);
+  let j; try { j = JSON.parse(r.body); } catch (e) { throw new Error("FxTwitter answered with something that was not JSON"); }
+  const posts = xParseFx(j, handle);
+  const why = freeCheck(posts);
+  if (why) throw new Error("FxTwitter: " + why);
+  return { posts, source: "x-free", cost: null, note: "read free through FxTwitter — no Apify" };
+}
+
 /* Each route is tried in turn and a failed one never blocks the next: twitterapi.io answering 402
    (an empty balance) used to end the read right there, even though the free page read below could
    still have been tried. Every route that refused is named in the final note or error. */
@@ -993,6 +1045,11 @@ async function collectX(ch) {
   const handle = xTarget(ch);
   if (!handle) throw new Error("No X (Twitter) handle could be read from this channel");
   const refused = [];
+  if (freeOn()) {
+    try { return await collectXFree(handle); }
+    catch (e) { refused.push(String(e.message || e)); }
+  }
+  if (noPaid()) throw new Error(refused.join(" | ") + " — the paid fallback is skipped on automatic checks");
   let spent = null;                       // a failed Apify run still cost something — keep it on the result
   if (process.env.APIFY_TOKEN) {
     try { return await collectXApify(handle); }
@@ -1336,6 +1393,7 @@ async function freeThenApify(platform, url, parse, apify) {
                          note: "read free from the platform's public page — no Apify" };
     } catch (e) { why = String(e.message || e); }
   }
+  if (noPaid()) throw new Error(`free read failed (${why}) — the paid fallback is skipped on automatic checks`);
   if (!process.env.APIFY_TOKEN) throw new Error(`free read failed (${why}) and APIFY_TOKEN is not set`);
   try {
     const out = await apify();
@@ -1702,29 +1760,31 @@ module.exports = async (req, res) => {
     : Math.min(Math.max(Number(body.days) || DEFAULT_DAYS, 1), 90) * 24;
   const cutoff = Date.now() - hours * 3600e3;
 
-  /* One read for the whole batch — see the comment in collectOne for why. An unreachable store
-     must never take a readable channel down with it, so a failure here just means every channel
-     finds nothing pushed and falls through to its own collector, exactly as before. */
-  let pushedAll = {};
-  try { pushedAll = await ingest.readAll(); } catch (e) { pushedAll = {}; }
-
-  const results = await Promise.all(channels.map(c => collectOne(c, cutoff, pushedAll)));
-
-  /* What this request actually spent on Apify, summed from each run's own record. Cached reads
-     count as 0; a run whose record carried no figure is counted in apifyRuns but not in the sum. */
-  const runs = results.map(r => r.cost).filter(c => c && !c.cached);
-  const apifyCostUsd = Math.round(runs.reduce((t, c) => t + (c.usd || 0), 0) * 1e6) / 1e6;
-
-  return res.status(200).json({
-    ok: true,
-    collectedAt: new Date().toISOString(),
-    hours,
-    days: Math.round(hours / 24),
-    apifyCostUsd,
-    apifyRuns: runs.length,
-    results,
-  });
+  const out = await collectChannels(channels, { hours, noPaid: !!body.noPaid });
+  return res.status(200).json({ ok: true, collectedAt: new Date().toISOString(), hours, days: Math.round(hours / 24), ...out });
 };
+
+async function collectChannels(channels, opts) {
+  const hours = (opts && opts.hours) || 24;
+  const cutoff = Date.now() - hours * 3600e3;
+  return policy.run({ noPaid: !!(opts && opts.noPaid) }, async () => {
+    /* One read for the whole batch — see the comment in collectOne for why. An unreachable store
+       must never take a readable channel down with it, so a failure here just means every channel
+       finds nothing pushed and falls through to its own collector, exactly as before. */
+    let pushedAll = {};
+    try { pushedAll = await ingest.readAll(); } catch (e) { pushedAll = {}; }
+
+    const results = await Promise.all(channels.map(c => collectOne(c, cutoff, pushedAll)));
+
+    /* What this request actually spent on Apify, summed from each run's own record. Cached reads
+       count as 0; a run whose record carried no figure is counted in apifyRuns but not in the sum. */
+    const runs = results.map(r => r.cost).filter(c => c && !c.cached);
+    const apifyCostUsd = Math.round(runs.reduce((t, c) => t + (c.usd || 0), 0) * 1e6) / 1e6;
+    return { apifyCostUsd, apifyRuns: runs.length, results };
+  });
+}
+module.exports.collectChannels = collectChannels;
+module.exports.xParseFx = xParseFx;
 
 /* ═══════════════════ small utilities ═══════════════════ */
 

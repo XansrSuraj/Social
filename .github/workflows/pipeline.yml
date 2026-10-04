@@ -1,0 +1,33 @@
+# The FM → channels pipeline's clock: every 5 minutes, ask the live site to run one tick
+# (api/pipeline.js?op=tick). Free on a public repository. GitHub may start a scheduled run a few
+# minutes late; nothing is lost when it does, because every tick catches up on all that is due —
+# and Vercel's own daily cron (vercel.json) is a second clock behind this one.
+#
+# Scheduled at odd minutes (1, 6, 11, …) to stay off the top-of-the-hour rush when GitHub delays most.
+# GitHub turns scheduled workflows off after 60 days without a commit to the repo; Actions → Enable
+# turns this one back on.
+name: pipeline-tick
+on:
+  schedule:
+    - cron: "1-59/5 * * * *"
+  workflow_dispatch: {}
+permissions: {}
+concurrency: { group: pipeline-tick, cancel-in-progress: false }
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Run one pipeline tick
+        env:
+          URL: https://aiko-social-distribution-check.vercel.app/api/pipeline?op=tick
+          KEY: ${{ secrets.PIPELINE_KEY }}
+        run: |
+          u="$URL"; [ -n "$KEY" ] && u="$u&key=$KEY"
+          for i in 1 2 3; do
+            code=$(curl -s -o out.json -w "%{http_code}" --max-time 150 "$u") || code=000
+            echo "attempt $i: HTTP $code"; cat out.json; echo
+            [ "$code" = "200" ] && exit 0
+            sleep 20
+          done
+          exit 1

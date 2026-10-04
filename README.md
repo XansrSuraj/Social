@@ -10,6 +10,8 @@ Brazilian Portuguese), so the site is exactly this: an overview of the channels 
 report a run produces.
 Adding a channel is a one-line code change, not a UI.
 
+**Automatic, end to end.** Every card FM Deliveries sends is checked on its real channel every 5 minutes, and problems (missing post, caption too long, FM failure, a broken reader) go to WhatsApp — see [PIPELINE.md](PIPELINE.md) and the **Live** page (`#/live`).
+
 **Two brands, one site.** The switch in the nav moves between them; each has its own channels,
 overview, report and saved history, and never mixes with the other:
 

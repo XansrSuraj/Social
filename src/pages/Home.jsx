@@ -25,6 +25,8 @@ export default function Home() {
   const onTime = rowsJudged.filter(r => r.status === "ok").length;
   const langIssues = rep.alerts.filter(a => a.kind === "lang").length;
   const perCheck = checks.apifyCheckUsd;
+  /* a press of Run, or the automatic pipeline reading channels — whichever was later */
+  const lastChecked = [checks.lastRun, checks.autoAt].filter(Boolean).sort().pop() || null;
   const all = E.dcChannels(E.ORG);
   const postsToday = vm.logPosts.length;
 
@@ -33,7 +35,7 @@ export default function Home() {
     { k: "Channels on time", v: <><em>{onTime}</em>/{rowsJudged.length || "—"}</>, x: 66, y: 4, d: .65 },
     { k: "Problems", v: <><em>{rep.alerts.length}</em> {rep.alerts.length === 1 ? "flag" : "flags"}</>, x: 0, y: 46, d: .8 },
     { k: "Wrong language", v: <><em>{langIssues}</em> {langIssues === 1 ? "post" : "posts"}</>, x: 70, y: 52, d: .95 },
-    { k: "Last checked", v: <>{ago(checks.lastRun)}</>, x: 8, y: 84, d: 1.1 },
+    { k: "Last checked", v: <>{ago(lastChecked)}</>, x: 8, y: 84, d: 1.1 },
     { k: "Cost per check", v: <><em>{perCheck != null ? "$" + perCheck.toFixed(3) : "free"}</em></>, x: 60, y: 88, d: 1.25 },
   ];
 
@@ -105,7 +107,7 @@ export default function Home() {
             <div className="stat"><div className="v">{all.length}</div><div className="k label">Channels watched</div><div className="s">across {E.REGIONS.length} regions</div></div>
             <div className="stat"><div className="v">{postsToday}</div><div className="k label">Posts read</div><div className="s">in the report's window</div></div>
             <div className="stat"><div className="v"><em>{rep.alerts.length}</em></div><div className="k label">Problems flagged</div><div className="s">missing, late, wrong language</div></div>
-            <div className="stat"><div className="v">{pct != null ? pct + "%" : "—"}</div><div className="k label">Delivered</div><div className="s">last checked {ago(checks.lastRun)}</div></div>
+            <div className="stat"><div className="v">{pct != null ? pct + "%" : "—"}</div><div className="k label">Delivered</div><div className="s">last checked {ago(lastChecked)}</div></div>
           </Reveal>
         </div>
       </section>

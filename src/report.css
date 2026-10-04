@@ -280,3 +280,28 @@ td.ask:hover .cl{transform:scale(1.12)}
   .rp-actions{width:100%}
   .rp-actions .btn{flex:1}
 }
+
+/* ═══════════════ live pipeline ═══════════════ */
+.live-stats .v{display:flex;align-items:center;gap:10px;font-size:clamp(24px,2.8vw,34px)}
+.live-drop{padding:18px;display:grid;gap:12px}
+.live-drop.gap{border-color:var(--red-line)}
+.live-row{display:grid;grid-template-columns:42px 1fr;gap:10px;align-items:start}
+.live-row .lang-tag{justify-self:start;margin-top:7px}
+.live-chips{display:flex;flex-wrap:wrap;gap:6px}
+.live-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px 4px 7px;border:1px solid var(--line);border-radius:9px;background:var(--paper);font-family:var(--font-ui);font-size:12px}
+a.live-chip:hover{border-color:var(--ink-4)}
+.live-chip svg{width:14px;height:14px;color:var(--muted)}
+.live-chip .cl{width:22px;height:22px;font-size:12px;border-radius:6px}
+.live-lag{color:var(--muted);font-variant-numeric:tabular-nums}
+.live-warn{color:var(--warn);font-weight:700}
+.live-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin-top:22px}
+.live-panel{padding:18px}
+.live-panel h3{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-size:19px;font-weight:600;letter-spacing:-.02em;margin:0 0 12px}
+.live-panel h3 svg{width:18px;height:18px;color:var(--red)}
+.live-alert{display:grid;grid-template-columns:86px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-2);font-size:13px;line-height:1.45;white-space:pre-line}
+.live-alert .mono{color:var(--muted);font-size:12px}
+.live-reader{display:grid;grid-template-columns:auto auto 1fr;gap:9px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line-2);font-size:13px}
+.live-reader b{font-family:var(--font-ui);font-weight:600}
+.live-reader span:last-child{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:860px){ .live-grid{grid-template-columns:1fr} }
+@media (max-width:560px){ .live-alert{grid-template-columns:1fr;gap:2px} .live-reader{grid-template-columns:auto 1fr} .live-reader span:last-child{grid-column:1/-1;white-space:normal} }

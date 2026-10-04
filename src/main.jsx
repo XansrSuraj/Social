@@ -7,6 +7,7 @@ import { EngineProvider, useApp } from "./app/core.jsx";
 import { Nav, Footer } from "./app/Shell.jsx";
 import Home from "./pages/Home.jsx";
 import Report from "./pages/Report.jsx";
+import Live from "./pages/Live.jsx";
 
 function App() {
   const { route, brand } = useApp();
@@ -17,7 +18,7 @@ function App() {
   return (
     <>
       <Nav route={route} />
-      <main key={brand.id}>{isReport ? <Report /> : <Home />}</main>
+      <main key={brand.id}>{route === "/live" ? <Live /> : isReport ? <Report /> : <Home />}</main>
       <Footer />
     </>
   );

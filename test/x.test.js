@@ -16,6 +16,9 @@
 const path = require("path");
 const MOD = path.join(__dirname, "..", "api", "collect.js");
 const realFetch = global.fetch;
+/* This file pins the x.com page route. X is read through FxTwitter first now (covered in
+   test/pipeline.test.js); switching the free readers off here tests the page route on its own. */
+process.env.FREE_READERS = "off";
 
 function load() { delete require.cache[require.resolve(MOD)]; return require(MOD); }
 

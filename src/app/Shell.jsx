@@ -48,6 +48,7 @@ export function Nav({ route }) {
           <nav className="nav-links" aria-label="Main">
             {link(home, "Overview")}
             {link(path("/report"), "Report")}
+            {brand.id === "sportsfc" && link("/live", "Live")}
             <a href="/fm-deliveries.html">FM Deliveries</a>
           </nav>
           <button className={`btn btn-sm nav-cta ${solid ? "btn-red" : "btn-white"}`} disabled={running} onClick={runIt}>
@@ -63,6 +64,7 @@ export function Nav({ route }) {
         <BrandSwitch route={route} />
         <a href={"#" + home} style={{ marginTop: 14 }}>Overview</a>
         <a href={"#" + path("/report")}>Report</a>
+        {brand.id === "sportsfc" && <a href="#/live">Live pipeline</a>}
         <a href="/fm-deliveries.html">FM Deliveries</a>
         <button className="btn btn-red btn-lg" style={{ marginTop: 18 }} disabled={running} onClick={runIt}>
           {running ? <Loader2 className="spin" /> : <Play />}{running ? "Checking…" : `Run ${brand.name} check`}
