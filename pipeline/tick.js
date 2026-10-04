@@ -324,7 +324,7 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
     const todays = Object.values(led.deliveries).filter(e => istDay(e.when) === day);
     if (todays.length) {
       const c = s => todays.filter(e => e.status === s).length;
-      raise(`digest:${day}`, "digest", [`📊 *Today ${day}* — ${todays.length} FM deliveries in ${new Set(todays.map(e => e.setId)).size} drops`,
+      raise(`digest:${day}`, "digest", [`📊 *Today ${day}* — ${todays.length} FM deliveries in ${new Set(todays.map(e => e.dropKey || e.setId)).size} drops`,
         `✓ ${c("verified") + c("late")} confirmed (${c("late")} late) · ❌ ${c("missing")} missing · 🔧 ${c("reader_failed")} couldn't check`,
         `≈ ${c("assumed")} Viber assumed · – ${c("unwatched")} not watched yet · ? ${c("unverifiable")} IG 18+`,
         `🛑 FM failed ${c("fm_failed")} · caption problems ${todays.filter(e => e.capProblem).length}`].join("\n"));

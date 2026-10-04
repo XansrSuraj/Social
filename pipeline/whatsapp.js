@@ -43,7 +43,8 @@ async function sendOne(text) {
    count — a message that has failed 6 times is dropped so one bad message cannot block the rest). */
 async function flush(outbox, { send = sendOne, gapMs = 3000, now = Date.now() } = {}) {
   const left = [], log = [];
-  if (!configured() && send === sendOne) return { left: outbox, log: [{ at: now, ok: false, error: "WhatsApp is not configured (WHATSAPP_PHONE / CALLMEBOT_APIKEY)" }] };
+  /* not set up: keep the messages (they expire after 3 h) and log nothing — the status says it is off */
+  if (!configured() && send === sendOne) return { left: outbox, log: [] };
   let first = true;
   for (const m of outbox) {
     try {
