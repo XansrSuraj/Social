@@ -124,7 +124,7 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   ok(/Missing\* — X VN · 10:30 "Triple Match Roundup"/.test(msg), "WhatsApp says X VN 10:30 is missing");
   ok(/Caption too long\* — X PT · 10:30/.test(msg), "…and that the Portuguese X caption is too long");
   ok(/Drop delivered\* — 18:30 "Attack vs Defense"/.test(msg) && /Drop with problems\* — 10:30/.test(msg), "…with a summary per drop: 18:30 clean, 10:30 with problems");
-  ok(!/editor@|jasjeet/.test(JSON.stringify(st.ledger)), "no editor email is stored");
+  ok(!/@/.test(JSON.stringify(Object.values(st.ledger.deliveries).map(e => e.publishedBy))), "no editor email is stored");
   ok(col.calls.length === 1 && col.calls[0].noPaid === true, "one batched read, free readers only", JSON.stringify(col.calls.map(x => x.ids.length)));
   ok(Object.keys(st.report.posts).length === 13 && st.report.autoAt, "what was read is merged into the daily-check report");
 
@@ -178,6 +178,12 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   await tick({ fm: async () => { throw new Error("HTTP 503"); }, collect: mkCollect(now), store: st, wa, now, force: true });
   ok(/FM Deliveries feed unreachable\* for 20 min/.test(wa.out.join("\n")), "an unreachable FM feed is alerted after 15 min");
   ok(st.ledger.lock === null, "the ledger is unlocked after every tick");
+
+  /* WhatsApp not set up for hours: the queue does not grow into a flood */
+  st = mkStore({ startedAt: at("2026-10-04T03:00:00Z"), outbox: [{ at: at("2026-10-04T08:00:00Z"), kind: "slot", text: "old" }] }); wa = mkWa();
+  now = at("2026-10-04T15:30:00Z");
+  await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, now, force: true });
+  ok(!wa.out.includes("old"), "a message stuck for 3+ hours is dropped, not sent late");
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

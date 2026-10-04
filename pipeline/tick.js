@@ -311,8 +311,10 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
   if (news.length) {
     const order = ["fm_down", "fm_failed", "missing", "caption", "fm_stuck", "fm_unconfirmed", "reader_down", "reader_failed", "late", "reader_up", "slot", "digest"];
     news.sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
-    led.outbox.push({ kind: news[0].kind, text: `*SportsFC · FM ↔ channels*\n\n${news.map(a => a.text).join("\n\n")}\n\n${PIPELINE_URL}` });
+    led.outbox.push({ at: now, kind: news[0].kind, text: `*SportsFC · FM ↔ channels*\n\n${news.map(a => a.text).join("\n\n")}\n\n${PIPELINE_URL}` });
   }
+  /* a message that could not go out for 3 h (WhatsApp not set up, or down) is stale — dropped, still in the log */
+  led.outbox = led.outbox.filter(m => !m.at || now - m.at < 3 * 3600e3);
   if (led.outbox.length) {
     try {
       const { left, log } = await wa.flush(led.outbox, { now });
