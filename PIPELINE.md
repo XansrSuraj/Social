@@ -51,9 +51,10 @@ never on every tick — so the pipeline costs nothing on a normal day.
   *pipeline-tick* → Enable turns it back on.
 - **Vercel's cron** (`vercel.json`) runs a tick once a day at 23:40 IST as a second clock (the Hobby
   plan allows only daily crons).
-- **Faster, optional:** a free [cron-job.org](https://cron-job.org) account calling
-  `https://aiko-social-distribution-check.vercel.app/api/pipeline?op=tick` every minute makes alerts
-  near-instant. Ticks closer than 40 s apart, or overlapping, do nothing — so several clocks are safe.
+- **Faster:** a free [cron-job.org](https://cron-job.org) job calling
+  `https://aiko-social-distribution-check.vercel.app/api/pipeline?op=tick&fast=1` every minute makes alerts
+  near-instant. `fast=1` answers at once and finishes in the background — cron-job.org cuts a request at
+  30 s and switches a job off after 25 failures in a row. Ticks closer than 40 s apart, or overlapping, do nothing — so several clocks are safe.
 
 ## WhatsApp setup (once, by the phone's owner — never paste the key in chat)
 

@@ -12,6 +12,7 @@
  * Optional PIPELINE_KEY: when set, op=tick and op=test-alert need ?key=… (or Vercel's cron header).
  */
 const { upstreamGet } = require("../fm-deliveries-client.js");
+const { waitUntil } = require("@vercel/functions");
 const { collectChannels } = require("./collect.js");
 const store = require("../pipeline/store.js");
 const wa = require("../pipeline/whatsapp.js");
@@ -50,8 +51,15 @@ module.exports = async (req, res) => {
   try {
     if (op === "tick") {
       if (!authorised(req)) return res.status(401).json({ ok: false, error: "PIPELINE_KEY required" });
-      const out = await tick({ fm: fmDeliveries, collect: collectChannels, store, wa, owner: "tick:" + Date.now() });
-      return res.status(200).json(out);
+      const run = tick({ fm: fmDeliveries, collect: collectChannels, store, wa, owner: "tick:" + Date.now() });
+      /* ?fast=1 — answer at once and finish in the background (Vercel's waitUntil). For a caller with a
+         short timeout: cron-job.org's free plan cuts a request at 30 s and switches a job off after 25
+         failures in a row, and a tick that reads many channels can take longer than that. */
+      if (req.query && req.query.fast) {
+        waitUntil(run.catch(e => console.error("pipeline tick failed:", e)));
+        return res.status(202).json({ ok: true, started: true });
+      }
+      return res.status(200).json(await run);
     }
 
     if (op === "test-alert") {
