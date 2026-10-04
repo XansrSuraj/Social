@@ -61,7 +61,7 @@ never on every tick — so the pipeline costs nothing on a normal day.
    free for personal notifications). The reply contains your **apikey**.
 2. Vercel → project → Settings → Environment Variables (Production):
    `WHATSAPP_PHONE` = your number with country code, e.g. `+9198…` · `CALLMEBOT_APIKEY` = the apikey.
-3. Redeploy, then on the Live page press **Test WhatsApp**.
+3. Redeploy, then on the Live page press **Test alert**.
 
 Until then alerts are kept in the ledger and shown on the Live page; they are not lost.
 

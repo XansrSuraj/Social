@@ -68,10 +68,11 @@ async function flush(outbox, { send = sendOne, gapMs = 3000, now = Date.now() } 
    WhatsApp, so an alert still reaches the phone if CallMeBot is slow or down. */
 const NTFY_TOPIC = () => String(process.env.NTFY_TOPIC || "").trim();
 const pushConfigured = () => !!NTFY_TOPIC();
-async function push(text, { problem = false, click = "" } = {}) {
+async function push(text, { problem = false, click = "", title = "" } = {}) {
   const r = await fetch((process.env.NTFY_URL || "https://ntfy.sh").replace(/\/+$/, "") + "/" + encodeURIComponent(NTFY_TOPIC()), {
     method: "POST", body: String(text).replace(/\*/g, "").slice(0, 3900), signal: AbortSignal.timeout(15000),
-    headers: { Title: problem ? "SportsFC: problem found" : "SportsFC pipeline", Priority: problem ? "high" : "default",
+    /* HTTP headers must be Latin-1: ntfy decodes an RFC 2047 "=?UTF-8?B?…?=" title, so emoji survive */
+    headers: { Title: "=?UTF-8?B?" + Buffer.from(title || (problem ? "SportsFC: problem found" : "SportsFC pipeline")).toString("base64") + "?=", Priority: problem ? "high" : "default",
                Tags: problem ? "warning" : "white_check_mark", ...(click ? { Click: click } : {}) } });
   if (!r.ok) throw new Error("ntfy " + r.status + ": " + (await r.text()).slice(0, 120));
 }

@@ -28,6 +28,12 @@ const KEEP_DAYS = 3;
 const MIN_TICK_GAP_MS = 40000;
 const PIPELINE_URL = "https://aiko-social-distribution-check.vercel.app/#/live";
 
+const SHORT = { youtube: "YouTube", telegram: "Telegram", telegram_direct: "Bot", x: "X", facebook: "Facebook", instagram: "Instagram", tiktok: "TikTok", viber: "Viber" };
+const FLAG = { vietnamese: "🇻🇳 ", english: "🇬🇧 ", portuguese: "🇧🇷 ", hindi: "🇮🇳 " };
+const LANG_SHORT = { vietnamese: "VN", english: "EN", portuguese: "PT", hindi: "HI" };
+const PROBLEM = { missing: `not on the channel 20 min after FM sent it`, reader_failed: "couldn't be checked — the channel couldn't be read",
+                  fm_failed: "FM failed to send it", fm_unconfirmed: "FM can't confirm it went out" };
+
 const FINAL = new Set(["verified", "late", "assumed", "unwatched", "unverifiable", "fm_failed", "fm_unconfirmed"]);
 const SETTLED = new Set([...FINAL, "missing", "reader_failed", "unchecked"]);
 const ist = ms => new Date(ms + 5.5 * 3600e3).toISOString().slice(11, 16);
@@ -283,13 +289,31 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
     const checked = sentOnes.filter(e => e.mode === "verify");
     const ok = checked.filter(e => e.status === "verified" || e.status === "late");
     const bad = list.filter(e => ["missing", "reader_failed", "fm_failed", "fm_unconfirmed"].includes(e.status));
-    const n = s => list.filter(e => e.status === s).length;
-    const extras = [n("assumed") && `Viber ${n("assumed")} assumed`, n("unwatched") && `${n("unwatched")} not watched yet`,
-                    n("unverifiable") && `${n("unverifiable")} can't be checked (IG 18+)`].filter(Boolean).join(" · ");
-    const head = bad.length ? `⚠️ *Drop with problems*` : `✅ *Drop delivered*`;
-    const lines = [`${head} — ${ist(first)} "${cards}"${list.some(e => e.deliveryMode === "now") ? " (sent now)" : ""}`,
-                   `${ok.length}/${checked.length} checked channels received it` + (extras ? ` · ${extras}` : "")];
-    for (const e of bad) lines.push(`   ✗ ${e.label}: ${e.status.replace("_", " ")}`);
+    /* the whole picture in one message: every channel, language by language, then what went wrong */
+    const lags = ok.map(e => e.lag).filter(x => x != null);
+    const head = bad.length ? `⚠️ *${ist(first)} · ${cards} — ${bad.length} problem${bad.length === 1 ? "" : "s"}*`
+                            : `✅ *${ist(first)} · ${cards} — all delivered*`;
+    const lines = [head + (list.some(e => e.deliveryMode === "now") ? " (sent now)" : ""),
+      `${ok.length}/${checked.length} checked channels received it` +
+      (lags.length ? ` · arrived ${Math.max(0, Math.round(Math.min(...lags)))}–${Math.round(Math.max(...lags))} min after FM sent it` : "")];
+    const ORDER = ["vietnamese", "english", "portuguese", "hindi"];
+    for (const lg of [...new Set(list.map(e => e.language))].sort((a, b) => (ORDER.indexOf(a) + 1 || 9) - (ORDER.indexOf(b) + 1 || 9))) {
+      const mine = list.filter(e => e.language === lg && e.mode === "verify" && e.fmState === "sent");
+      if (!mine.length) continue;
+      lines.push(`${FLAG[lg] || ""}${(LANG_SHORT[lg] || lg).toUpperCase()}: ` + mine.sort((a, b) => a.channel.localeCompare(b.channel))
+        .map(e => `${SHORT[e.channel] || e.channel} ${e.status === "verified" ? "✓" : e.status === "late" ? "✓(late)" : "✗"}`).join(" · "));
+    }
+    const viber = list.filter(e => e.status === "assumed").length;
+    if (viber) lines.push(`Viber ≈ ${viber} (taken on FM's word)`);
+    const unwatched = list.filter(e => e.status === "unwatched").map(e => e.label);
+    if (unwatched.length) lines.push(`Not watched yet: ${unwatched.join(", ")}`);
+    const cant = list.filter(e => e.status === "unverifiable").map(e => e.label);
+    if (cant.length) lines.push(`Can't be checked: ${cant.join(", ")} (18+)`);
+    if (bad.length) {
+      lines.push("Problems:");
+      for (const e of bad) lines.push(`❌ ${e.label} — ${PROBLEM[e.status] || e.status}` +
+        (e.capProblem ? ` (${e.capProblem})` : "") + (e.status === "reader_failed" && e.readNote ? ` (${e.readNote.slice(0, 90)})` : ""));
+    }
     raise(`slot:${setId}`, "slot", lines.join("\n"), first);
   }
 
@@ -316,7 +340,9 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
     /* the phone push (ntfy) goes out at once, independent of WhatsApp */
     if (wa.pushConfigured && wa.pushConfigured()) {
       const problem = news.some(a => !["slot", "digest", "reader_up"].includes(a.kind) || /problems/.test(a.text));
-      try { await wa.push(text, { problem, click: PIPELINE_URL }); led.waLog.unshift({ at: now, ok: true, via: "push", kind: news[0].kind }); }
+      /* the notification's title is the most important line itself, so the lock screen already says it */
+      const title = news[0].text.split("\n")[0].replace(/\*/g, "").slice(0, 110) + (news.length > 1 ? `  (+${news.length - 1} more)` : "");
+      try { await wa.push(text, { problem, click: PIPELINE_URL, title }); led.waLog.unshift({ at: now, ok: true, via: "push", kind: news[0].kind }); }
       catch (e) { led.waLog.unshift({ at: now, ok: false, via: "push", error: String(e.message || e).slice(0, 200) }); }
     }
   }

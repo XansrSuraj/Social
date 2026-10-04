@@ -123,7 +123,10 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   const msg = wa.out.join("\n");
   ok(/Missing\* — X VN · 10:30 "Triple Match Roundup"/.test(msg), "WhatsApp says X VN 10:30 is missing");
   ok(/Caption too long\* — X PT · 10:30/.test(msg), "…and that the Portuguese X caption is too long");
-  ok(/Drop delivered\* — 18:30 "Attack vs Defense"/.test(msg) && /Drop with problems\* — 10:30/.test(msg), "…with a summary per drop: 18:30 clean, 10:30 with problems");
+  ok(/18:30 · Attack vs Defense — all delivered/.test(msg) && /10:30 · Triple Match Roundup — 1 problem/.test(msg), "…with a summary per drop: 18:30 clean, 10:30 with problems");
+  ok(/🇻🇳 VN: Facebook ✓ · Instagram ✓ · Telegram ✓ · Bot ✓ · TikTok ✓ · X ✗ · YouTube ✓/.test(msg) && /Problems:\n❌ X VN — not on the channel/.test(msg),
+     "…listing every channel per language, and what went wrong");
+  if (process.env.SHOW) console.log("\n" + wa.out[0] + "\n");
   ok(!/@/.test(JSON.stringify(Object.values(st.ledger.deliveries).map(e => e.publishedBy))), "no editor email is stored");
   ok(col.calls.length === 1 && col.calls[0].noPaid === true, "one batched read, free readers only", JSON.stringify(col.calls.map(x => x.ids.length)));
   ok(Object.keys(st.report.posts).length === 13 && st.report.autoAt, "what was read is merged into the daily-check report");
@@ -150,7 +153,7 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   ok(!/18:30 "Attack vs Defense"/.test(wa.out.join("\n")), "…but its summary waits until the 20-min window closes");
   now = at("2026-10-04T13:22:00Z");
   await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, now });
-  ok(/Drop delivered\* — 18:30 "Attack vs Defense"/.test(wa.out.join("\n")), "…and is sent once it does");
+  ok(/18:30 · Attack vs Defense — all delivered/.test(wa.out.join("\n")), "…and is sent once it does");
 
   /* a broken reader: Facebook VN refuses twice — reader-down alert, not a false "missing" */
   now = at("2026-10-04T13:05:00Z");
