@@ -62,4 +62,18 @@ async function flush(outbox, { send = sendOne, gapMs = 3000, now = Date.now() } 
   return { left, log };
 }
 
-module.exports = { configured, flush, chunks, sendOne };
+/* ── phone push through ntfy (ntfy.sh) — a second, instant, free channel ──────────────────────
+   No account, no signup: install the ntfy app, subscribe to your topic, and set NTFY_TOPIC (a long
+   random name — whoever knows it can read the alerts) on Vercel. Sent once per message, alongside
+   WhatsApp, so an alert still reaches the phone if CallMeBot is slow or down. */
+const NTFY_TOPIC = () => String(process.env.NTFY_TOPIC || "").trim();
+const pushConfigured = () => !!NTFY_TOPIC();
+async function push(text, { problem = false, click = "" } = {}) {
+  const r = await fetch((process.env.NTFY_URL || "https://ntfy.sh").replace(/\/+$/, "") + "/" + encodeURIComponent(NTFY_TOPIC()), {
+    method: "POST", body: String(text).replace(/\*/g, "").slice(0, 3900), signal: AbortSignal.timeout(15000),
+    headers: { Title: problem ? "SportsFC: problem found" : "SportsFC pipeline", Priority: problem ? "high" : "default",
+               Tags: problem ? "warning" : "white_check_mark", ...(click ? { Click: click } : {}) } });
+  if (!r.ok) throw new Error("ntfy " + r.status + ": " + (await r.text()).slice(0, 120));
+}
+
+module.exports = { configured, flush, chunks, sendOne, push, pushConfigured };

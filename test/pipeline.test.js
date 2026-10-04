@@ -185,6 +185,14 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, now, force: true });
   ok(!wa.out.includes("old"), "a message stuck for 3+ hours is dropped, not sent late");
 
+  /* phone push (ntfy) goes out at once, beside WhatsApp — and marks a problem as one */
+  const pushed = [];
+  st = mkStore({ startedAt: at("2026-10-04T03:00:00Z") });
+  wa = { ...mkWa(), pushConfigured: () => true, push: async (text, o) => { pushed.push({ text, problem: o.problem }); } };
+  now = at("2026-10-04T15:30:00Z");
+  await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, now, force: true });
+  ok(pushed.length === 1 && pushed[0].problem && /Missing\* — X VN/.test(pushed[0].text), "the same alert is pushed to the phone, flagged as a problem");
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

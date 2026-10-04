@@ -65,6 +65,18 @@ never on every tick — so the pipeline costs nothing on a normal day.
 
 Until then alerts are kept in the ledger and shown on the Live page; they are not lost.
 
+CallMeBot says: if the key does not arrive within 2 minutes, try again after 24 hours (it often does not answer when busy).
+
+## Phone push (ntfy) — instant, free, no signup
+
+Every alert also goes out as a phone notification through [ntfy](https://ntfy.sh), independent of
+WhatsApp, so alerts arrive even while CallMeBot is slow or down.
+
+1. Install **ntfy** (Play Store / App Store) → **+** → subscribe to your topic (a long random name —
+   anyone who knows it can read the alerts, so do not use a guessable one).
+2. Vercel → Environment Variables: `NTFY_TOPIC` = that same name. Redeploy.
+3. Live page → **Test alert**. Problems arrive as high-priority notifications; tapping one opens the Live page.
+
 ## Waiting for links (FM sends here, the daily check can't see it yet)
 
 Found on 4 Oct 2026 — 27 of FM's 62 deliveries that day went to channels not watched here:
@@ -90,7 +102,7 @@ MatchPulse has no FM feed yet; when it does, it gets its own entry here.
 
 - `GET /api/pipeline` — status (public, read-only; no keys, numbers or emails in it)
 - `GET /api/pipeline?op=tick` — run a tick now
-- `GET /api/pipeline?op=test-alert` — one WhatsApp test (at most one per 10 min)
+- `GET /api/pipeline?op=test-alert` — one test alert on every configured channel (at most one per 10 min)
 - Optional `PIPELINE_KEY` env var: when set, `op=tick` / `op=test-alert` need `?key=…` (add the same
   value as the GitHub secret `PIPELINE_KEY` so the clock keeps working).
 

@@ -56,7 +56,8 @@ module.exports = async (req, res) => {
 
     if (op === "test-alert") {
       if (!authorised(req)) return res.status(401).json({ ok: false, error: "PIPELINE_KEY required" });
-      if (!wa.configured()) return res.status(200).json({ ok: false, error: "WhatsApp is not configured — set WHATSAPP_PHONE and CALLMEBOT_APIKEY on Vercel, then redeploy." });
+      if (!wa.configured() && !wa.pushConfigured())
+        return res.status(200).json({ ok: false, error: "No alert channel is set up — set NTFY_TOPIC and/or WHATSAPP_PHONE + CALLMEBOT_APIKEY on Vercel, then redeploy." });
       const lock = await store.lockLedger("test-alert");
       if (!lock) return res.status(409).json({ ok: false, error: "a tick is running — try again in a minute" });
       const led = lock.ledger;
@@ -65,7 +66,16 @@ module.exports = async (req, res) => {
         return res.status(429).json({ ok: false, error: "one test per 10 minutes" });
       }
       led.lastTestAt = Date.now();
-      const { left, log } = await wa.flush([{ kind: "test", text: `✅ *SportsFC pipeline* — WhatsApp alerts are working.\n${PIPELINE_URL}` }]);
+      const testText = `✅ *SportsFC pipeline* — alerts are working.\n${PIPELINE_URL}`;
+      const log = [], left = [];
+      if (wa.configured()) {
+        const r = await wa.flush([{ kind: "test", text: testText }]);
+        left.push(...r.left); log.push(...r.log.map(x => ({ ...x, via: "whatsapp" })));
+      }
+      if (wa.pushConfigured()) {
+        try { await wa.push(testText, { click: PIPELINE_URL }); log.push({ at: Date.now(), ok: true, via: "push", kind: "test" }); }
+        catch (e) { left.push(1); log.push({ at: Date.now(), ok: false, via: "push", error: String(e.message || e) }); }
+      }
       led.waLog = [...log, ...(led.waLog || [])].slice(0, 60);
       await store.saveLedger(led, lock.updatedAt, true);
       return res.status(200).json({ ok: !left.length, log });
@@ -79,7 +89,7 @@ module.exports = async (req, res) => {
       ok: true, now: new Date().toISOString(),
       lastTick: led.lastTick || null, lastTickAt: led.lastTickAt || null, ticks: led.ticks || 0, startedAt: led.startedAt || null,
       lastCrash: led.lastCrash || null, fm: led.fm || null, readers: led.readers || {},
-      whatsapp: { configured: wa.configured(), outbox: (led.outbox || []).length, log: led.waLog || [] },
+      whatsapp: { configured: wa.configured(), push: wa.pushConfigured(), outbox: (led.outbox || []).length, log: led.waLog || [] },
       alerts: (led.alerts || []).slice(0, 80), deliveries, lastReportMerge: led.lastReportMerge || null,
       coverage: Object.entries(FM_CHANNELS).map(([k, v]) => ({ fm: k, mode: v.mode, account: v.read ? v.read.url : null, why: v.why || null })),
     });
