@@ -68,6 +68,31 @@ Until then alerts are kept in the ledger and shown on the Live page; they are no
 
 CallMeBot says: if the key does not arrive within 2 minutes, try again after 24 hours (it often does not answer when busy).
 
+## Microsoft Teams (the team's channel)
+
+Every alert also goes into a Teams channel as one Adaptive Card per check — a red section for a problem,
+a green one for a drop that was fully delivered, every channel's ✓/✗ per language, and a link to the
+Live page. Teams' own "Incoming Webhook" connector was retired in May 2026; this uses its official
+replacement, the **Workflows** app.
+
+1. In Teams, open the channel → **⋯** → **Workflows** → template **"Send webhook alerts to a channel"**
+   → choose the team and channel → **Save** → copy the **webhook URL** it shows. (The URL lets anyone
+   post into the channel — keep it out of chat and out of the code.)
+2. Vercel → Environment Variables: `TEAMS_WEBHOOK_URL` = that URL. Redeploy.
+3. Live page → **Test alert** — a green "Teams alerts are working" card appears in the channel.
+
+The card shows as posted by the Workflows (flow) bot; the workflow belongs to whoever created it, so add
+a co-owner in Workflows so it keeps working if that person leaves.
+
+## The pipeline's own health
+
+- **A check crashes** → 🚨 "Pipeline check failed" on every channel at once (at most every 30 min while
+  it keeps retrying each minute).
+- **The clock stops** (cron-job.org down, GitHub late) → the first check after it says "🕒 Pipeline was
+  paused for N min" and catches up on everything sent in that time.
+- **FM unreachable 15+ min** → 📡; **a scraper failing twice in a row** → 🔧 (and 🟢 when it is back).
+- **The site itself down** → cron-job.org emails its owner after failed calls.
+
 ## Phone push (ntfy) — instant, free, no signup
 
 Every alert also goes out as a phone notification through [ntfy](https://ntfy.sh), independent of

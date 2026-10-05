@@ -16,6 +16,7 @@ const { waitUntil } = require("@vercel/functions");
 const { collectChannels } = require("./collect.js");
 const store = require("../pipeline/store.js");
 const wa = require("../pipeline/whatsapp.js");
+const teams = require("../pipeline/teams.js");
 const { tick, PIPELINE_URL } = require("../pipeline/tick.js");
 const { FM_CHANNELS } = require("../pipeline/channels.js");
 
@@ -64,8 +65,8 @@ module.exports = async (req, res) => {
 
     if (op === "test-alert") {
       if (!authorised(req)) return res.status(401).json({ ok: false, error: "PIPELINE_KEY required" });
-      if (!wa.configured() && !wa.pushConfigured())
-        return res.status(200).json({ ok: false, error: "No alert channel is set up — set NTFY_TOPIC and/or WHATSAPP_PHONE + CALLMEBOT_APIKEY on Vercel, then redeploy." });
+      if (!wa.configured() && !wa.pushConfigured() && !teams.configured())
+        return res.status(200).json({ ok: false, error: "No alert channel is set up — set TEAMS_WEBHOOK_URL, NTFY_TOPIC and/or WHATSAPP_PHONE + CALLMEBOT_APIKEY on Vercel, then redeploy." });
       const lock = await store.lockLedger("test-alert");
       if (!lock) return res.status(409).json({ ok: false, error: "a tick is running — try again in a minute" });
       const led = lock.ledger;
@@ -84,6 +85,11 @@ module.exports = async (req, res) => {
         try { await wa.push(testText, { click: PIPELINE_URL }); log.push({ at: Date.now(), ok: true, via: "push", kind: "test" }); }
         catch (e) { left.push(1); log.push({ at: Date.now(), ok: false, via: "push", error: String(e.message || e) }); }
       }
+      if (teams.configured()) {
+        try { await teams.post(teams.card([{ kind: "test", text: "✅ *Teams alerts are working* — this channel will get every drop's result, every problem, and a nightly summary." }], { link: PIPELINE_URL }));
+              log.push({ at: Date.now(), ok: true, via: "teams", kind: "test" }); }
+        catch (e) { left.push(1); log.push({ at: Date.now(), ok: false, via: "teams", error: String(e.message || e) }); }
+      }
       led.waLog = [...log, ...(led.waLog || [])].slice(0, 60);
       await store.saveLedger(led, lock.updatedAt, true);
       return res.status(200).json({ ok: !left.length, log });
@@ -97,7 +103,7 @@ module.exports = async (req, res) => {
       ok: true, now: new Date().toISOString(),
       lastTick: led.lastTick || null, lastTickAt: led.lastTickAt || null, ticks: led.ticks || 0, startedAt: led.startedAt || null,
       lastCrash: led.lastCrash || null, fm: led.fm || null, readers: led.readers || {},
-      whatsapp: { configured: wa.configured(), push: wa.pushConfigured(), outbox: (led.outbox || []).length, log: led.waLog || [] },
+      whatsapp: { configured: wa.configured(), push: wa.pushConfigured(), teams: teams.configured(), outbox: (led.outbox || []).length, log: led.waLog || [] },
       alerts: (led.alerts || []).slice(0, 80), deliveries, lastReportMerge: led.lastReportMerge || null,
       /* accounts not created yet are left out entirely — FM sends there, distribution drops it */
       coverage: Object.entries(FM_CHANNELS).filter(([, v]) => v.mode !== "skip")

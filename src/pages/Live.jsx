@@ -76,12 +76,12 @@ export default function Live() {
             <div>
               <span className="eyebrow">SportsFC · Live pipeline</span>
               <h1 className="display l">FM → <b>every channel</b></h1>
-              <div className="rp-when">Every card FM sends is looked for on each channel within 20 minutes — automatically, every 5 minutes. Problems go to WhatsApp.</div>
+              <div className="rp-when">Every card FM sends is looked for on each channel within 20 minutes — automatically, every 5 minutes. Every result and problem goes to Teams, your phone (ntfy) and WhatsApp.</div>
             </div>
             <div className="rp-actions">
               <button className="btn btn-line btn-sm" disabled={!!busy} onClick={() => act("tick", "Check")}>{busy === "tick" ? <Loader2 className="spin" /> : <Play />}Check now</button>
-              <button className="btn btn-line btn-sm" disabled={!!busy || !(s.whatsapp.configured || s.whatsapp.push)} onClick={() => act("test-alert", "Test alert")}
-                title={s.whatsapp.configured || s.whatsapp.push ? "Send one test alert (once per 10 min)" : "No alert channel is set up yet"}><BellRing />Test alert</button>
+              <button className="btn btn-line btn-sm" disabled={!!busy || !(s.whatsapp.configured || s.whatsapp.push || s.whatsapp.teams)} onClick={() => act("test-alert", "Test alert")}
+                title={s.whatsapp.configured || s.whatsapp.push || s.whatsapp.teams ? "Send one test alert (once per 10 min)" : "No alert channel is set up yet"}><BellRing />Test alert</button>
               <button className="btn btn-line btn-sm" onClick={load}><RefreshCw />Refresh</button>
             </div>
           </div>
@@ -97,11 +97,11 @@ export default function Live() {
               <div className="s">{s.fm && s.fm.ok ? "feed OK" : (s.fm && s.fm.lastError) || "not read yet"}</div></div>
             <div className="stat"><div className="v">{okN}<span style={{ color: "var(--muted-2)" }}>/{checked.length}</span></div><div className="k label">Confirmed on the channel</div>
               <div className="s">{problems ? <span style={{ color: "var(--red)" }}>{problems} problem{problems === 1 ? "" : "s"}</span> : "no problems"} · {day}</div></div>
-            <div className="stat"><div className="v">{s.whatsapp.configured || s.whatsapp.push ? "On" : <em>Off</em>}</div>
-              <div className="k label">Alerts · WhatsApp {s.whatsapp.configured ? "✓" : "✗"} · Push {s.whatsapp.push ? "✓" : "✗"}</div>
-              <div className="s">{s.whatsapp.configured || s.whatsapp.push
+            <div className="stat"><div className="v">{s.whatsapp.configured || s.whatsapp.push || s.whatsapp.teams ? "On" : <em>Off</em>}</div>
+              <div className="k label">Alerts · Teams {s.whatsapp.teams ? "✓" : "✗"} · Push {s.whatsapp.push ? "✓" : "✗"} · WhatsApp {s.whatsapp.configured ? "✓" : "✗"}</div>
+              <div className="s">{s.whatsapp.configured || s.whatsapp.push || s.whatsapp.teams
                 ? (s.whatsapp.log[0] ? `last: ${s.whatsapp.log[0].ok ? "sent" : "failed"}${s.whatsapp.log[0].via ? " (" + s.whatsapp.log[0].via + ")" : ""} ${ago(s.whatsapp.log[0].at)}` : "nothing sent yet")
-                : "set NTFY_TOPIC and/or WHATSAPP_PHONE + CALLMEBOT_APIKEY"}</div></div>
+                : "set TEAMS_WEBHOOK_URL, NTFY_TOPIC or WhatsApp"}</div></div>
           </div>
           {down.length > 0 && <div className="alert" style={{ marginTop: 14 }}><span className="kind missing">reader down</span>
             <span className="txt">{down.map(([id, h]) => <span key={id}><b>{id}</b> — {h.lastError} · </span>)}</span></div>}

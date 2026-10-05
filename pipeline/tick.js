@@ -16,6 +16,7 @@
  */
 const { routeOf, labelOf } = require("./channels.js");
 const { captionProblem, assign } = require("./rules.js");
+const realTeams = require("./teams.js");
 
 const WINDOW_MIN = 20;            // every channel normally shows the post within ~5 min; 20 is the buffer
 const FIRST_CHECK_MIN = 2;        // first look 2 min after FM sent it
@@ -72,7 +73,7 @@ function fresh(led, now) {
   return led;
 }
 
-async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", force = false }) {
+async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(), owner = "tick", force = false }) {
   const t0 = Date.now();
   const lock = await store.lockLedger(owner);
   if (!lock) return { ok: true, skipped: "another tick is running" };
@@ -80,7 +81,15 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
   try {
     return await run(led, lock);
   } catch (e) {
-    /* never leave the ledger locked behind a crash */
+    /* the pipeline itself broke: say so on every channel at once (at most every 30 min — it retries
+       every minute), and never leave the ledger locked behind a crash */
+    if (!led.lastCrashAlertAt || now - led.lastCrashAlertAt > 30 * 60e3) {
+      led.lastCrashAlertAt = now;
+      const text = `🚨 *Pipeline check failed* — ${String(e.message || e).slice(0, 200)}. It retries every minute; nothing is lost while it does.`;
+      try { if (wa.pushConfigured && wa.pushConfigured()) await wa.push(text, { problem: true, click: PIPELINE_URL, title: "🚨 Pipeline check failed" }); } catch (e2) {}
+      try { if (teams.configured()) await teams.post(teams.card([{ kind: "pipeline", text }], { link: PIPELINE_URL })); } catch (e2) {}
+      led.outbox = [...(led.outbox || []), { at: now, kind: "pipeline", text: `*SportsFC · FM ↔ channels*\n\n${text}\n\n${PIPELINE_URL}` }];
+    }
     try { await store.saveLedger({ ...led, lastCrash: { at: now, error: String(e.stack || e).slice(0, 500) } }, lock.updatedAt, true); } catch (e2) {}
     throw e;
   }
@@ -101,6 +110,10 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
     if (!quiet(when == null ? now : when)) news.push(a);
   };
   const errors = [];
+
+  /* the clock stopped (cron-job.org down, GitHub late…): the first tick back says for how long */
+  if (led.lastTickAt && now - led.lastTickAt > 10 * 60e3)
+    raise(`gap:${led.lastTickAt}`, "pipeline", `🕒 *Pipeline was paused* for ${Math.round((now - led.lastTickAt) / 60e3)} min (no checks from ${ist(led.lastTickAt)} to ${ist(now)} IST) — running again, and anything sent meanwhile is being checked now.`);
 
   /* ── 1. FM ── */
   let fmRows = null;
@@ -350,7 +363,7 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
 
   /* ── 9. WhatsApp ── */
   if (news.length) {
-    const order = ["fm_down", "fm_failed", "missing", "caption", "fm_stuck", "fm_unconfirmed", "reader_down", "reader_failed", "late", "reader_up", "slot", "digest"];
+    const order = ["pipeline", "fm_down", "fm_failed", "missing", "caption", "fm_stuck", "fm_unconfirmed", "reader_down", "reader_failed", "late", "reader_up", "slot", "digest"];
     news.sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
     const text = `*SportsFC · FM ↔ channels*\n\n${news.map(a => a.text).join("\n\n")}\n\n${PIPELINE_URL}`;
     led.outbox.push({ at: now, kind: news[0].kind, text });
@@ -363,6 +376,17 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
       catch (e) { led.waLog.unshift({ at: now, ok: false, via: "push", error: String(e.message || e).slice(0, 200) }); }
     }
   }
+  /* Microsoft Teams: the same alerts as one Adaptive Card in the team's channel */
+  led.teamsOutbox = (led.teamsOutbox || []).filter(m => now - m.at < 3 * 3600e3);
+  if (news.length && teams.configured()) led.teamsOutbox.push({ at: now, kind: news[0].kind, payload: teams.card(news, { link: PIPELINE_URL }) });
+  if (led.teamsOutbox.length) {
+    try {
+      const { left, log } = await teams.flush(led.teamsOutbox);
+      led.teamsOutbox = left;
+      led.waLog = [...log, ...led.waLog].slice(0, 60);
+    } catch (e) { errors.push("teams: " + String(e.message || e)); }
+  }
+
   /* a message that could not go out for 3 h (WhatsApp not set up, or down) is stale — dropped, still in the log */
   led.outbox = led.outbox.filter(m => !m.at || now - m.at < 3 * 3600e3);
   if (led.outbox.length) {

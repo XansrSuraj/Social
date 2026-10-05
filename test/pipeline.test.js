@@ -223,6 +223,41 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, now, force: true });
   ok(pushed.length === 1 && pushed[0].problem && /Missing\* — X VN/.test(pushed[0].text), "the same alert is pushed to the phone, flagged as a problem");
 
+  console.log("\n── Microsoft Teams, and the pipeline's own health");
+  const { card } = require("../pipeline/teams.js");
+  const cards = [];
+  const teamsStub = { configured: () => true, card, post: async p => { cards.push(p); }, flush: async q => { cards.push(...q.map(m => m.payload)); return { left: [], log: [] }; } };
+  now = at("2026-10-04T15:30:00Z");
+  st = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }); wa = mkWa();
+  await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, teams: teamsStub, now, force: true });
+  const c0 = cards[0] && cards[0].attachments[0];
+  ok(cards.length === 1 && c0.contentType === "application/vnd.microsoft.card.adaptive" && c0.content.type === "AdaptiveCard",
+     "one Adaptive Card per tick goes to the Teams channel");
+  const blocks = JSON.stringify(c0.content.body);
+  ok(/"style":"attention"/.test(blocks) && /\*\*Missing\*\* — X VN · 10:30/.test(blocks), "a missing post is a red section, in Teams' **bold**");
+  ok(/"style":"good"/.test(blocks) && /18:30 · Attack vs Defense — all delivered/.test(blocks), "a fully delivered drop is a green section");
+  ok(JSON.stringify(cards[0]).length < 28000, "the card stays under Teams' 28 KB limit", JSON.stringify(cards[0]).length + " bytes");
+
+  /* the clock stopped for 25 min: the first tick back says so */
+  st = mkStore({ startedAt: at("2026-10-04T03:00:00Z"), lastTickAt: at("2026-10-04T15:05:00Z") }); wa = mkWa();
+  now = at("2026-10-04T15:30:00Z");
+  await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, teams: { ...teamsStub, configured: () => false }, now });
+  ok(/Pipeline was paused\* for 25 min \(no checks from 20:35 to 21:00 IST\)/.test(wa.out.join("\n")), "a 25-min gap in the clock is reported");
+
+  /* a tick that crashes: one alert on every channel, then quiet for 30 min while it retries */
+  const pushes = [];
+  const waCrash = { ...mkWa(), pushConfigured: () => true, push: async (t) => { pushes.push(t); } };
+  st = mkStore({ startedAt: at("2026-10-04T03:00:00Z") });
+  /* FM answering with something that is not a list makes the tick itself throw */
+  const garbage = async () => ({ deliveries: "nonsense" });
+  let crashed = 0;
+  for (const m of [0, 1, 2]) {
+    try { await tick({ fm: garbage, collect: mkCollect(now), store: st, wa: waCrash, teams: { ...teamsStub, configured: () => false }, now: now + m * 60e3, force: true }); }
+    catch (e) { crashed++; }
+  }
+  ok(crashed === 3 && pushes.length === 1 && /Pipeline check failed/.test(pushes[0]), "a crashing tick alerts exactly once per 30 min", `${crashed} crashes, ${pushes.length} alert(s)`);
+  ok(st.ledger.lock === null && st.ledger.lastCrash, "…and the ledger is never left locked by a crash");
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
