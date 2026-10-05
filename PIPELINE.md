@@ -29,8 +29,8 @@ Live page: **`#/live`** on the site. Code: `pipeline/` + `api/pipeline.js`. Test
    | ✗ missing | FM sent it, not on the channel after 20 min | ❌ immediately |
    | ! reader failed | the channel could not be read — **our** problem, not the content team's | 🔧 |
    | ≈ assumed | Viber — nothing can read it, FM's "sent" is taken as delivered (agreed exception) | — |
-   | – not watched | FM sends here but the account's link isn't configured yet | — |
-   | ? can't verify | Instagram `sportsfc.fans` (18+) — nothing logged-out can see it | — |
+   | – not watched | a platform FM added later that isn't configured here | — |
+   | ? can't verify | Instagram `sportsfc.fans` while it is 18+ | — |
    | FM failed / stuck / can't confirm | FM itself failed, or a card still queued 15 min after its time | 🛑 ⏳ ❔ immediately |
    | · not checked | sent before the pipeline was watching | — |
 
@@ -78,26 +78,26 @@ WhatsApp, so alerts arrive even while CallMeBot is slow or down.
 2. Vercel → Environment Variables: `NTFY_TOPIC` = that same name. Redeploy.
 3. Live page → **Test alert**. Problems arrive as high-priority notifications; tapping one opens the Live page.
 
-## Waiting for links (FM sends here, the daily check can't see it yet)
+## Channels FM sends to that are not checked
 
-Found on 4 Oct 2026 — 27 of FM's 62 deliveries that day went to channels not watched here:
-
-| FM channel | Deliveries that day | What's needed |
+| FM channel | Why | What happens |
 |---|---|---|
-| X English | 3 | account link |
-| X Portuguese | 2 | account link |
-| TikTok English | 3 | account link (`@sportsfc.fans` no longer exists on TikTok) |
-| TikTok Portuguese | 2 | account link |
-| Telegram Portuguese | 2 | channel link |
-| Telegram bot (direct) English | 2 | bot username (and the session must be able to read it) |
-| Telegram bot (direct) Portuguese | 2 | bot username |
-| Viber (all 3 languages) | 8 | — taken on FM's word |
-| Instagram English `sportsfc.fans` | 3 | 18+ — remove the age restriction, or the official Instagram API |
+| Viber (all 3 languages) | nothing can read Viber | FM's "sent" is taken as delivered (agreed exception) |
+| Instagram EN `sportsfc.fans` | 18+ — nothing logged-out can see it | read on every drop anyway; "can't be checked" while restricted, **verified automatically the day the restriction is lifted** — no change needed |
+| X EN, X PT, TikTok EN, TikTok PT, Telegram PT, Telegram bot EN, Telegram bot PT | **the accounts don't exist yet** — FM sends, distribution drops it (2026-10-05) | ignored everywhere: no ledger entry, no alert, not on the Live page |
 
-To add one: put the account in `pipeline/channels.js` (switch its `mode` to `"verify"` with a `read`
+When one of those accounts is created: put it in `pipeline/channels.js` (mode `"verify"` with a `read`
 entry) **and** in `SPORTSFC` in `src/engine/engine.js` — `test/pipeline.test.js` fails if they differ.
 
 MatchPulse has no FM feed yet; when it does, it gets its own entry here.
+
+## Matching rules
+
+A post counts as the delivery's post when it is on the channel from 5 min before to 20 min after FM
+sent it and shares **≥ 75%** of the caption's words; after 20 min (a late arrival) it must share
+**≥ 90%** — one template used for two matches can share ~80% of its words (3 Oct: "The Full Verdict"
+for Spain–Czechia and for Croatia–England). All of a channel's due deliveries are matched against all
+of its posts at once, best pairs first.
 
 ## Endpoints
 

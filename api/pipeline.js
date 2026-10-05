@@ -99,7 +99,9 @@ module.exports = async (req, res) => {
       lastCrash: led.lastCrash || null, fm: led.fm || null, readers: led.readers || {},
       whatsapp: { configured: wa.configured(), push: wa.pushConfigured(), outbox: (led.outbox || []).length, log: led.waLog || [] },
       alerts: (led.alerts || []).slice(0, 80), deliveries, lastReportMerge: led.lastReportMerge || null,
-      coverage: Object.entries(FM_CHANNELS).map(([k, v]) => ({ fm: k, mode: v.mode, account: v.read ? v.read.url : null, why: v.why || null })),
+      /* accounts not created yet are left out entirely — FM sends there, distribution drops it */
+      coverage: Object.entries(FM_CHANNELS).filter(([, v]) => v.mode !== "skip")
+        .map(([k, v]) => ({ fm: k, mode: v.mode, soft: !!v.soft, account: v.read ? v.read.url : null, why: v.why || null })),
     });
   } catch (e) {
     return res.status(500).json({ ok: false, error: String((e && e.message) || e) });

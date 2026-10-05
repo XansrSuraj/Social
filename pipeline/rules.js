@@ -54,26 +54,55 @@ function similarity(a, b) {
   for (const w of A) if (B.has(w)) n++;
   return n / Math.min(A.size, B.size);
 }
-const MATCH_MIN = 0.5;
+/* Measured on 4 Oct 2026: two DIFFERENT cards of the same template family score up to 0.52 (they
+   share "who wins", "prediction", the team names…); the same card scores 1.00, and 0.9+ when a
+   platform clips it. 0.75 sits in the middle of that gap. */
+const MATCH_MIN = 0.75;
+/* A post more than the window after FM sent it must be the SAME card, near word for word: one template
+   used for two matches ("The Full Verdict" at 16:30 for Spain–Czechia and at 18:25 for Croatia–England,
+   3 Oct) shares 78% of its words — a later card must never pass for an earlier missing one. */
+const MATCH_LATE_MIN = 0.9;
 const EARLY_MIN = 5;          // a post up to 5 min before FM's send time still counts (clocks differ)
 
-/* The best post for one delivery among `posts`, skipping ids already given to another delivery.
-   A post with words must agree with the caption; a post with none (a reel some readers return bare)
-   is matched on time alone, and only inside the normal window. */
+/* How well one post fits one delivery, or null if it cannot be that delivery's post. A post with
+   words must agree with the caption; a post with none (a reel some readers return bare) is matched
+   on time alone, and only inside the normal window. */
+function pairScore(delivery, p, windowMin, lateMin) {
+  const lag = (Date.parse(p.ts) - Date.parse(delivery.sentAt)) / 60e3;
+  if (!(lag >= -EARLY_MIN && lag <= lateMin)) return null;
+  const sim = similarity(delivery.caption, p.text);
+  if (sim !== null && sim < (lag > windowMin ? MATCH_LATE_MIN : MATCH_MIN)) return null;
+  if (sim === null && lag > windowMin) return null;
+  return { post: p, lag, sim, score: (sim === null ? 0.6 : sim) - Math.abs(lag) / 1000 };
+}
+
+/* The best post for one delivery among `posts`, skipping ids already given to another delivery. */
 function bestMatch(delivery, posts, used, windowMin, lateMin) {
-  const sent = Date.parse(delivery.sentAt);
   let best = null;
   for (const p of posts) {
     if (used.has(p.externalId)) continue;
-    const lag = (Date.parse(p.ts) - sent) / 60e3;
-    if (!(lag >= -EARLY_MIN && lag <= lateMin)) continue;
-    const sim = similarity(delivery.caption, p.text);
-    if (sim !== null && sim < MATCH_MIN) continue;
-    if (sim === null && lag > windowMin) continue;
-    const score = (sim === null ? 0.6 : sim) - Math.abs(lag) / 1000;
-    if (!best || score > best.score) best = { post: p, lag, sim, score };
+    const m = pairScore(delivery, p, windowMin, lateMin);
+    if (m && (!best || m.score > best.score)) best = m;
   }
   return best;
 }
 
-module.exports = { xLength, captionProblem, similarity, bestMatch, MATCH_MIN };
+/* All of one channel's deliveries against all of its posts at once, best pairs first — so a post goes
+   to the delivery it fits best, never to whichever delivery happened to be looked at first. */
+function assign(deliveries, posts, used, windowMin, lateMin) {
+  const pairs = [];
+  for (const d of deliveries) for (const p of posts) {
+    if (used.has(p.externalId)) continue;
+    const m = pairScore(d, p, windowMin, lateMin);
+    if (m) pairs.push({ d, ...m });
+  }
+  pairs.sort((a, b) => b.score - a.score);
+  const out = new Map(), taken = new Set();
+  for (const x of pairs) {
+    if (out.has(x.d) || taken.has(x.post.externalId)) continue;
+    out.set(x.d, x); taken.add(x.post.externalId);
+  }
+  return out;
+}
+
+module.exports = { xLength, captionProblem, similarity, bestMatch, assign, MATCH_MIN, MATCH_LATE_MIN };

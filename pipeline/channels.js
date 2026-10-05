@@ -8,9 +8,13 @@
  *   mode "verify"       read the account and confirm the post appeared
  *   mode "assume"       Viber: no way to read it at all, so FM's own "sent" is taken as delivered
  *                        (the one agreed exception — 2026-10-04)
- *   mode "unverifiable" the account exists but nothing can read it logged out (Instagram 18+)
- *   mode "unwatched"    FM sends here but the account's link is not known yet — fill in `read`
- *                        and switch the mode to "verify" when it arrives
+ *   soft: true          read it on every drop, but a read that fails is "can't be checked", never an
+ *                        alert — Instagram sportsfc.fans while it is 18+; the day the restriction is
+ *                        lifted its reads succeed and it is verified like any other channel, unchanged
+ *   mode "skip"         the account does not exist yet: FM sends here and distribution drops it
+ *                        (2026-10-05). Ignored everywhere — no ledger entry, no alert, not on the
+ *                        Live page. When the account is created: add `read`, mode "verify".
+ *   mode "unwatched"    an FM pair not in this table at all (a platform FM adds later)
  */
 
 const FM_CHANNELS = {
@@ -28,21 +32,22 @@ const FM_CHANNELS = {
   "youtube/english":            { mode: "verify", read: { id: "yt-fans", platform: "youtube", url: "https://youtube.com/@sportsfc_fans", handle: "@sportsfc_fans", ytChannelId: "UCbqnwmEMgqGH2WQ-UpbX2lA" } },
   "telegram/english":           { mode: "verify", read: { id: "tg-fans", platform: "telegram", url: "https://t.me/sportsfc_fans", handle: "sportsfc_fans" } },
   "facebook/english":           { mode: "verify", read: { id: "fb-fans", platform: "facebook", url: "https://facebook.com/Sportsfc.fans", handle: "Sportsfc.fans" } },
-  "instagram/english":          { mode: "unverifiable", why: "sportsfc.fans is 18+ — no logged-out reader can see it (remove the age restriction, or use the official Instagram API)" },
+  "instagram/english":          { mode: "verify", soft: true, why: "sportsfc.fans is 18+ — can't be checked until the age restriction is lifted",
+                                  read: { id: "ig-fans", platform: "instagram", url: "https://instagram.com/sportsfc.fans", handle: "sportsfc.fans" } },
   "viber/english":              { mode: "assume" },
-  "x/english":                  { mode: "unwatched", why: "the English X account's link is not configured yet" },
-  "tiktok/english":             { mode: "unwatched", why: "the English TikTok account's link is not configured yet (@sportsfc.fans no longer exists)" },
-  "telegram_direct/english":    { mode: "unwatched", why: "the English Telegram bot is not configured yet" },
+  "x/english":                  { mode: "skip", why: "the account isn't created yet — FM sends, distribution drops it" },
+  "tiktok/english":             { mode: "skip", why: "the account isn't created yet — FM sends, distribution drops it" },
+  "telegram_direct/english":    { mode: "skip", why: "the account isn't created yet — FM sends, distribution drops it" },
 
   /* ── Portuguese (Brazil) ── */
   "youtube/portuguese":         { mode: "verify", read: { id: "yt-br", platform: "youtube", url: "https://www.youtube.com/@sfc-br", handle: "@sfc-br", ytChannelId: "UCR6OeH8jO7RMFDkx0Rfdv0w" } },
   "facebook/portuguese":        { mode: "verify", read: { id: "fb-br", platform: "facebook", url: "https://www.facebook.com/sportsfc.br", handle: "sportsfc.br" } },
   "instagram/portuguese":       { mode: "verify", read: { id: "ig-br", platform: "instagram", url: "https://www.instagram.com/sportsfc.br", handle: "sportsfc.br" } },
   "viber/portuguese":           { mode: "assume" },
-  "x/portuguese":               { mode: "unwatched", why: "the Portuguese X account's link is not configured yet" },
-  "tiktok/portuguese":          { mode: "unwatched", why: "the Portuguese TikTok account's link is not configured yet" },
-  "telegram/portuguese":        { mode: "unwatched", why: "the Portuguese Telegram channel's link is not configured yet" },
-  "telegram_direct/portuguese": { mode: "unwatched", why: "the Portuguese Telegram bot is not configured yet" },
+  "x/portuguese":               { mode: "skip", why: "the account isn't created yet — FM sends, distribution drops it" },
+  "tiktok/portuguese":          { mode: "skip", why: "the account isn't created yet — FM sends, distribution drops it" },
+  "telegram/portuguese":        { mode: "skip", why: "the account isn't created yet — FM sends, distribution drops it" },
+  "telegram_direct/portuguese": { mode: "skip", why: "the account isn't created yet — FM sends, distribution drops it" },
 };
 
 const PLATFORM_NAME = { youtube: "YouTube", telegram: "Telegram", telegram_direct: "Telegram bot", x: "X", facebook: "Facebook",

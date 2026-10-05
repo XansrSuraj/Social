@@ -159,13 +159,13 @@ export default function Live() {
             <div className="card live-panel">
               <h3><Activity /> Readers</h3>
               {readers.length ? readers.sort().map(([id, h]) => (
-                <div key={id} className="live-reader"><span className={`dot ${h.down ? "bad" : h.ok ? "ok" : "warn"}`} /><b>{id}</b>
-                  <span>{h.ok ? `${h.source || "ok"} · ${ago(h.lastOkAt)}` : `failing · ${String(h.lastError || "").slice(0, 80)}`}</span></div>
+                <div key={id} className="live-reader"><span className={`dot ${h.down ? "bad" : h.ok ? "ok" : h.soft ? "" : "warn"}`} /><b>{id}</b>
+                  <span>{h.ok ? `${h.source || "ok"} · ${ago(h.lastOkAt)}` : h.soft ? "18+ — waiting for the age restriction to be lifted" : `failing · ${String(h.lastError || "").slice(0, 80)}`}</span></div>
               )) : <div className="empty" style={{ padding: 20 }}>Readers are only asked when a card is due.</div>}
               <h3 style={{ marginTop: 20 }}><Radio /> What FM sends, and how it's checked</h3>
               {(s.coverage || []).map(c => (
                 <div key={c.fm} className="live-reader"><span className={`dot ${c.mode === "verify" ? "ok" : c.mode === "assume" ? "warn" : ""}`} /><b>{c.fm}</b>
-                  <span>{c.mode === "verify" ? c.account.replace(/^https?:\/\/(www\.)?/, "") : c.mode === "assume" ? "Viber — taken on FM's word" : c.why}</span></div>
+                  <span>{c.mode === "verify" ? c.account.replace(/^https?:\/\/(www\.)?/, "") + (c.soft ? " — 18+, checked once the restriction is lifted" : "") : c.mode === "assume" ? "Viber — taken on FM's word" : c.why}</span></div>
               ))}
             </div>
           </div>

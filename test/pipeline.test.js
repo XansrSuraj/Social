@@ -37,6 +37,8 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   const a = find("youtube", "vietnamese", "Attack vs Defense");
   ok(similarity(a.caption, a.caption) === 1, "a caption matches itself fully");
   ok(similarity(a.caption, find("youtube", "vietnamese", "Triple Match Roundup").caption) < 0.5, "two different cards do not match");
+  ok(similarity(find("instagram", "english", "The Full Verdict").caption, find("instagram", "english", "Attack vs Defense").caption) < 0.75,
+     "…not even two cards of the same family that share many words (0.52)");
   ok(similarity(a.caption, a.caption.slice(0, 120) + "… See more") >= 0.9, "a clipped caption with 'See more' still matches");
   const sent = Date.parse(a.sentAt);
   const posts = [{ externalId: "p1", ts: new Date(sent + 90e3).toISOString(), text: a.caption },
@@ -46,6 +48,14 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   ok(!bestMatch(a, posts, new Set(["p1"]), 20, 180), "a post already given to another delivery is not reused");
   ok(bestMatch(a, [{ externalId: "r", ts: new Date(sent + 120e3).toISOString(), text: "" }], new Set(), 20, 180), "a bare reel (no text) matches on time inside the window");
   ok(!bestMatch(a, [{ externalId: "r", ts: new Date(sent + 40 * 60e3).toISOString(), text: "" }], new Set(), 20, 180), "…but not 40 min later");
+  /* 3 Oct, Instagram VN: "The Full Verdict" for Spain–Czechia (16:30) and for Croatia–England (18:25)
+     share 78% of their words. The later card's post must never pass as the earlier one arriving late. */
+  const fv1 = { sentAt: "2026-10-03T11:00:00Z", caption: "Tây Ban Nha có thể khuất phục được Séc? 🔥 📊 SPORTSFC.FANS 🏆 UEFA Nations League 📅 Sat 03 Oct 2026 🕘 9:30 pm ICT 📍 Estadio 🔮 Tây Ban Nha có 62% cơ hội giành chiến thắng ⚽ 43% khả năng cả hai đội cùng ghi bàn 📈 72% khả năng trận đấu có trên 2,5 bàn thắng 👉 Xem ngay dự đoán và thống kê chi tiết tại sportsfc.fans" };
+  const fv2 = { externalId: "later", ts: "2026-10-03T12:56:00Z", text: "Croatia có thể khuất phục được Anh trên sân Stadion HNK Rijeka? 🔥 📊 SPORTSFC.FANS 🏆 UEFA Nations League 📅 Sat 03 Oct 2026 🕘 11:00 pm ICT 📍 Stadion HNK Rijeka 🔮 Croatia có 41% cơ hội giành chiến thắng ⚽ 52% khả năng cả hai đội cùng ghi bàn 📈 64% khả năng trận đấu có dưới 2,5 bàn thắng 👉 Xem ngay dự đoán và thống kê chi tiết tại sportsfc.fans" };
+  ok(similarity(fv1.caption, fv2.text) >= 0.75 && !bestMatch(fv1, [fv2], new Set(), 20, 180),
+     "the same template for a different match, 2 h later, is NOT taken as a late arrival", similarity(fv1.caption, fv2.text).toFixed(2));
+  ok(bestMatch(fv1, [{ externalId: "same", ts: "2026-10-03T12:00:00Z", text: fv1.caption }], new Set(), 20, 180),
+     "…while the same card really arriving 60 min late still is");
 
   console.log("\n── the channel map agrees with the daily check");
   const engine = fs.readFileSync(path.join(__dirname, "..", "src", "engine", "engine.js"), "utf8");
@@ -101,7 +111,8 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
     const calls = [];
     const fn = async (channels, opts) => { calls.push({ ids: channels.map(c => c.id), noPaid: opts.noPaid });
       return { results: channels.map(c => broken.includes(c.id) ? { channelId: c.id, ok: false, note: "HTTP 429" }
-                                                                : { channelId: c.id, ok: true, source: "stub", posts: visibleAt(now)(c.id) }) }; };
+        : !FX.posts[c.id] ? { channelId: c.id, ok: false, note: "free read failed (no posts found on the page)" }
+        : { channelId: c.id, ok: true, source: "stub", posts: visibleAt(now)(c.id) }) }; };
     fn.calls = calls; return fn;
   };
   const mkWa = () => { const out = []; return { out, flush: async (box) => { out.push(...box.map(m => m.text)); return { left: [], log: box.map(m => ({ ok: true, kind: m.kind })) }; } }; };
@@ -113,16 +124,20 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   let r = await tick({ fm: fmAt(now), collect: col, store: st, wa, now, force: true });
   const E = Object.values(st.ledger.deliveries);
   const c = s => E.filter(e => e.status === s).length;
-  ok(E.length === 62, "all 62 FM deliveries are in the ledger", E.length);
+  ok(E.length === 46, "46 of the 62 FM deliveries are kept — the 16 to accounts not created yet are ignored", E.length);
+  ok(!E.some(e => ["x/english", "x/portuguese", "tiktok/english", "tiktok/portuguese", "telegram/portuguese", "telegram_direct/english", "telegram_direct/portuguese"]
+                  .includes(e.channel + "/" + e.language)), "none of the 7 not-yet-created channels is in the ledger");
   ok(c("verified") === 34 && c("missing") === 1, "34 verified, 1 missing", `verified ${c("verified")}, missing ${c("missing")}`);
-  ok(c("assumed") === 8 && c("unwatched") === 16 && c("unverifiable") === 3, "8 Viber assumed, 16 not watched yet, 3 Instagram 18+",
+  ok(c("assumed") === 8 && c("unwatched") === 0 && c("unverifiable") === 3, "8 Viber assumed, 3 Instagram 18+ can't be checked, nothing 'not watched'",
      `${c("assumed")}/${c("unwatched")}/${c("unverifiable")}`);
   const miss = E.find(e => e.status === "missing");
   ok(miss.channel === "x" && miss.language === "vietnamese" && miss.card === "Triple Match Roundup", "the missing one is X VN 10:30 — exactly what was found by hand");
   ok(E.filter(e => e.status === "verified").every(e => e.lag >= -5 && e.lag <= 20 && e.sim >= 50), "every verified delivery is inside 20 min with matching words");
   const msg = wa.out.join("\n");
   ok(/Missing\* — X VN · 10:30 "Triple Match Roundup"/.test(msg), "WhatsApp says X VN 10:30 is missing");
-  ok(/Caption too long\* — X PT · 10:30/.test(msg), "…and that the Portuguese X caption is too long");
+  ok(!/X PT|TikTok EN|Telegram PT|Bot EN|Bot PT|Not watched yet/.test(msg), "the channels that don't exist yet appear nowhere in the alerts");
+  ok(!/Reader down\* — ig-fans|Can't confirm\* — Instagram EN/.test(msg) && /Can't be checked: Instagram EN \(18\+\)/.test(msg),
+     "Instagram EN (18+) is quietly 'can't be checked' — never a reader alert");
   ok(/18:30 · Attack vs Defense — all delivered/.test(msg) && /10:30 · Triple Match Roundup — 1 problem/.test(msg), "…with a summary per drop: 18:30 clean, 10:30 with problems");
   ok(/🇻🇳 VN: Facebook ✓ · Instagram ✓ · Telegram ✓ · Bot ✓ · TikTok ✓ · X ✗ · YouTube ✓/.test(msg) && /Problems:\n❌ X VN — not on the channel/.test(msg),
      "…listing every channel per language, and what went wrong");
@@ -147,7 +162,7 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   now = at("2026-10-04T13:07:00Z");
   st = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }); wa = mkWa();
   await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, now, force: true });
-  const evening = Object.values(st.ledger.deliveries).filter(e => e.card === "Attack vs Defense" && e.mode === "verify");
+  const evening = Object.values(st.ledger.deliveries).filter(e => e.card === "Attack vs Defense" && e.mode === "verify" && !e.soft);
   ok(evening.length === 13 && evening.every(e => e.status === "verified"), "7 min after the 18:30 drop all 13 checked channels are already verified",
      evening.map(e => e.status).join(","));
   ok(!/18:30 "Attack vs Defense"/.test(wa.out.join("\n")), "…but its summary waits until the 20-min window closes");
@@ -164,6 +179,18 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   const fbv = Object.values(st.ledger.deliveries).find(e => e.chId === "fb-vn" && e.card === "Attack vs Defense");
   ok(fbv.status === "reader_failed" && /Reader down\* — fb-vn/.test(wa.out.join("\n")), "a broken reader is reported as such, never as a missing post", fbv.status);
   ok(!/Missing\* — Facebook VN · 18:30/.test(wa.out.join("\n")), "…and Facebook VN 18:30 is not called missing");
+
+  /* Instagram EN becomes readable (restriction lifted): the same channel is verified like any other */
+  {
+    const att = D.filter(d => d.channel === "instagram" && d.language === "english" && d.template.label === "Attack vs Defense");
+    FX.posts["ig-fans"] = att.map((d, i) => ({ externalId: "igf" + i, ts: new Date(Date.parse(d.sentAt) + 90e3).toISOString(), text: d.caption }));
+    now = at("2026-10-04T13:25:00Z");
+    st = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }); wa = mkWa();
+    await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, now, force: true });
+    const igf = Object.values(st.ledger.deliveries).find(e => e.chId === "ig-fans" && e.card === "Attack vs Defense");
+    ok(igf.status === "verified", "once the 18+ restriction is lifted, Instagram EN is verified automatically", igf.status);
+    delete FX.posts["ig-fans"];
+  }
 
   /* FM failed / stuck */
   now = at("2026-10-04T13:20:00Z");

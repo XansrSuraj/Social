@@ -15,7 +15,7 @@
  * end to end without a network (test/pipeline.test.js).
  */
 const { routeOf, labelOf } = require("./channels.js");
-const { captionProblem, bestMatch } = require("./rules.js");
+const { captionProblem, assign } = require("./rules.js");
 
 const WINDOW_MIN = 20;            // every channel normally shows the post within ~5 min; 20 is the buffer
 const FIRST_CHECK_MIN = 2;        // first look 2 min after FM sent it
@@ -119,17 +119,22 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
   for (const d of fmRows || []) {
     if (!d || !d.cardId) continue;
     const route = routeOf(d.channel, d.language);
+    /* an account that does not exist yet: FM sends, distribution drops it — not ours to judge */
+    if (route.mode === "skip") { delete led.deliveries[d.cardId]; continue; }
     const e = led.deliveries[d.cardId] || { cardId: d.cardId, firstSeen: now, checks: 0, status: "new" };
+    const prevMode = e.mode;
     Object.assign(e, {
       setId: d.setId, channel: d.channel, language: d.language, label: labelOf(d.channel, d.language),
       card: (d.template && d.template.label) || d.collection || "card",
       caption: String(d.caption || "").slice(0, 700),
       scheduledAt: d.scheduledAt || null, queuedAt: d.queuedAt || null, sentAt: d.sentAt || null,
       fmState: d.state, fmError: d.error ? String(d.error).slice(0, 200) : null, failureStage: d.failureStage || null,
-      mode: route.mode, why: route.why || null, chId: route.read ? route.read.id : null,
+      mode: route.mode, soft: !!route.soft, why: route.why || null, chId: route.read ? route.read.id : null,
       /* who published is kept only as scheduler / editor — the status page is public, an email is not */
       deliveryMode: d.deliveryMode || null, publishedBy: d.publishedBy ? (/^cron:/.test(d.publishedBy) ? "scheduler" : "editor") : null,
     });
+    /* a channel switched to "verify" since this delivery was filed (its link was added): check it from now on */
+    if (prevMode && prevMode !== e.mode && e.mode === "verify" && ["assumed", "unwatched", "unverifiable"].includes(e.status)) e.status = "waiting";
     const when = T(e.sentAt || e.scheduledAt || e.queuedAt) || now;
     e.when = when;
     if (!e.capChecked) {
@@ -144,6 +149,12 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
     }
     led.deliveries[d.cardId] = e;
   }
+
+  for (const [k, e] of Object.entries(led.deliveries)) if (routeOf(e.channel, e.language).mode === "skip") delete led.deliveries[k];
+  /* a late match kept from before the late-match rule (≥ 90% of the words) is looked at again */
+  for (const e of Object.values(led.deliveries))
+    if (e.status === "late" && e.sim != null && e.sim < 90)
+      Object.assign(e, { status: "waiting", postId: null, postAt: null, postUrl: "", lag: null, sim: null, checks: 0 });
 
   /* ── 3. FM-side states ── */
   for (const e of Object.values(led.deliveries)) {
@@ -163,8 +174,7 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
       if (e.mode === "assume") e.status = "assumed";
       else if (e.mode === "unwatched") e.status = "unwatched";
       else if (e.mode === "unverifiable") e.status = "unverifiable";
-      /* also a channel whose link was added since: it is checked from now on */
-      else if (["new", "fm_pending", "assumed", "unwatched", "unverifiable"].includes(e.status)) e.status = "waiting";
+      else if (e.status === "new" || e.status === "fm_pending") e.status = "waiting";
     }
   }
 
@@ -172,7 +182,7 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
   const sinceSent = e => (now - T(e.sentAt)) / 60e3;
   const due = Object.values(led.deliveries).filter(e => {
     if (e.mode !== "verify" || e.fmState !== "sent" || !e.sentAt || !e.chId) return false;
-    if (e.status === "verified" || e.status === "late") return false;
+    if (e.status === "verified" || e.status === "late" || e.status === "unverifiable") return false;
     const m = sinceSent(e);
     if (m < FIRST_CHECK_MIN) return false;
     /* past the late limit only a delivery never looked at gets its one catch-up check (the read covers 30 h) */
@@ -190,7 +200,7 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
       for (const r of out.results || []) byCh[r.channelId] = r;
     } catch (e) { errors.push("collect: " + String(e.message || e)); }
     /* a free read that failed at a delivery's last chance gets ONE paid attempt — never on every tick */
-    const lastChance = [...new Set(due.filter(e => sinceSent(e) >= WINDOW_MIN && !e.paidTried &&
+    const lastChance = [...new Set(due.filter(e => !e.soft && sinceSent(e) >= WINDOW_MIN && !e.paidTried &&
                                                    byCh[e.chId] && !byCh[e.chId].ok).map(e => e.chId))];
     if (lastChance.length && Date.now() - t0 < 30000) {
       for (const e of due) if (lastChance.includes(e.chId)) e.paidTried = true;
@@ -202,8 +212,10 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
   }
 
   /* reader health — a channel failing twice in a row is a broken scraper, said once, and its recovery too */
+  const softIds = new Set(due.filter(e => e.soft).map(e => e.chId));
   for (const [id, r] of Object.entries(byCh)) {
     const h = led.readers[id] || { fails: 0 };
+    if (softIds.has(id)) { led.readers[id] = { ...h, ok: !!r.ok, soft: true, ...(r.ok ? { lastOkAt: now, source: r.source } : { lastFailAt: now, lastError: String(r.note || "").slice(0, 300) }) }; continue; }
     if (r.ok) {
       if (h.down) raise(`up:${id}:${now}`, "reader_up", `🟢 *Reader back* — ${id} is being read again (${r.source})`);
       Object.assign(h, { ok: true, fails: 0, down: false, lastOkAt: now, source: r.source, lastError: h.lastError || null });
@@ -220,6 +232,12 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
 
   /* ── 5. match ── */
   const claimed = new Set(Object.values(led.deliveries).filter(e => e.postId).map(e => e.chId + ":" + e.postId));
+  /* per channel, all due deliveries against all posts at once — best pairs first */
+  const hits = new Map();
+  for (const [id, r] of Object.entries(byCh)) if (r.ok) {
+    const used = new Set([...claimed].filter(k => k.startsWith(id + ":")).map(k => k.slice(id.length + 1)));
+    for (const [d, m] of assign(due.filter(e => e.chId === id), r.posts || [], used, WINDOW_MIN, LATE_MAX_MIN)) hits.set(d, m);
+  }
   for (const e of due.sort((a, b) => T(a.sentAt) - T(b.sentAt))) {
     const r = byCh[e.chId];
     e.checks = (e.checks || 0) + 1;
@@ -227,11 +245,10 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
     const m = sinceSent(e);
     if (!r || !r.ok) {
       e.readNote = r ? String(r.note || "").slice(0, 200) : "not read this tick";
-      if (m >= WINDOW_MIN && e.status !== "missing") e.status = "reader_failed";
+      if (m >= WINDOW_MIN && e.status !== "missing") e.status = e.soft ? "unverifiable" : "reader_failed";
       continue;
     }
-    const used = new Set([...claimed].filter(k => k.startsWith(e.chId + ":")).map(k => k.slice(e.chId.length + 1)));
-    const hit = bestMatch(e, r.posts || [], used, WINDOW_MIN, LATE_MAX_MIN);
+    const hit = hits.get(e) || null;
     if (hit) {
       const was = e.status;
       Object.assign(e, { status: hit.lag <= WINDOW_MIN ? "verified" : "late", postId: hit.post.externalId,
@@ -286,7 +303,7 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
     slot.summarySent = now;
     const first = Math.min(...list.map(e => e.when));
     const cards = [...new Set(list.map(e => e.card))].join(" + ");
-    const checked = sentOnes.filter(e => e.mode === "verify");
+    const checked = sentOnes.filter(e => e.mode === "verify" && e.status !== "unverifiable");
     const ok = checked.filter(e => e.status === "verified" || e.status === "late");
     const bad = list.filter(e => ["missing", "reader_failed", "fm_failed", "fm_unconfirmed"].includes(e.status));
     /* the whole picture in one message: every channel, language by language, then what went wrong */
@@ -298,7 +315,7 @@ async function tick({ fm, collect, store, wa, now = Date.now(), owner = "tick", 
       (lags.length ? ` · arrived ${Math.max(0, Math.round(Math.min(...lags)))}–${Math.round(Math.max(...lags))} min after FM sent it` : "")];
     const ORDER = ["vietnamese", "english", "portuguese", "hindi"];
     for (const lg of [...new Set(list.map(e => e.language))].sort((a, b) => (ORDER.indexOf(a) + 1 || 9) - (ORDER.indexOf(b) + 1 || 9))) {
-      const mine = list.filter(e => e.language === lg && e.mode === "verify" && e.fmState === "sent");
+      const mine = list.filter(e => e.language === lg && e.mode === "verify" && e.fmState === "sent" && e.status !== "unverifiable");
       if (!mine.length) continue;
       lines.push(`${FLAG[lg] || ""}${(LANG_SHORT[lg] || lg).toUpperCase()}: ` + mine.sort((a, b) => a.channel.localeCompare(b.channel))
         .map(e => `${SHORT[e.channel] || e.channel} ${e.status === "verified" ? "✓" : e.status === "late" ? "✓(late)" : "✗"}`).join(" · "));
