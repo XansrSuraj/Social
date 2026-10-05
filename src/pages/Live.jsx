@@ -61,7 +61,7 @@ export default function Live() {
   const sets = {};
   for (const e of list) (sets[e.dropKey || e.setId] = sets[e.dropKey || e.setId] || []).push(e);
   const drops = Object.values(sets).sort((a, b) => Math.min(...b.map(e => e.when)) - Math.min(...a.map(e => e.when)));
-  const checked = list.filter(e => e.mode === "verify" && e.fmState === "sent");
+  const checked = list.filter(e => e.mode === "verify" && e.fmState === "sent" && e.status !== "unverifiable");
   const okN = checked.filter(e => e.status === "verified" || e.status === "late").length;
   const problems = list.filter(e => ["missing", "fm_failed", "reader_failed", "fm_unconfirmed"].includes(e.status)).length;
   const readers = Object.entries(s.readers || {});
