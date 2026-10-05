@@ -136,11 +136,14 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   const msg = wa.out.join("\n");
   ok(/Missing\* — X VN · 10:30 "Triple Match Roundup"/.test(msg), "WhatsApp says X VN 10:30 is missing");
   ok(!/X PT|TikTok EN|Telegram PT|Bot EN|Bot PT|Not watched yet/.test(msg), "the channels that don't exist yet appear nowhere in the alerts");
-  ok(!/Reader down\* — ig-fans|Can't confirm\* — Instagram EN/.test(msg) && /Can't be checked: Instagram EN \(18\+\)/.test(msg),
+  ok(!/Reader down\* — ig-fans|Can't confirm\* — Instagram EN/.test(msg) && /• Instagram — can't be checked \(18\+\)/.test(msg),
      "Instagram EN (18+) is quietly 'can't be checked' — never a reader alert");
-  ok(/18:30 · Attack vs Defense — all delivered/.test(msg) && /10:30 · Triple Match Roundup — 1 problem/.test(msg), "…with a summary per drop: 18:30 clean, 10:30 with problems");
-  ok(/🇻🇳 VN: Facebook ✓ · Instagram ✓ · Telegram ✓ · Bot ✓ · TikTok ✓ · X ✗ · YouTube ✓/.test(msg) && /Problems:\n❌ X VN — not on the channel/.test(msg),
-     "…listing every channel per language, and what went wrong");
+  ok(/DROP REPORT — 18:30 IST[^\n]*\n✅ \*All delivered\* · 13\/13/.test(msg) && /DROP REPORT — 10:30 IST[^\n]*\n⚠️ \*1 problem\* · 12\/13/.test(msg),
+     "…with a full report per drop: 18:30 all delivered, 10:30 with one problem");
+  ok(/🇻🇳 \*VIETNAMESE\* — 6\/7 ✓/.test(msg) && /• X — ✗ Missing/.test(msg) && /• YouTube — ✓ Delivered at \d\d:\d\d:\d\d \(\+\d+\.\d min\) · caption 100%/.test(msg) &&
+     /\*Problems:\*\n❌ X VN — not on the channel 20 min after FM sent it/.test(msg) && /\*Sent:\* scheduled for 10:30 \(sent by the scheduler\)/.test(msg),
+     "…listing every channel per language with its time, delay and caption match, who sent it, and what went wrong");
+  ok(wa.out.filter(t => /DROP REPORT/.test(t)).every(t => (t.match(/DROP REPORT/g) || []).length === 1), "every drop report is a message of its own");
   if (process.env.SHOW) console.log("\n" + wa.out[0] + "\n");
   ok(!/@/.test(JSON.stringify(Object.values(st.ledger.deliveries).map(e => e.publishedBy))), "no editor email is stored");
   ok(col.calls.length === 1 && col.calls[0].noPaid === true, "one batched read, free readers only", JSON.stringify(col.calls.map(x => x.ids.length)));
@@ -168,7 +171,7 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   ok(!/18:30 "Attack vs Defense"/.test(wa.out.join("\n")), "…but its summary waits until the 20-min window closes");
   now = at("2026-10-04T13:22:00Z");
   await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, now });
-  ok(/18:30 · Attack vs Defense — all delivered/.test(wa.out.join("\n")), "…and is sent once it does");
+  ok(/DROP REPORT — 18:30 IST/.test(wa.out.join("\n")), "…and is sent once it does");
 
   /* a broken reader: Facebook VN refuses twice — reader-down alert, not a false "missing" */
   now = at("2026-10-04T13:05:00Z");
@@ -221,7 +224,9 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   wa = { ...mkWa(), pushConfigured: () => true, push: async (text, o) => { pushed.push({ text, problem: o.problem }); } };
   now = at("2026-10-04T15:30:00Z");
   await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, now, force: true });
-  ok(pushed.length === 1 && pushed[0].problem && /Missing\* — X VN/.test(pushed[0].text), "the same alert is pushed to the phone, flagged as a problem");
+  ok(pushed[0] && pushed[0].problem && /Missing\* — X VN/.test(pushed[0].text), "the problems are pushed to the phone first, flagged as a problem");
+  ok(pushed.filter(p => /DROP REPORT/.test(p.text)).length >= 3 && pushed.every(p => p.text.length < 4000), "…then each drop report as its own push, each under ntfy's 4 KB",
+     pushed.map(p => p.text.length).join(","));
 
   console.log("\n── Microsoft Teams, and the pipeline's own health");
   const { card } = require("../pipeline/teams.js");
@@ -231,12 +236,14 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   st = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }); wa = mkWa();
   await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, teams: teamsStub, now, force: true });
   const c0 = cards[0] && cards[0].attachments[0];
-  ok(cards.length === 1 && c0.contentType === "application/vnd.microsoft.card.adaptive" && c0.content.type === "AdaptiveCard",
-     "one Adaptive Card per tick goes to the Teams channel");
+  ok(cards.length >= 4 && cards.every(c => c.attachments[0].contentType === "application/vnd.microsoft.card.adaptive" && c.attachments[0].content.type === "AdaptiveCard"),
+     "Adaptive Cards go to the Teams channel: the problems, then one card per drop report", cards.length + " cards");
   const blocks = JSON.stringify(c0.content.body);
   ok(/"style":"attention"/.test(blocks) && /\*\*Missing\*\* — X VN · 10:30/.test(blocks), "a missing post is a red section, in Teams' **bold**");
-  ok(/"style":"good"/.test(blocks) && /18:30 · Attack vs Defense — all delivered/.test(blocks), "a fully delivered drop is a green section");
-  ok(JSON.stringify(cards[0]).length < 28000, "the card stays under Teams' 28 KB limit", JSON.stringify(cards[0]).length + " bytes");
+  const clean = cards.map(c => JSON.stringify(c)).find(j => /Drop report — 18:30 IST/.test(j)) || "";
+  ok(/"style":"good"/.test(clean) && /All delivered · 13\/13/.test(clean) && /"title":"Sent"/.test(clean) && /\*\*Channel\*\*/.test(clean),
+     "a fully delivered drop is a green report card: overview facts and a per-language table");
+  ok(cards.every(c => JSON.stringify(c).length < 28000), "every card stays under Teams' 28 KB limit", cards.map(c => JSON.stringify(c).length).join(","));
 
   /* the clock stopped for 25 min: the first tick back says so */
   st = mkStore({ startedAt: at("2026-10-04T03:00:00Z"), lastTickAt: at("2026-10-04T15:05:00Z") }); wa = mkWa();

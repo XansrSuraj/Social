@@ -12,6 +12,7 @@
  * page. Workflows does not render buttons, so the link is a markdown link. Limits: 28 KB per
  * message, 4 requests a second — one card per tick stays far inside both.
  */
+const { dropCardItems } = require("./report.js");
 const URL_ = () => String(process.env.TEAMS_WEBHOOK_URL || "").trim();
 const configured = () => /^https:\/\//.test(URL_());
 
@@ -29,6 +30,8 @@ function card(alerts, { title = "SportsFC · FM ↔ channels", link = "" } = {})
       isSubtle: true, spacing: "None", size: "Small" },
   ];
   for (const a of alerts) {
+    /* a drop that settled: its full report — overview, a table per language, problems */
+    if (a.report) { body.push({ type: "Container", spacing: "Large", separator: true, items: dropCardItems(a.report) }); continue; }
     const [head, ...rest] = String(a.text).split("\n");
     const style = a.kind === "slot" ? (/problem/.test(head) ? "attention" : "good") : (STYLE[a.kind] || "default");
     body.push({ type: "Container", style, bleed: false, spacing: "Medium", items: [

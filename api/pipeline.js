@@ -7,7 +7,8 @@
  *                                     .github/workflows/pipeline.yml and once a day by Vercel's cron.
  *                                     Safe to call by anyone: a tick within 40 s of the last one, or
  *                                     while another runs, does nothing, and it only ever reads.
- *   GET /api/pipeline?op=test-alert   send one WhatsApp test message (at most one per 10 minutes)
+ *   GET /api/pipeline?op=test-alert   send one test alert to every channel (at most one per 10 minutes)
+ *   GET /api/pipeline?op=report&at=16:30[&day=YYYY-MM-DD]   send that drop's full report again (once a minute)
  *
  * Optional PIPELINE_KEY: when set, op=tick and op=test-alert need ?key=… (or Vercel's cron header).
  */
@@ -17,6 +18,7 @@ const { collectChannels } = require("./collect.js");
 const store = require("../pipeline/store.js");
 const wa = require("../pipeline/whatsapp.js");
 const teams = require("../pipeline/teams.js");
+const { dropData, dropText } = require("../pipeline/report.js");
 const { tick, PIPELINE_URL } = require("../pipeline/tick.js");
 const { FM_CHANNELS } = require("../pipeline/channels.js");
 
@@ -93,6 +95,44 @@ module.exports = async (req, res) => {
       led.waLog = [...log, ...(led.waLog || [])].slice(0, 60);
       await store.saveLedger(led, lock.updatedAt, true);
       return res.status(200).json({ ok: !left.length, log });
+    }
+
+    /* op=report&at=16:30[&day=2026-10-05] — the full drop report for a past drop, sent again to every
+       alert channel (at most once a minute) */
+    if (op === "report") {
+      if (!authorised(req)) return res.status(401).json({ ok: false, error: "PIPELINE_KEY required" });
+      const m = String((req.query && req.query.at) || "").match(/^(\d{1,2}):(\d{2})$/);
+      if (!m) return res.status(400).json({ ok: false, error: "give ?at=HH:MM (IST)" });
+      const day = (req.query && req.query.day) || new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 10);
+      const target = Date.parse(`${day}T${m[1].padStart(2, "0")}:${m[2]}:00+05:30`);
+      const lock = await store.lockLedger("report");
+      if (!lock) return res.status(409).json({ ok: false, error: "a check is running — try again in a minute" });
+      const led = lock.ledger;
+      if (led.lastManualReportAt && Date.now() - led.lastManualReportAt < 60e3) {
+        await store.saveLedger(led, lock.updatedAt, true);
+        return res.status(429).json({ ok: false, error: "one report a minute" });
+      }
+      const drops = {};
+      for (const e of Object.values(led.deliveries || {})) if (e.dropKey) (drops[e.dropKey] = drops[e.dropKey] || []).push(e);
+      const near = Object.values(drops).map(list => ({ list, first: Math.min(...list.map(e => e.when)) }))
+        .filter(x => Math.abs(x.first - target) <= 60 * 60e3).sort((a, b) => Math.abs(a.first - target) - Math.abs(b.first - target))[0];
+      if (!near) { await store.saveLedger(led, lock.updatedAt, true); return res.status(404).json({ ok: false, error: `no drop within an hour of ${m[0]} on ${day}` }); }
+      led.lastManualReportAt = Date.now();
+      const d = dropData(near.list);
+      const text = dropText(d, PIPELINE_URL), log = [];
+      const title = (d.problems.length ? "⚠️ " : "✅ ") + `Drop report ${new Date(d.when + 5.5 * 3600e3).toISOString().slice(11, 16)} ${d.card}`;
+      if (wa.pushConfigured()) {
+        try { await wa.push(text, { problem: d.problems.length > 0, click: PIPELINE_URL, title }); log.push({ at: Date.now(), ok: true, via: "push", kind: "report" }); }
+        catch (e) { log.push({ at: Date.now(), ok: false, via: "push", error: String(e.message || e) }); }
+      }
+      if (teams.configured()) {
+        try { await teams.post(teams.card([{ kind: "slot", text, report: d }], { link: PIPELINE_URL })); log.push({ at: Date.now(), ok: true, via: "teams", kind: "report" }); }
+        catch (e) { log.push({ at: Date.now(), ok: false, via: "teams", error: String(e.message || e) }); }
+      }
+      if (wa.configured()) { const r = await wa.flush([{ kind: "report", text }]); log.push(...r.log.map(x => ({ ...x, via: "whatsapp" }))); }
+      led.waLog = [...log, ...(led.waLog || [])].slice(0, 60);
+      await store.saveLedger(led, lock.updatedAt, true);
+      return res.status(200).json({ ok: log.length > 0 && log.every(x => x.ok), drop: { at: d.when, card: d.card, ok: d.ok, checked: d.checked, problems: d.problems.length }, log });
     }
 
     /* status — public and read-only; nothing secret is in the ledger (no keys, no numbers) */

@@ -17,6 +17,7 @@
 const { routeOf, labelOf } = require("./channels.js");
 const { captionProblem, assign } = require("./rules.js");
 const realTeams = require("./teams.js");
+const { dropData, dropText } = require("./report.js");
 
 const WINDOW_MIN = 20;            // every channel normally shows the post within ~5 min; 20 is the buffer
 const FIRST_CHECK_MIN = 2;        // first look 2 min after FM sent it
@@ -102,12 +103,12 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
 
   const news = [];                           // alerts raised in this tick
   const quiet = when => when < led.startedAt - BACKFILL_QUIET_H * 3600e3;
-  const raise = (key, kind, text, when) => {
+  const raise = (key, kind, text, when, extra) => {
     if (led.sent[key]) return;
     led.sent[key] = now;
     const a = { at: now, kind, text };
-    led.alerts.unshift(a);
-    if (!quiet(when == null ? now : when)) news.push(a);
+    led.alerts.unshift(a);                       // the log keeps the text; the full report rides on the alert only
+    if (!quiet(when == null ? now : when)) news.push({ ...a, ...(extra || {}) });
   };
   const errors = [];
 
@@ -314,37 +315,12 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     if (!list.every(e => SETTLED.has(e.status))) continue;
     if (list.some(e => e.mode === "verify" && e.fmState === "sent" && sinceSent(e) < WINDOW_MIN)) continue;
     slot.summarySent = now;
-    const first = Math.min(...list.map(e => e.when));
-    const cards = [...new Set(list.map(e => e.card))].join(" + ");
-    const checked = sentOnes.filter(e => e.mode === "verify" && e.status !== "unverifiable");
-    const ok = checked.filter(e => e.status === "verified" || e.status === "late");
-    const bad = list.filter(e => ["missing", "reader_failed", "fm_failed", "fm_unconfirmed"].includes(e.status));
-    /* the whole picture in one message: every channel, language by language, then what went wrong */
-    const lags = ok.map(e => e.lag).filter(x => x != null);
-    const head = bad.length ? `⚠️ *${ist(first)} · ${cards} — ${bad.length} problem${bad.length === 1 ? "" : "s"}*`
-                            : `✅ *${ist(first)} · ${cards} — all delivered*`;
-    const lines = [head + (list.some(e => e.deliveryMode === "now") ? " (sent now)" : ""),
-      `${ok.length}/${checked.length} checked channels received it` +
-      (lags.length ? ` · arrived ${Math.max(0, Math.round(Math.min(...lags)))}–${Math.round(Math.max(...lags))} min after FM sent it` : "")];
-    const ORDER = ["vietnamese", "english", "portuguese", "hindi"];
-    for (const lg of [...new Set(list.map(e => e.language))].sort((a, b) => (ORDER.indexOf(a) + 1 || 9) - (ORDER.indexOf(b) + 1 || 9))) {
-      const mine = list.filter(e => e.language === lg && e.mode === "verify" && e.fmState === "sent" && e.status !== "unverifiable");
-      if (!mine.length) continue;
-      lines.push(`${FLAG[lg] || ""}${(LANG_SHORT[lg] || lg).toUpperCase()}: ` + mine.sort((a, b) => a.channel.localeCompare(b.channel))
-        .map(e => `${SHORT[e.channel] || e.channel} ${e.status === "verified" ? "✓" : e.status === "late" ? "✓(late)" : "✗"}`).join(" · "));
-    }
-    const viber = list.filter(e => e.status === "assumed").length;
-    if (viber) lines.push(`Viber ≈ ${viber} (taken on FM's word)`);
-    const unwatched = list.filter(e => e.status === "unwatched").map(e => e.label);
-    if (unwatched.length) lines.push(`Not watched yet: ${unwatched.join(", ")}`);
-    const cant = list.filter(e => e.status === "unverifiable").map(e => e.label);
-    if (cant.length) lines.push(`Can't be checked: ${cant.join(", ")} (18+)`);
-    if (bad.length) {
-      lines.push("Problems:");
-      for (const e of bad) lines.push(`❌ ${e.label} — ${PROBLEM[e.status] || e.status}` +
-        (e.capProblem ? ` (${e.capProblem})` : "") + (e.status === "reader_failed" && e.readNote ? ` (${e.readNote.slice(0, 90)})` : ""));
-    }
-    raise(`slot:${setId}`, "slot", lines.join("\n"), first);
+    /* the full drop report (pipeline/report.js): every channel per language, when it landed, how fast,
+       what wasn't checked and why, and every problem with its reason */
+    const d = dropData(list);
+    const title = (d.problems.length ? "⚠️ " : "✅ ") + `${ist(d.when)} ${d.card} — ` +
+      (d.problems.length ? `${d.problems.length} problem${d.problems.length === 1 ? "" : "s"}` : `all delivered (${d.ok}/${d.checked})`);
+    raise(`slot:${setId}`, "slot", dropText(d), d.when, { report: d, title });
   }
 
   /* ── 8. the nightly digest (after 23:00 IST, once a day) ── */
@@ -361,24 +337,30 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     }
   }
 
-  /* ── 9. WhatsApp ── */
+  /* ── 9. notify: problems together in one message; every drop report as a message of its own ──
+     (a report is a few KB — several in one would pass ntfy's 4 KB and Teams' 28 KB) */
   if (news.length) {
     const order = ["pipeline", "fm_down", "fm_failed", "missing", "caption", "fm_stuck", "fm_unconfirmed", "reader_down", "reader_failed", "late", "reader_up", "slot", "digest"];
-    news.sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
-    const text = `*SportsFC · FM ↔ channels*\n\n${news.map(a => a.text).join("\n\n")}\n\n${PIPELINE_URL}`;
-    led.outbox.push({ at: now, kind: news[0].kind, text });
-    /* the phone push (ntfy) goes out at once, independent of WhatsApp */
-    if (wa.pushConfigured && wa.pushConfigured()) {
-      const problem = news.some(a => !["slot", "digest", "reader_up"].includes(a.kind) || /problems/.test(a.text));
-      /* the notification's title is the most important line itself, so the lock screen already says it */
-      const title = news[0].text.split("\n")[0].replace(/\*/g, "").slice(0, 110) + (news.length > 1 ? `  (+${news.length - 1} more)` : "");
-      try { await wa.push(text, { problem, click: PIPELINE_URL, title }); led.waLog.unshift({ at: now, ok: true, via: "push", kind: news[0].kind }); }
-      catch (e) { led.waLog.unshift({ at: now, ok: false, via: "push", error: String(e.message || e).slice(0, 200) }); }
+    news.sort((x, y) => order.indexOf(x.kind) - order.indexOf(y.kind));
+    const plain = news.filter(x => !x.report), reports = news.filter(x => x.report);
+    const messages = [];
+    if (plain.length) messages.push({ kind: plain[0].kind, alerts: plain,
+      text: `*SportsFC · FM ↔ channels*\n\n${plain.map(x => x.text).join("\n\n")}\n\n${PIPELINE_URL}`,
+      title: (plain[0].title || plain[0].text.split("\n")[0].replace(/\*/g, "")).slice(0, 110) + (plain.length > 1 ? `  (+${plain.length - 1} more)` : ""),
+      problem: plain.some(x => !["digest", "reader_up"].includes(x.kind)) });
+    for (const r of reports) messages.push({ kind: "slot", alerts: [r], text: `${r.text}\n\n${PIPELINE_URL}`, title: r.title || "Drop report", problem: r.report.problems.length > 0 });
+    for (const m of messages) {
+      led.outbox.push({ at: now, kind: m.kind, text: m.text });
+      if (teams.configured()) led.teamsOutbox = [...(led.teamsOutbox || []), { at: now, kind: m.kind, payload: teams.card(m.alerts, { link: PIPELINE_URL }) }];
+      /* the phone push (ntfy) goes out at once; its title is the result itself, so the lock screen says it */
+      if (wa.pushConfigured && wa.pushConfigured()) {
+        try { await wa.push(m.text, { problem: m.problem, click: PIPELINE_URL, title: m.title }); led.waLog.unshift({ at: now, ok: true, via: "push", kind: m.kind }); }
+        catch (e) { led.waLog.unshift({ at: now, ok: false, via: "push", error: String(e.message || e).slice(0, 200) }); }
+      }
     }
   }
-  /* Microsoft Teams: the same alerts as one Adaptive Card in the team's channel */
+  /* Microsoft Teams: one Adaptive Card per message, queued and retried */
   led.teamsOutbox = (led.teamsOutbox || []).filter(m => now - m.at < 3 * 3600e3);
-  if (news.length && teams.configured()) led.teamsOutbox.push({ at: now, kind: news[0].kind, payload: teams.card(news, { link: PIPELINE_URL }) });
   if (led.teamsOutbox.length) {
     try {
       const { left, log } = await teams.flush(led.teamsOutbox);
