@@ -136,14 +136,25 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   const msg = wa.out.join("\n");
   ok(/Missing\* — X VN · 10:30 "Triple Match Roundup"/.test(msg), "WhatsApp says X VN 10:30 is missing");
   ok(!/X PT|TikTok EN|Telegram PT|Bot EN|Bot PT|Not watched yet/.test(msg), "the channels that don't exist yet appear nowhere in the alerts");
-  ok(!/Reader down\* — ig-fans|Can't confirm\* — Instagram EN/.test(msg) && /• Instagram — can't be checked \(18\+\)/.test(msg),
+  ok(!/Reader down\* — ig-fans|Can't confirm\* — Instagram EN/.test(msg) && /• Instagram — ⚠ Can't read — 18\+ age restriction \(checked automatically once it's lifted\)/.test(msg),
      "Instagram EN (18+) is quietly 'can't be checked' — never a reader alert");
   ok(/DROP REPORT — 18:30 IST[^\n]*\n✅ \*All delivered\* · 13\/13/.test(msg) && /DROP REPORT — 10:30 IST[^\n]*\n⚠️ \*1 problem\* · 12\/13/.test(msg),
      "…with a full report per drop: 18:30 all delivered, 10:30 with one problem");
-  ok(/🇻🇳 \*VIETNAMESE\* — 6\/7 ✓/.test(msg) && /• X — ✗ Missing/.test(msg) && /• YouTube — ✓ Delivered at \d\d:\d\d:\d\d \(\+\d+\.\d min\) · caption 100%/.test(msg) &&
+  ok(/🇻🇳 \*VIETNAMESE\* — 6\/7 delivered/.test(msg) && /• X — ✗ Missing/.test(msg) && /• YouTube — ✓ Delivered at \d\d:\d\d:\d\d \(\+\d+\.\d min\) · caption 100%/.test(msg) &&
      /\*Problems:\*\n❌ X VN — not on the channel 20 min after FM sent it/.test(msg) && /\*Sent:\* scheduled for 10:30 \(sent by the scheduler\)/.test(msg),
      "…listing every channel per language with its time, delay and caption match, who sent it, and what went wrong");
   ok(wa.out.filter(t => /DROP REPORT/.test(t)).every(t => (t.match(/DROP REPORT/g) || []).length === 1), "every drop report is a message of its own");
+  ok(/🇻🇳 \*VIETNAMESE\* — 6\/7 delivered\n(• [^\n]+\n)*• Telegram bot — ✓ Delivered/.test(msg), "the Telegram bot has its row in the Vietnamese table");
+
+  /* a card FM did not send to the Telegram bot (5 Oct, 16:31): the row is there and says so */
+  {
+    const noBot = D.filter(d => !(d.channel === "telegram_direct" && d.template.label === "Attack vs Defense"));
+    const n2 = at("2026-10-04T15:30:00Z"), st2 = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), wa2 = mkWa();
+    await tick({ fm: async () => noBot.filter(d => Date.parse(d.queuedAt) <= n2), collect: mkCollect(n2), store: st2, wa: wa2, now: n2, force: true });
+    const r18 = wa2.out.find(t => /DROP REPORT — 18:30/.test(t)) || "";
+    ok(/• Telegram bot — ○ Not sent by FM for this card/.test(r18) && /🇻🇳 \*VIETNAMESE\* — 6\/6 delivered · 1 not sent by FM/.test(r18),
+       "a channel FM skipped is listed as 'not sent by FM', not left out and not counted as missing");
+  }
   if (process.env.SHOW) console.log("\n" + wa.out[0] + "\n");
   ok(!/@/.test(JSON.stringify(Object.values(st.ledger.deliveries).map(e => e.publishedBy))), "no editor email is stored");
   ok(col.calls.length === 1 && col.calls[0].noPaid === true, "one batched read, free readers only", JSON.stringify(col.calls.map(x => x.ids.length)));

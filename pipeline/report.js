@@ -9,6 +9,7 @@
  * (/api/pipeline?op=report&at=16:30).
  */
 const { xLength } = require("./rules.js");
+const { FM_CHANNELS } = require("./channels.js");
 
 const SHORT = { youtube: "YouTube", telegram: "Telegram", telegram_direct: "Telegram bot", x: "X", facebook: "Facebook", instagram: "Instagram", tiktok: "TikTok", viber: "Viber" };
 const LANGS = [["vietnamese", "🇻🇳", "Vietnamese"], ["english", "🇬🇧", "English"], ["portuguese", "🇧🇷", "Portuguese"], ["hindi", "🇮🇳", "Hindi"]];
@@ -36,16 +37,26 @@ function dropData(list) {
   const now = list.some(e => e.deliveryMode === "now");
   const languages = LANGS.filter(([lg]) => list.some(e => e.language === lg)).map(([lg, flag, name]) => {
     const mine = list.filter(e => e.language === lg);
-    const rows = mine.filter(e => e.mode === "verify" && e.status !== "unverifiable").sort((a, b) => a.channel.localeCompare(b.channel)).map(e => ({
-      channel: SHORT[e.channel] || e.channel, status: e.status,
-      result: e.status === "verified" ? "✓ Delivered" : e.status === "late" ? "✓ Late" : e.status === "missing" ? "✗ Missing" :
-              e.status === "reader_failed" ? "! Couldn't check" : e.status === "fm_failed" ? "✗ FM failed" : e.status === "waiting" ? "⏳ Checking" : e.status,
-      posted: e.postAt ? istT(Date.parse(e.postAt)) : "—", lag: e.lag, match: e.sim != null ? `${e.sim}%` : "—", url: e.postUrl || "",
-    }));
+    const configured = Object.entries(FM_CHANNELS).filter(([k, v]) => k.endsWith("/" + lg) && v.mode === "verify").map(([k]) => k.split("/")[0]);
+    const chans = [...new Set([...configured, ...mine.filter(e => e.mode === "verify").map(e => e.channel)])].sort();
+    const rows = chans.map(ch => {
+      const e = mine.find(x => x.channel === ch);
+      if (!e) return { channel: SHORT[ch] || ch, status: "not_sent", result: "○ Not sent by FM for this card", posted: "—", lag: null, match: "—", url: "" };
+      if (e.status === "unverifiable")
+        return { channel: SHORT[ch] || ch, status: "unverifiable", result: "⚠ Can't read — 18+ age restriction (checked automatically once it's lifted)", posted: "—", lag: null, match: "—", url: "" };
+      return {
+        channel: SHORT[ch] || ch, status: e.status,
+        result: e.status === "verified" ? "✓ Delivered" : e.status === "late" ? "✓ Late" : e.status === "missing" ? "✗ Missing" :
+                e.status === "reader_failed" ? "! Couldn't check" : e.status === "fm_failed" ? "✗ FM failed" : e.status === "waiting" ? "⏳ Checking" : e.status,
+        posted: e.postAt ? istT(Date.parse(e.postAt)) : "—", lag: e.lag, match: e.sim != null ? `${e.sim}%` : "—", url: e.postUrl || "",
+      };
+    });
+    const viberConfigured = !!FM_CHANNELS["viber/" + lg];
     const x = mine.find(e => e.channel === "x");
     return { lg, flag, name, rows, ok: rows.filter(r => r.status === "verified" || r.status === "late").length,
-             viber: mine.filter(e => e.status === "assumed").length,
-             cantCheck: mine.filter(e => e.status === "unverifiable").map(e => SHORT[e.channel] || e.channel),
+             checkable: rows.filter(r => !["not_sent", "unverifiable"].includes(r.status)).length,
+             notSent: rows.filter(r => r.status === "not_sent").length,
+             viber: mine.filter(e => e.status === "assumed").length, viberNotSent: viberConfigured && !mine.some(e => e.channel === "viber"),
              xLen: x ? xLength(x.caption) : null };
   });
   return {
@@ -74,10 +85,10 @@ function dropText(d, link) {
   if (d.lagMin != null) L.push(`*Arrived:* ${d.lagMin.toFixed(1)}–${d.lagMax.toFixed(1)} min after FM (average ${d.lagAvg.toFixed(1)} min)`);
   for (const g of d.languages) {
     L.push("");
-    L.push(`${g.flag} *${g.name.toUpperCase()}* — ${g.ok}/${g.rows.length} ✓`);
+    L.push(`${g.flag} *${g.name.toUpperCase()}* — ${g.ok}/${g.checkable} delivered${g.notSent ? ` · ${g.notSent} not sent by FM` : ""}`);
     for (const r of g.rows) L.push(`• ${r.channel} — ${r.result}${r.posted !== "—" ? ` at ${r.posted} (${mins(r.lag)})` : ""}${r.match !== "—" ? ` · caption ${r.match}` : ""}`);
     if (g.viber) L.push(`• Viber — ≈ taken on FM's word`);
-    for (const c of g.cantCheck) L.push(`• ${c} — can't be checked (18+)`);
+    else if (g.viberNotSent) L.push(`• Viber — ○ Not sent by FM for this card`);
     if (g.xLen != null) L.push(`• X caption: ${g.xLen}/280 ${g.xLen > 280 ? "✗ too long" : g.xLen >= 270 ? "⚠ at the limit" : "✓"}`);
   }
   L.push("");
@@ -107,12 +118,12 @@ function dropCardItems(d, link) {
     ] },
   ];
   for (const g of d.languages) {
-    items.push({ type: "TextBlock", text: `${g.flag} **${g.name}** — ${g.ok}/${g.rows.length} delivered`, weight: "Bolder", spacing: "Large", separator: true, wrap: true });
+    items.push({ type: "TextBlock", text: `${g.flag} **${g.name}** — ${g.ok}/${g.checkable} delivered${g.notSent ? ` · ${g.notSent} not sent by FM` : ""}`, weight: "Bolder", spacing: "Large", separator: true, wrap: true });
     items.push({ type: "ColumnSet", spacing: "Small", columns: [cell("**Channel**", 3), cell("**Result**", 3), cell("**Posted (IST)**", 3), cell("**After FM**", 2), cell("**Caption**", 2), cell("**Post**", 2)] });
     for (const r of g.rows)
-      items.push({ type: "ColumnSet", spacing: "None", columns: [cell(r.channel, 3), cell(r.result, 3, { color: /✗|!/.test(r.result) ? "Attention" : /✓/.test(r.result) ? "Good" : "Default" }),
+      items.push({ type: "ColumnSet", spacing: "None", columns: [cell(r.channel, 3), cell(r.result, 3, { color: /✗|!/.test(r.result) ? "Attention" : /✓/.test(r.result) ? "Good" : /⚠/.test(r.result) ? "Warning" : "Default", isSubtle: r.status === "not_sent" }),
         cell(r.posted, 3), cell(r.lag == null ? "—" : mins(r.lag), 2), cell(r.match, 2), cell(r.url ? `[open](${r.url})` : "—", 2)] });
-    const notes = [g.viber ? "Viber ≈ taken on FM's word" : "", ...g.cantCheck.map(c => `${c} can't be checked (18+)`),
+    const notes = [g.viber ? "Viber ≈ taken on FM's word" : g.viberNotSent ? "Viber — not sent by FM for this card" : "",
                    g.xLen != null ? `X caption ${g.xLen}/280 ${g.xLen > 280 ? "✗ too long" : g.xLen >= 270 ? "⚠ at the limit" : "✓"}` : ""].filter(Boolean);
     if (notes.length) items.push({ type: "TextBlock", text: notes.join(" · "), isSubtle: true, size: "Small", wrap: true, spacing: "Small" });
   }
