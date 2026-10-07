@@ -41,7 +41,7 @@ function dropData(list) {
     const chans = [...new Set([...configured, ...mine.filter(e => e.mode === "verify").map(e => e.channel)])].sort();
     const rows = chans.map(ch => {
       const e = mine.find(x => x.channel === ch);
-      if (!e) return { channel: SHORT[ch] || ch, status: "not_sent", result: "○ Not sent by FM for this card", posted: "—", lag: null, match: "—", url: "" };
+      if (!e) return { channel: SHORT[ch] || ch, status: "not_sent", result: "○ Not sent by content team", posted: "—", lag: null, match: "—", url: "" };
       if (e.status === "unverifiable")
         return { channel: SHORT[ch] || ch, status: "unverifiable", result: "⚠ Can't read — 18+ age restriction (checked automatically once it's lifted)", posted: "—", lag: null, match: "—", url: "" };
       return {
@@ -85,10 +85,10 @@ function dropText(d, link) {
   if (d.lagMin != null) L.push(`*Arrived:* ${d.lagMin.toFixed(1)}–${d.lagMax.toFixed(1)} min after FM (average ${d.lagAvg.toFixed(1)} min)`);
   for (const g of d.languages) {
     L.push("");
-    L.push(`${g.flag} *${g.name.toUpperCase()}* — ${g.ok}/${g.checkable} delivered${g.notSent ? ` · ${g.notSent} not sent by FM` : ""}`);
+    L.push(`${g.flag} *${g.name.toUpperCase()}* — ${g.ok}/${g.checkable} delivered${g.notSent ? ` · ${g.notSent} not sent by content team` : ""}`);
     for (const r of g.rows) L.push(`• ${r.channel} — ${r.result}${r.posted !== "—" ? ` at ${r.posted} (${mins(r.lag)})` : ""}${r.match !== "—" ? ` · caption ${r.match}` : ""}`);
     if (g.viber) L.push(`• Viber — ≈ taken on FM's word`);
-    else if (g.viberNotSent) L.push(`• Viber — ○ Not sent by FM for this card`);
+    else if (g.viberNotSent) L.push(`• Viber — ○ Not sent by content team`);
     if (g.xLen != null) L.push(`• X caption: ${g.xLen}/280 ${g.xLen > 280 ? "✗ too long" : g.xLen >= 270 ? "⚠ at the limit" : "✓"}`);
   }
   L.push("");
@@ -118,12 +118,12 @@ function dropCardItems(d, link) {
     ] },
   ];
   for (const g of d.languages) {
-    items.push({ type: "TextBlock", text: `${g.flag} **${g.name}** — ${g.ok}/${g.checkable} delivered${g.notSent ? ` · ${g.notSent} not sent by FM` : ""}`, weight: "Bolder", spacing: "Large", separator: true, wrap: true });
+    items.push({ type: "TextBlock", text: `${g.flag} **${g.name}** — ${g.ok}/${g.checkable} delivered${g.notSent ? ` · ${g.notSent} not sent by content team` : ""}`, weight: "Bolder", spacing: "Large", separator: true, wrap: true });
     items.push({ type: "ColumnSet", spacing: "Small", columns: [cell("**Channel**", 3), cell("**Result**", 3), cell("**Posted (IST)**", 3), cell("**After FM**", 2), cell("**Caption**", 2), cell("**Post**", 2)] });
     for (const r of g.rows)
       items.push({ type: "ColumnSet", spacing: "None", columns: [cell(r.channel, 3), cell(r.result, 3, { color: /✗|!/.test(r.result) ? "Attention" : /✓/.test(r.result) ? "Good" : /⚠/.test(r.result) ? "Warning" : "Default", isSubtle: r.status === "not_sent" }),
         cell(r.posted, 3), cell(r.lag == null ? "—" : mins(r.lag), 2), cell(r.match, 2), cell(r.url ? `[open](${r.url})` : "—", 2)] });
-    const notes = [g.viber ? "Viber ≈ taken on FM's word" : g.viberNotSent ? "Viber — not sent by FM for this card" : "",
+    const notes = [g.viber ? "Viber ≈ taken on FM's word" : g.viberNotSent ? "Viber — not sent by content team" : "",
                    g.xLen != null ? `X caption ${g.xLen}/280 ${g.xLen > 280 ? "✗ too long" : g.xLen >= 270 ? "⚠ at the limit" : "✓"}` : ""].filter(Boolean);
     if (notes.length) items.push({ type: "TextBlock", text: notes.join(" · "), isSubtle: true, size: "Small", wrap: true, spacing: "Small" });
   }

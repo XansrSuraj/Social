@@ -152,8 +152,8 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
     const n2 = at("2026-10-04T15:30:00Z"), st2 = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), wa2 = mkWa();
     await tick({ fm: async () => noBot.filter(d => Date.parse(d.queuedAt) <= n2), collect: mkCollect(n2), store: st2, wa: wa2, now: n2, force: true });
     const r18 = wa2.out.find(t => /DROP REPORT — 18:30/.test(t)) || "";
-    ok(/• Telegram bot — ○ Not sent by FM for this card/.test(r18) && /🇻🇳 \*VIETNAMESE\* — 6\/6 delivered · 1 not sent by FM/.test(r18),
-       "a channel FM skipped is listed as 'not sent by FM', not left out and not counted as missing");
+    ok(/• Telegram bot — ○ Not sent by content team/.test(r18) && /🇻🇳 \*VIETNAMESE\* — 6\/6 delivered · 1 not sent by content team/.test(r18),
+       "a channel the content team didn't send to is listed as 'not sent by content team', not left out and not counted as missing");
   }
   if (process.env.SHOW) console.log("\n" + wa.out[0] + "\n");
   ok(!/@/.test(JSON.stringify(Object.values(st.ledger.deliveries).map(e => e.publishedBy))), "no editor email is stored");
