@@ -1028,8 +1028,10 @@ function xParseFx(json, handle) {
   }).filter(Boolean).sort((a, b) => new Date(b.ts) - new Date(a.ts));
 }
 async function collectXFree(handle) {
+  /* FxTwitter now and then answers 404 for an account that exists, for a minute or two (8 Oct) — so a
+     404 is asked again, like a 5xx, before the read is given up */
   const r = await get("https://api.fxtwitter.com/2/profile/" + encodeURIComponent(handle) + "/statuses",
-    { Accept: "application/json" });
+    { Accept: "application/json" }, [404]);
   if (r.status !== 200) throw new Error("FxTwitter returned HTTP " + r.status);
   let j; try { j = JSON.parse(r.body); } catch (e) { throw new Error("FxTwitter answered with something that was not JSON"); }
   const posts = xParseFx(j, handle);

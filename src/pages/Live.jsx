@@ -21,6 +21,8 @@ const STATUS = {
   unchecked:      { g: "·", cls: "na",   t: "not checked — sent before the pipeline was watching" },
 };
 const ICON = { telegram_direct: "tgbot" };
+/* scraper health — shown on this page only, never sent as a notification (pipeline/tick.js, INTERNAL) */
+const READER_KINDS = new Set(["reader_down", "reader_up", "reader_failed"]);
 const LANG = { vietnamese: "VN", english: "EN", portuguese: "PT", hindi: "HI" };
 const ist = ms => new Date(ms + 5.5 * 3600e3).toISOString().slice(11, 16);
 const istDay = ms => new Date(ms + 5.5 * 3600e3).toISOString().slice(0, 10);
@@ -65,7 +67,6 @@ export default function Live() {
   const okN = checked.filter(e => e.status === "verified" || e.status === "late").length;
   const problems = list.filter(e => ["missing", "fm_failed", "reader_failed", "fm_unconfirmed"].includes(e.status)).length;
   const readers = Object.entries(s.readers || {});
-  const down = readers.filter(([, h]) => h.down);
   const tickFresh = s.lastTickAt && Date.now() - s.lastTickAt < 12 * 60e3;
 
   return (
@@ -103,8 +104,7 @@ export default function Live() {
                 ? (s.whatsapp.log[0] ? `last: ${s.whatsapp.log[0].ok ? "sent" : "failed"}${s.whatsapp.log[0].via ? " (" + s.whatsapp.log[0].via + ")" : ""} ${ago(s.whatsapp.log[0].at)}` : "nothing sent yet")
                 : "set TEAMS_WEBHOOK_URL, NTFY_TOPIC or WhatsApp"}</div></div>
           </div>
-          {down.length > 0 && <div className="alert" style={{ marginTop: 14 }}><span className="kind missing">reader down</span>
-            <span className="txt">{down.map(([id, h]) => <span key={id}><b>{id}</b> — {h.lastError} · </span>)}</span></div>}
+          <SystemStatus s={s} />
 
           <div className="tabs">
             {days.map(d => <button key={d} className={`tab${d === day ? " on" : ""}`} onClick={() => setDay(d)}>{d === istDay(Date.now()) ? "Today" : d}</button>)}
@@ -153,13 +153,14 @@ export default function Live() {
             <div className="card live-panel">
               <h3><BellRing /> Alerts</h3>
               {(s.alerts || []).length ? s.alerts.slice(0, 30).map((a, i) => (
-                <div key={i} className="live-alert"><span className="mono">{istDay(a.at).slice(5)} {ist(a.at)}</span><span>{a.text.replace(/\*/g, "")}</span></div>
+                <div key={i} className="live-alert"><span className="mono">{istDay(a.at).slice(5)} {ist(a.at)}</span>
+                  <span>{READER_KINDS.has(a.kind) && <span className="tg" style={{ marginRight: 6 }}>website only</span>}{a.text.replace(/\*/g, "")}</span></div>
               )) : <div className="empty" style={{ padding: 20 }}>No alerts yet.</div>}
             </div>
             <div className="card live-panel">
               <h3><Activity /> Readers</h3>
               {readers.length ? readers.sort().map(([id, h]) => (
-                <div key={id} className="live-reader"><span className={`dot ${h.down ? "bad" : h.ok ? "ok" : h.soft ? "" : "warn"}`} /><b>{id}</b>
+                <div key={id} className="live-reader"><span className={`dot ${h.down ? "bad" : h.ok ? "ok" : h.soft ? "" : "warn"}`} /><b>{(s.readerLabels || {})[id] || id}</b>
                   <span>{h.ok ? `${h.source || "ok"} · ${ago(h.lastOkAt)}` : h.soft ? "18+ — waiting for the age restriction to be lifted" : `failing · ${String(h.lastError || "").slice(0, 80)}`}</span></div>
               )) : <div className="empty" style={{ padding: 20 }}>Readers are only asked when a card is due.</div>}
               <h3 style={{ marginTop: 20 }}><Radio /> What FM sends, and how it's checked</h3>
@@ -175,5 +176,67 @@ export default function Live() {
         </div>
       </section>
     </>
+  );
+}
+
+/* What is down right now, and what was recently. Scraper health lives here rather than in notifications:
+   the free readers hiccup for a minute or two and recover on their own, so this page is where to look. */
+function SystemStatus({ s }) {
+  const now = Date.now();
+  const names = s.readerLabels || {};
+  const rename = text => Object.entries(names).reduce((t, [id, label]) => t.split(id).join(label), String(text || ""));
+  const rows = [];
+
+  const tickAge = s.lastTickAt ? now - s.lastTickAt : null;
+  const clockOk = tickAge != null && tickAge < 12 * 60e3;
+  rows.push({ ok: clockOk, name: "Automatic checks",
+    text: tickAge == null ? "not run yet" : clockOk ? `running · last check ${ago(s.lastTickAt)}`
+      : `no check for ${Math.round(tickAge / 60e3)} min — the clock (cron-job.org) may be down` });
+
+  const fm = s.fm || {};
+  rows.push({ ok: !!fm.ok, name: "FM Deliveries feed",
+    text: fm.ok ? `OK · ${fm.count} deliveries in the last 36 h`
+      : fm.failingSince ? `down since ${ist(fm.failingSince)} — ${fm.lastError || "no answer"}` : "not read yet" });
+
+  const readers = Object.entries(s.readers || {});
+  const failing = readers.filter(([, h]) => !h.ok);
+  rows.push({ ok: !failing.length, name: "Channel readers",
+    text: readers.length ? `${readers.length - failing.length} of ${readers.length} working` : "asked only when a card is due",
+    sub: failing.map(([id, h]) => `${names[id] || id} — not readable since ${ist(h.failingSince || h.lastFailAt)}: ` +
+      `${String(h.lastError || "").replace(/ — the paid fallback is skipped on automatic checks/, "").slice(0, 100)} · retrying every minute`) });
+
+  const log = (s.whatsapp && s.whatsapp.log) || [];
+  const lastOf = via => log.find(l => (l.via || "whatsapp") === via);
+  const outs = [["teams", "Teams", s.whatsapp.teams], ["push", "Phone (ntfy)", s.whatsapp.push], ["whatsapp", "WhatsApp", s.whatsapp.configured]];
+  const broken = outs.filter(([via, , on]) => on && lastOf(via) && !lastOf(via).ok);
+  rows.push({ ok: !broken.length, name: "Alerts",
+    text: outs.map(([, label, on]) => `${label} ${on ? "✓" : "— not set up"}`).join(" · "),
+    sub: broken.map(([via, label]) => `${label}: the last send failed ${ago(lastOf(via).at)} — ${lastOf(via).error || "no reason given"}`) });
+
+  const issues = rows.filter(r => !r.ok).length;
+  const recent = (s.alerts || []).filter(a => READER_KINDS.has(a.kind)).slice(0, 6);
+  return (
+    <div className="card sys">
+      <div className="sys-head">
+        <h3><Activity /> System status</h3>
+        <span className={`pill ${issues ? "short" : "ok"}`}>{issues ? `${issues} issue${issues === 1 ? "" : "s"}` : "All systems working"}</span>
+      </div>
+      {rows.map(r => (
+        <div key={r.name} className="sys-row">
+          <span className={`dot ${r.ok ? "ok" : "bad"}`} />
+          <b>{r.name}</b>
+          <span>{r.text}{(r.sub || []).map((x, i) => <span key={i} className="sys-sub">{x}</span>)}</span>
+        </div>
+      ))}
+      {recent.length > 0 && (
+        <div className="sys-recent">
+          <div className="label">Recent reader incidents · shown here only, not sent as notifications</div>
+          {recent.map((a, i) => (
+            <div key={i} className="sys-inc"><span className="mono">{istDay(a.at).slice(5)} {ist(a.at)}</span>
+              <span>{rename(a.text).replace(/\*/g, "").replace(/ — the paid fallback is skipped on automatic checks/g, "")}</span></div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

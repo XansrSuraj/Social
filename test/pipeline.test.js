@@ -94,6 +94,22 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   ok(xp.length === 1 && xp[0].externalId === "2" && xp[0].kind === "video" && xp[0].duration === 48, "a post is read; reposts and replies are dropped");
   ok(xp[0].link === "https://sfc.my/r/abc" && xp[0].thumb && xp[0].views === 7 && xp[0].hashtags.includes("football"), "link, cover, views and hashtags come through");
 
+  /* FxTwitter answering 404 for a moment (8 Oct) is asked again before the read is given up */
+  {
+    const realFetch = global.fetch;
+    const fresh = { results: [{ ...fx.results[0], created_timestamp: Math.floor(Date.now() / 1000) - 3600 }] };
+    let calls = 0;
+    global.fetch = async (url, opts) => {
+      if (/api\.fxtwitter\.com/.test(String(url))) { calls++; return calls === 1 ? new Response("not found", { status: 404 }) : new Response(JSON.stringify(fresh), { status: 200 }); }
+      return realFetch(url, opts);
+    };
+    let r;
+    try { r = (await require("../api/collect.js").collectChannels([{ id: "x-vn", platform: "x", url: "https://x.com/Sportsfcvn", handle: "Sportsfcvn" }], { hours: 48, noPaid: true })).results[0]; }
+    finally { global.fetch = realFetch; }
+    ok(calls === 2 && r.ok && r.source === "x-free" && r.posts.length === 1, "a 404 from FxTwitter is asked again — the read goes through",
+       `${calls} call(s), ${r.ok ? r.source : r.note}`);
+  }
+
   console.log("\n── a whole tick, replayed on 2026-10-04");
   const mkStore = (ledger = {}) => {
     let row = { data: ledger, updatedAt: "v0" }, report = { data: { posts: {}, meta: {} } }, n = 0;
@@ -184,15 +200,43 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, now });
   ok(/DROP REPORT — 18:30 IST/.test(wa.out.join("\n")), "…and is sent once it does");
 
-  /* a broken reader: Facebook VN refuses twice — reader-down alert, not a false "missing" */
+  /* a broken reader: Facebook VN refuses — kept on the website, never a notification, never a false "missing" */
   now = at("2026-10-04T13:05:00Z");
   st = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }); wa = mkWa();
   await tick({ fm: fmAt(now), collect: mkCollect(now, ["fb-vn"]), store: st, wa, now, force: true });
   now = at("2026-10-04T13:25:00Z");
   await tick({ fm: fmAt(now), collect: mkCollect(now, ["fb-vn"]), store: st, wa, now });
-  const fbv = Object.values(st.ledger.deliveries).find(e => e.chId === "fb-vn" && e.card === "Attack vs Defense");
-  ok(fbv.status === "reader_failed" && /Reader down\* — fb-vn/.test(wa.out.join("\n")), "a broken reader is reported as such, never as a missing post", fbv.status);
-  ok(!/Missing\* — Facebook VN · 18:30/.test(wa.out.join("\n")), "…and Facebook VN 18:30 is not called missing");
+  let fbv = Object.values(st.ledger.deliveries).find(e => e.chId === "fb-vn" && e.card === "Attack vs Defense");
+  ok(fbv.status === "waiting" && !/DROP REPORT — 18:30/.test(wa.out.join("\n")),
+     "25 min after FM sent it, an unreadable channel is still being retried — no verdict, no drop report yet", fbv.status);
+  now = at("2026-10-04T13:31:00Z");
+  await tick({ fm: fmAt(now), collect: mkCollect(now, ["fb-vn"]), store: st, wa, now });
+  fbv = Object.values(st.ledger.deliveries).find(e => e.chId === "fb-vn" && e.card === "Attack vs Defense");
+  const out1 = wa.out.join("\n"), r1830a = wa.out.find(t => /DROP REPORT — 18:30/.test(t)) || "";
+  ok(fbv.status === "reader_failed" && /🇻🇳 \*VIETNAMESE\*[^🇬]*• Facebook — ! Couldn't check/.test(r1830a),
+     "after 10 more minutes of retries the drop is reported, with Facebook VN as couldn't-check", fbv.status);
+  ok(!/Reader down|Reader back|Can't confirm/.test(out1), "scraper health is never sent as a notification");
+  ok(!/Missing\* — Facebook VN · 18:30/.test(out1), "…and Facebook VN 18:30 is not called missing");
+  const fbh = st.ledger.readers["fb-vn"];
+  ok(fbh.down && fbh.failingSince === at("2026-10-04T13:05:00Z") && /HTTP 429/.test(fbh.lastError),
+     "the website still knows: Facebook VN down, since when, and why");
+  ok(st.ledger.alerts.some(a => a.kind === "reader_down" && a.internal) && st.ledger.alerts.some(a => a.kind === "reader_failed" && a.internal),
+     "…and lists the incident (marked website-only) in its log");
+
+  /* a hiccup: X can't be read at the 20-min mark, then reads again 2 minutes later — nobody hears of it */
+  now = at("2026-10-04T13:21:00Z");
+  st = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }); wa = mkWa();
+  await tick({ fm: fmAt(now), collect: mkCollect(now, ["x-vn"]), store: st, wa, now, force: true });
+  now = at("2026-10-04T13:22:00Z");
+  await tick({ fm: fmAt(now), collect: mkCollect(now, ["x-vn"]), store: st, wa, now });
+  now = at("2026-10-04T13:23:00Z");
+  await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, now });
+  const xv = Object.values(st.ledger.deliveries).find(e => e.chId === "x-vn" && e.card === "Attack vs Defense");
+  const out2 = wa.out.join("\n"), r1830b = wa.out.find(t => /DROP REPORT — 18:30/.test(t)) || "";
+  ok(xv.status === "verified" && /✅ \*All delivered\*/.test(r1830b) && !/Couldn't check/.test(r1830b) && !/Reader down|Reader back|Can't confirm/.test(out2),
+     "a reader that recovers within the grace is invisible: X verified, the drop all delivered, no notification", xv.status);
+  ok(st.ledger.readers["x-vn"].ok && !st.ledger.readers["x-vn"].down && st.ledger.readers["x-vn"].failingSince === null,
+     "…and the website shows X working again");
 
   /* Instagram EN becomes readable (restriction lifted): the same channel is verified like any other */
   {

@@ -23,6 +23,12 @@ const WINDOW_MIN = 20;            // every channel normally shows the post withi
 const FIRST_CHECK_MIN = 2;        // first look 2 min after FM sent it
 const LATE_MAX_MIN = 180;         // keep looking for a missing post this long, to report a late arrival
 const RECHECK_MISSING_MIN = 15;   // …but only every 15 min once it is past the window
+const READ_GRACE_MIN = 10;        // a channel that can't be read at the 20-min mark gets 10 more minutes of retries
+/* Scraper health — a reader failing, coming back, a post that couldn't be checked — is shown on the Live
+   page (System status) and never sent as a notification: the free readers hiccup for a minute or two and
+   recover on their own (FxTwitter answering 404 for X, 8 Oct), and the drop report already says when a
+   channel could not be checked. (2026-10-08, at the user's request.) */
+const INTERNAL = new Set(["reader_down", "reader_up", "reader_failed"]);
 const STUCK_MIN = 15;             // FM still not sent 15 min after the scheduled time
 const FM_DOWN_MIN = 15;
 const BACKFILL_QUIET_H = 3;       // on the very first tick, stay quiet about anything older than this
@@ -106,9 +112,9 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
   const raise = (key, kind, text, when, extra) => {
     if (led.sent[key]) return;
     led.sent[key] = now;
-    const a = { at: now, kind, text };
+    const a = { at: now, kind, text, ...(INTERNAL.has(kind) ? { internal: true } : {}) };
     led.alerts.unshift(a);                       // the log keeps the text; the full report rides on the alert only
-    if (!quiet(when == null ? now : when)) news.push({ ...a, ...(extra || {}) });
+    if (!INTERNAL.has(kind) && !quiet(when == null ? now : when)) news.push({ ...a, ...(extra || {}) });
   };
   const errors = [];
 
@@ -225,17 +231,18 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     }
   }
 
-  /* reader health — a channel failing twice in a row is a broken scraper, said once, and its recovery too */
+  /* reader health — a channel failing twice in a row counts as down (shown on the Live page with since
+     when and why), and its recovery too; neither is a notification (INTERNAL) */
   const softIds = new Set(due.filter(e => e.soft).map(e => e.chId));
   for (const [id, r] of Object.entries(byCh)) {
     const h = led.readers[id] || { fails: 0 };
     if (softIds.has(id)) { led.readers[id] = { ...h, ok: !!r.ok, soft: true, ...(r.ok ? { lastOkAt: now, source: r.source } : { lastFailAt: now, lastError: String(r.note || "").slice(0, 300) }) }; continue; }
     if (r.ok) {
       if (h.down) raise(`up:${id}:${now}`, "reader_up", `🟢 *Reader back* — ${id} is being read again (${r.source})`);
-      Object.assign(h, { ok: true, fails: 0, down: false, lastOkAt: now, source: r.source, lastError: h.lastError || null });
+      Object.assign(h, { ok: true, fails: 0, down: false, failingSince: null, lastOkAt: now, source: r.source, lastError: h.lastError || null });
     } else {
       h.fails = (h.fails || 0) + 1;
-      Object.assign(h, { ok: false, lastFailAt: now, lastError: String(r.note || "").slice(0, 300) });
+      Object.assign(h, { ok: false, lastFailAt: now, failingSince: h.failingSince || now, lastError: String(r.note || "").slice(0, 300) });
       if (h.fails >= 2 && !h.down) {
         h.down = true;
         raise(`down:${id}:${now}`, "reader_down", `🔧 *Reader down* — ${id} can't be read: ${String(r.note || "").slice(0, 160)}. Posts there can't be confirmed until it's back.`);
@@ -259,7 +266,13 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     const m = sinceSent(e);
     if (!r || !r.ok) {
       e.readNote = r ? String(r.note || "").slice(0, 200) : "not read this tick";
-      if (m >= WINDOW_MIN && e.status !== "missing") e.status = e.soft ? "unverifiable" : "reader_failed";
+      if (m >= WINDOW_MIN && e.status !== "missing") {
+        /* Instagram's 18+ wall (its embed shows no posts): nothing to wait for. Any other failure is
+           retried every minute for READ_GRACE_MIN more before the drop is reported without it — a
+           scraper hiccup of a minute or two must never decide a verdict. */
+        if (e.soft && /no posts found/i.test(e.readNote)) e.status = "unverifiable";
+        else if (m >= WINDOW_MIN + READ_GRACE_MIN) e.status = "reader_failed";
+      }
       continue;
     }
     const hit = hits.get(e) || null;

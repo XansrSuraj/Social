@@ -20,7 +20,7 @@ const wa = require("../pipeline/whatsapp.js");
 const teams = require("../pipeline/teams.js");
 const { dropData, dropText } = require("../pipeline/report.js");
 const { tick, PIPELINE_URL } = require("../pipeline/tick.js");
-const { FM_CHANNELS } = require("../pipeline/channels.js");
+const { FM_CHANNELS, labelOf } = require("../pipeline/channels.js");
 
 /* every FM delivery queued OR sent since `since` (both time fields, so nothing falls between) */
 async function fmDeliveries({ since }) {
@@ -145,6 +145,9 @@ module.exports = async (req, res) => {
       lastCrash: led.lastCrash || null, fm: led.fm || null, readers: led.readers || {},
       whatsapp: { configured: wa.configured(), push: wa.pushConfigured(), teams: teams.configured(), outbox: (led.outbox || []).length, log: led.waLog || [] },
       alerts: (led.alerts || []).slice(0, 80), deliveries, lastReportMerge: led.lastReportMerge || null,
+      /* a reader's id → the name people know it by ("x-vn" → "X VN"), for the System status panel */
+      readerLabels: Object.fromEntries(Object.entries(FM_CHANNELS).filter(([, v]) => v.read)
+        .map(([k, v]) => [v.read.id, labelOf(...k.split("/"))])),
       /* accounts not created yet are left out entirely — FM sends there, distribution drops it */
       coverage: Object.entries(FM_CHANNELS).filter(([, v]) => v.mode !== "skip")
         .map(([k, v]) => ({ fm: k, mode: v.mode, soft: !!v.soft, account: v.read ? v.read.url : null, why: v.why || null })),

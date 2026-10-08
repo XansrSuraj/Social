@@ -27,7 +27,7 @@ Live page: **`#/live`** on the site. Code: `pipeline/` + `api/pipeline.js`. Test
    | ✓ verified | on the channel within 20 min | — (in the drop summary) |
    | ✓ late | turned up after 20 min | 🕒 if it had been reported missing |
    | ✗ missing | FM sent it, not on the channel after 20 min | ❌ immediately |
-   | ! reader failed | the channel could not be read — **our** problem, not the content team's | 🔧 |
+   | ! reader failed | the channel could not be read for 10 min past the window — **our** problem, not the content team's | in the drop report only |
    | ≈ assumed | Viber — nothing can read it, FM's "sent" is taken as delivered (agreed exception) | — |
    | – not watched | a platform FM added later that isn't configured here | — |
    | ? can't verify | Instagram `sportsfc.fans` while it is 18+ | — |
@@ -90,7 +90,13 @@ a co-owner in Workflows so it keeps working if that person leaves.
   it keeps retrying each minute).
 - **The clock stops** (cron-job.org down, GitHub late) → the first check after it says "🕒 Pipeline was
   paused for N min" and catches up on everything sent in that time.
-- **FM unreachable 15+ min** → 📡; **a scraper failing twice in a row** → 🔧 (and 🟢 when it is back).
+- **FM unreachable 15+ min** → 📡.
+- **A scraper failing** (reader down / back, a post that couldn't be checked) is **not a notification**
+  (since 8 Oct): the free readers hiccup for a minute or two and recover on their own — FxTwitter
+  answered 404 for X twice that day. It is shown on the **Live page → System status** instead: what is
+  down, since when and why, plus the recent incidents. A channel that can't be read at the 20-min mark
+  is retried every minute for 10 more minutes before its drop is reported, so a short hiccup changes
+  nothing; FxTwitter's 404 is also retried at once.
 - **The site itself down** → cron-job.org emails its owner after failed calls.
 
 ## Phone push (ntfy) — instant, free, no signup
@@ -134,9 +140,9 @@ of its posts at once, best pairs first.
 
 ## Honest limits
 
-- **X** is read through FxTwitter (free, community-run). If it breaks, X shows "reader failed" and the
-  last-chance paid read covers it.
+- **X** is read through FxTwitter (free, community-run). It sometimes answers 404 for a minute or two;
+  that is retried, and if it lasts, the last-chance paid read covers it. Its state is on the Live page.
 - **CallMeBot** is a free personal service with no published limits; failed messages are retried for
   six ticks.
 - **Telegram bot** reads need the user session (`TG_SESSION`); if Telegram logs it out, the bot channel
-  shows "reader down" — re-run `tg-login.js`.
+  shows as not readable on the Live page (System status) — re-run `tg-login.js`.
