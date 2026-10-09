@@ -35,10 +35,10 @@ Live page: **`#/live`** on the site. Code: `pipeline/` + `api/pipeline.js`. Test
    | ✓ verified | on the channel within 20 min | — (in the drop summary) |
    | ✓ late | turned up after 20 min | 🕒 if it had been reported missing |
    | ✗ missing | FM sent it, not on the channel after 20 min | ❌ immediately |
+   | ⚠ not visible | **Instagram only**: not on the public profile after 20 min. Instagram puts an 18+ wall on single posts by itself (9 Oct 22:30, a betting-style reel on Instagram PT) and nothing logged-out — Apify included — can see such a post, so it may be restricted *or* not posted | ⚠️ "Check by hand" — short, amber |
    | ! reader failed | the channel could not be read for 10 min past the window — **our** problem, not the content team's | in the drop report only |
    | ≈ assumed | Viber — nothing can read it, FM's "sent" is taken as delivered (agreed exception) | — |
    | – not watched | a platform FM added later that isn't configured here | — |
-   | ? can't verify | Instagram `sportsfc.fans` while it is 18+ | — |
    | FM failed / stuck / can't confirm | FM itself failed, or a card still queued 15 min after its time | 🛑 held 5 min (see below) · ⏳ ❔ immediately |
    | ↻ superseded | a failed/skipped attempt the content team **sent again** (same card, same language, ≥ 20 s later) | — (a note in that send's drop report) |
    | · not checked | sent before the pipeline was watching | — |
@@ -46,7 +46,9 @@ Live page: **`#/live`** on the site. Code: `pipeline/` + `api/pipeline.js`. Test
 5. **Report** — everything read is merged into the daily-check report (conditionally — a browser's own
    save is never overwritten), so `#/report` stays current with nobody pressing Run.
 6. **Alerts** (Teams, phone, WhatsApp) — problems as soon as they are known; one full report per drop
-   once all its channels are settled; a digest after 23:00 IST. Every alert is sent once.
+   once all its channels are settled; the **daily summary** after 23:00 IST — how many posts reached
+   their channels (per language), and a short list of what needs attention, each with its time and why.
+   Every alert is sent once.
 
 ### Two rules that keep alerts true (since 10 Oct 2026)
 
@@ -142,10 +144,12 @@ WhatsApp, so alerts arrive even while CallMeBot is slow or down.
 
 ## Channels FM sends to that are not checked
 
+(Instagram EN `sportsfc.fans` was here while the whole account was 18+; it is public again since ~9 Oct
+2026 and checked like every other channel.)
+
 | FM channel | Why | What happens |
 |---|---|---|
 | Viber (all 3 languages) | nothing can read Viber | FM's "sent" is taken as delivered (agreed exception) |
-| Instagram EN `sportsfc.fans` | 18+ — nothing logged-out can see it | read on every drop anyway; "can't be checked" while restricted, **verified automatically the day the restriction is lifted** — no change needed |
 | X EN, X PT, TikTok EN, TikTok PT, Telegram PT, Telegram bot EN, Telegram bot PT | **the accounts don't exist yet** — FM sends, distribution drops it (2026-10-05) | ignored everywhere: no ledger entry, no alert, not on the Live page |
 
 When one of those accounts is created: put it in `pipeline/channels.js` (mode `"verify"` with a `read`

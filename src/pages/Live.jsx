@@ -14,7 +14,8 @@ const STATUS = {
   reader_failed:  { g: "!", cls: "lang", t: "the channel couldn't be read" },
   assumed:        { g: "≈", cls: "okc",  t: "Viber — taken on FM's word" },
   unwatched:      { g: "–", cls: "na",   t: "not watched yet (link missing)" },
-  unverifiable:   { g: "?", cls: "na",   t: "can't be checked (Instagram 18+)" },
+  unverifiable:   { g: "?", cls: "na",   t: "can't be checked right now" },
+  not_visible:    { g: "⚠", cls: "lang", t: "not on the public profile — maybe 18+ restricted by Instagram (we can't see those) or not posted; check in the app" },
   fm_pending:     { g: "…", cls: "none", t: "FM hasn't sent it yet" },
   fm_failed:      { g: "✗", cls: "miss", t: "FM failed to send it" },
   fm_failing:     { g: "…", cls: "none", t: "FM failed — waiting 5 min in case the content team sends it again" },
@@ -73,7 +74,7 @@ export default function Live() {
   const drops = Object.values(sets).sort((a, b) => Math.min(...b.map(e => e.when)) - Math.min(...a.map(e => e.when)));
   const checked = list.filter(e => e.mode === "verify" && e.fmState === "sent" && e.status !== "unverifiable");
   const okN = checked.filter(e => e.status === "verified" || e.status === "late").length;
-  const problems = list.filter(e => ["missing", "fm_failed", "reader_failed", "fm_unconfirmed"].includes(e.status)).length;
+  const problems = list.filter(e => ["missing", "not_visible", "fm_failed", "reader_failed", "fm_unconfirmed"].includes(e.status)).length;
   const readers = ((s.health && s.health.groups.find(g => g.id === "readers")) || { items: [] }).items;
   const tickFresh = s.lastTickAt && Date.now() - s.lastTickAt < 12 * 60e3;
 
@@ -125,7 +126,7 @@ export default function Live() {
               : <b>No FM deliveries on {day}.</b>}</div>}
             {drops.map(ds => {
               const first = Math.min(...ds.map(e => e.when));
-              const bad = ds.filter(e => ["missing", "fm_failed", "reader_failed", "fm_unconfirmed"].includes(e.status));
+              const bad = ds.filter(e => ["missing", "not_visible", "fm_failed", "reader_failed", "fm_unconfirmed"].includes(e.status));
               const langs = [...new Set(ds.map(e => e.language))];
               return (
                 <div key={ds[0].dropKey || ds[0].setId} className={`card live-drop${bad.length ? " gap" : ""}`}>
@@ -155,7 +156,7 @@ export default function Live() {
                   ))}
                   {(() => { const sets = new Set(ds.map(e => e.setId)); const r = retried.filter(e => sets.has(e.setId));
                     return r.length ? <div className="note-warn">A first attempt at {ist(Math.min(...r.map(e => Date.parse(e.queuedAt) || e.when)))} was {r[0].fmState} by {r[0].failureStage === "cms" ? "the CMS" : "FM"} on {r.length} channel{r.length === 1 ? "" : "s"}{r[0].fmError ? ` (${r[0].fmError.replace(/\s*—.*$/, "")})` : ""} — the content team sent it again; this is that send.</div> : null; })()}
-                  {bad.map(e => <div key={e.cardId} className="note-miss">{e.label}: {STATUS[e.status].t}{e.capProblem ? ` — likely why: ${e.capProblem}` : ""}{e.readNote ? ` — ${e.readNote}` : ""}</div>)}
+                  {bad.map(e => <div key={e.cardId} className={e.status === "not_visible" ? "note-warn" : "note-miss"}>{e.label}:{STATUS[e.status].t}{e.capProblem ? ` — likely why: ${e.capProblem}` : ""}{e.readNote ? ` — ${e.readNote}` : ""}</div>)}
                   {ds.filter(e => e.capProblem && !bad.includes(e)).map(e => <div key={e.cardId + "c"} className="note-warn">{e.label}: {e.capProblem}</div>)}
                 </div>
               );
@@ -179,7 +180,7 @@ export default function Live() {
               <h3 style={{ marginTop: 20 }}><Radio /> What FM sends, and how it's checked</h3>
               {(s.coverage || []).map(c => (
                 <div key={c.fm} className="live-reader"><span className={`dot ${c.mode === "verify" ? "ok" : c.mode === "assume" ? "warn" : ""}`} /><b>{c.fm}</b>
-                  <span>{c.mode === "verify" ? c.account.replace(/^https?:\/\/(www\.)?/, "") + (c.soft ? " — 18+, checked once the restriction is lifted" : "") : c.mode === "assume" ? "Viber — taken on FM's word" : c.why}</span></div>
+                  <span>{c.mode === "verify" ? c.account.replace(/^https?:\/\/(www\.)?/, "") + (c.soft ? " — checked quietly while it can't be read" : "") : c.mode === "assume" ? "Viber — taken on FM's word" : c.why}</span></div>
               ))}
             </div>
           </div>

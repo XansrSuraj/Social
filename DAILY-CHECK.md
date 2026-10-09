@@ -54,7 +54,7 @@ worse than admitting "we don't know."** Each channel, for each drop, lands on de
 > **Update 2026-10-03 — free first.** Facebook ×2, Instagram `sportsfc.vn` and TikTok are now read
 > **free**, from each platform's own public page (Facebook's Reels tab; Instagram's and TikTok's
 > embed widgets) — no Apify, no browser, no login. Apify is only the fallback when a free read fails
-> or looks wrong, and still reads X (~$0.001) and the 18+ Instagram account. A normal daily check now
+> or looks wrong, and still reads X (~$0.001). A normal daily check now
 > costs about **$0.003** instead of $0.096. The tables below describe the Apify setup, which is what
 > runs whenever a free read falls through.
 
@@ -226,7 +226,7 @@ and the second defeats the point of an automatic check.
 
 | Issue | Effect | Fix |
 |---|---|---|
-| **Instagram `sportsfc.fans` is age-restricted** | Instagram shows it only to logged-in adults, so no logged-out reader (Apify included) can see it. Reads *unknown*; costs $0.0017 per check. | In that account's Instagram settings, remove the minimum-age restriction. Nothing to change here — it starts working on the next check. |
+| **An Instagram post can be age-restricted on its own** | Instagram puts an 18+ wall on single posts by itself (9 Oct 2026, a betting-style reel on `sportsfc.br`); nothing logged-out — Apify included — can see it, so it reads as not posted. (`sportsfc.fans` was 18+ as a whole account until ~9 Oct; that restriction is gone.) | Check that post in the app. The automatic pipeline says "check by hand" for it, never "missing". |
 | **Facebook has no captions** | The Reels tab gives times but not text, so Facebook gets no language check, and a Facebook post that is not a reel (a photo) would read as missing. | None needed while SportsFC posts reels; the extension still reads captions if ever needed. |
 | **Telegram bot session is dead** | `401 AUTH_KEY_UNREGISTERED` | Re-run `tg-login.js` and update `TG_SESSION` on Vercel. |
 | **Viber removed (2026-10-03)** | Its only source was a phone forwarding notifications, which could not prove a post went out. It is no longer watched, shown, or served (`api/notif`, `api/notiflog` and the Viber monitor in `api/health` are gone). | If it comes back, it needs a source that can actually confirm delivery. |

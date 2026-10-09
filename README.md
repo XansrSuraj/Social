@@ -237,8 +237,8 @@ no login, no Apify). Tested from a datacenter and a home connection: 5 of 5 roun
 posts to the minute. A free read is only believed when it looks right (posts found, real times,
 newest within 4 days); otherwise that channel falls through to Apify, so a platform changing its page
 costs a few cents for that channel, never a blank report. `FREE_READERS=off` switches them off.
-X has no such page and stays on Apify (~$0.001 a check); Instagram `sportsfc.fans` (18+ restricted)
-falls back to Apify and the extension. The full experiment is in the `free-scraper-lab` branch of
+X has no such page and stays on Apify (~$0.001 a check). (Instagram `sportsfc.fans` was 18+ until ~9 Oct
+2026 and fell back to Apify and the extension; it is public again.) The full experiment is in the `free-scraper-lab` branch of
 the backup repo.
 
 ### Apify (fallback, and X)

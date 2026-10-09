@@ -9,8 +9,8 @@
  *   mode "assume"       Viber: no way to read it at all, so FM's own "sent" is taken as delivered
  *                        (the one agreed exception — 2026-10-04)
  *   soft: true          read it on every drop, but a read that fails is "can't be checked", never an
- *                        alert — Instagram sportsfc.fans while it is 18+; the day the restriction is
- *                        lifted its reads succeed and it is verified like any other channel, unchanged
+ *                        alert — for an account that can't be read at all for a while (sportsfc.fans was,
+ *                        while the whole account was 18+, until ~9 Oct 2026). None is soft now.
  *   mode "skip"         the account does not exist yet: FM sends here and distribution drops it
  *                        (2026-10-05). Ignored everywhere — no ledger entry, no alert, not on the
  *                        Live page. When the account is created: add `read`, mode "verify".
@@ -32,8 +32,7 @@ const FM_CHANNELS = {
   "youtube/english":            { mode: "verify", read: { id: "yt-fans", platform: "youtube", url: "https://youtube.com/@sportsfc_fans", handle: "@sportsfc_fans", ytChannelId: "UCbqnwmEMgqGH2WQ-UpbX2lA" } },
   "telegram/english":           { mode: "verify", read: { id: "tg-fans", platform: "telegram", url: "https://t.me/sportsfc_fans", handle: "sportsfc_fans" } },
   "facebook/english":           { mode: "verify", read: { id: "fb-fans", platform: "facebook", url: "https://facebook.com/Sportsfc.fans", handle: "Sportsfc.fans" } },
-  "instagram/english":          { mode: "verify", soft: true, why: "sportsfc.fans is 18+ — can't be checked until the age restriction is lifted",
-                                  read: { id: "ig-fans", platform: "instagram", url: "https://instagram.com/sportsfc.fans", handle: "sportsfc.fans" } },
+  "instagram/english":          { mode: "verify", read: { id: "ig-fans", platform: "instagram", url: "https://instagram.com/sportsfc.fans", handle: "sportsfc.fans" } },
   "viber/english":              { mode: "assume" },
   "x/english":                  { mode: "skip", why: "the account isn't created yet — FM sends, distribution drops it" },
   "tiktok/english":             { mode: "skip", why: "the account isn't created yet — FM sends, distribution drops it" },

@@ -19,6 +19,10 @@ let pass = 0, fail = 0;
 const ok = (good, label, extra) => { good ? pass++ : fail++; console.log(`  ${good ? "pass" : "FAIL"}  ${label}${extra !== undefined ? "  — " + extra : ""}`); };
 const FX = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "fm-2026-10-04.json"), "utf8"));
 const D = FX.deliveries;
+/* Instagram EN (sportsfc.fans) was 18+ on 4 Oct, so the fixture has no read of it; it is public since ~9 Oct
+   and checked like every other channel — its posts stand in here, each 90 s after FM sent it */
+FX.posts["ig-fans"] = D.filter(d => d.channel === "instagram" && d.language === "english")
+  .map((d, i) => ({ externalId: "igf" + i, ts: new Date(Date.parse(d.sentAt) + 90e3).toISOString(), text: d.caption }));
 const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === lang && d.template.label === card);
 
 (async () => {
@@ -161,8 +165,8 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   ok(E.length === 46, "46 of the 62 FM deliveries are kept — the 16 to accounts not created yet are ignored", E.length);
   ok(!E.some(e => ["x/english", "x/portuguese", "tiktok/english", "tiktok/portuguese", "telegram/portuguese", "telegram_direct/english", "telegram_direct/portuguese"]
                   .includes(e.channel + "/" + e.language)), "none of the 7 not-yet-created channels is in the ledger");
-  ok(c("verified") === 34 && c("missing") === 1, "34 verified, 1 missing", `verified ${c("verified")}, missing ${c("missing")}`);
-  ok(c("assumed") === 8 && c("unwatched") === 0 && c("unverifiable") === 3, "8 Viber assumed, 3 Instagram 18+ can't be checked, nothing 'not watched'",
+  ok(c("verified") === 37 && c("missing") === 1, "37 verified, 1 missing", `verified ${c("verified")}, missing ${c("missing")}`);
+  ok(c("assumed") === 8 && c("unwatched") === 0 && c("unverifiable") === 0, "8 Viber assumed, nothing 'not watched', nothing that can't be checked",
      `${c("assumed")}/${c("unwatched")}/${c("unverifiable")}`);
   const miss = E.find(e => e.status === "missing");
   ok(miss.channel === "x" && miss.language === "vietnamese" && miss.card === "Triple Match Roundup", "the missing one is X VN 10:30 — exactly what was found by hand");
@@ -170,12 +174,12 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   const msg = wa.out.join("\n");
   ok(/Missing\* — X VN · 10:30 "Triple Match Roundup"/.test(msg), "WhatsApp says X VN 10:30 is missing");
   ok(!/X PT|TikTok EN|Telegram PT|Bot EN|Bot PT|Not watched yet/.test(msg), "the channels that don't exist yet appear nowhere in the alerts");
-  ok(!/Reader down\* — ig-fans|Can't confirm\* — Instagram EN/.test(msg) && /• Instagram — ⚠ Can't read — 18\+ age restriction \(checked automatically once it's lifted\)/.test(msg),
-     "Instagram EN (18+) is quietly 'can't be checked' — never a reader alert");
-  ok(/DROP REPORT — 18:30 IST[^\n]*\n✅ \*All delivered\* · 13\/13/.test(msg) && /DROP REPORT — 10:30 IST[^\n]*\n⚠️ \*1 problem\* · 12\/13/.test(msg),
+  ok(!/18\+/.test(msg) && /🇬🇧 \*ENGLISH\*[^🇧]*• Instagram — ✓ Delivered/.test(msg),
+     "Instagram EN is checked like every other channel — no '18+' left anywhere in the alerts");
+  ok(/DROP REPORT — 18:30 IST[^\n]*\n✅ \*All delivered\* · 14\/14 channels confirmed/.test(msg) && /DROP REPORT — 10:30 IST[^\n]*\n⚠️ \*1 problem\* · 13\/14 channels confirmed/.test(msg),
      "…with a full report per drop: 18:30 all delivered, 10:30 with one problem");
   ok(/🇻🇳 \*VIETNAMESE\* — 6\/7 delivered/.test(msg) && /• X — ✗ Missing/.test(msg) && /• YouTube — ✓ Delivered at \d\d:\d\d:\d\d \(\+\d+\.\d min\) · caption 100%/.test(msg) &&
-     /\*Problems:\*\n❌ X VN — not on the channel 20 min after FM sent it/.test(msg) && /\*Sent:\* scheduled for 10:30 \(sent by the scheduler\)/.test(msg),
+     /\*Needs attention:\*\n❌ X VN — not on X — caption 315\/280 as X counts it, so X refused it/.test(msg) && /\*Sent:\* scheduled for 10:30 \(sent by the scheduler\)/.test(msg),
      "…listing every channel per language with its time, delay and caption match, who sent it, and what went wrong");
   ok(wa.out.filter(t => /DROP REPORT/.test(t)).every(t => (t.match(/DROP REPORT/g) || []).length === 1), "every drop report is a message of its own");
   ok(/🇻🇳 \*VIETNAMESE\* — 6\/7 delivered\n(• [^\n]+\n)*• Telegram bot — ✓ Delivered/.test(msg), "the Telegram bot has its row in the Vietnamese table");
@@ -193,7 +197,7 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   ok(!/@/.test(JSON.stringify(Object.values(st.ledger.deliveries).map(e => e.publishedBy))), "no editor email is stored");
   ok(col.calls.length === 2 && col.calls.every(c => c.noPaid === true && c.fresh === true), "one batched read per tick, free readers only, never a cached read",
      JSON.stringify(col.calls.map(x => x.ids.length)));
-  ok(Object.keys(st.report.posts).length === 13 && st.report.autoAt, "what was read is merged into the daily-check report");
+  ok(Object.keys(st.report.posts).length === 14 && st.report.autoAt, "what was read is merged into the daily-check report");
 
   /* a second tick a few minutes later: nothing new to say, nothing re-sent */
   const before = wa.out.length;
@@ -212,7 +216,7 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   st = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }); wa = mkWa();
   await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, now, force: true });
   const evening = Object.values(st.ledger.deliveries).filter(e => e.card === "Attack vs Defense" && e.mode === "verify" && !e.soft);
-  ok(evening.length === 13 && evening.every(e => e.status === "verified"), "7 min after the 18:30 drop all 13 checked channels are already verified",
+  ok(evening.length === 14 && evening.every(e => e.status === "verified"), "7 min after the 18:30 drop all 14 checked channels are already verified",
      evening.map(e => e.status).join(","));
   ok(!/18:30 "Attack vs Defense"/.test(wa.out.join("\n")), "…but its summary waits until the 20-min window closes");
   now = at("2026-10-04T13:22:00Z");
@@ -257,16 +261,28 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   ok(st.ledger.readers["x-vn"].ok && !st.ledger.readers["x-vn"].down && st.ledger.readers["x-vn"].failingSince === null,
      "…and the website shows X working again");
 
-  /* Instagram EN becomes readable (restriction lifted): the same channel is verified like any other */
+  /* Instagram: a post not on the public profile is "check by hand", never "missing" — Instagram puts an 18+
+     wall on single posts by itself and nothing logged-out can see those (9 Oct 22:30, Instagram PT) */
   {
-    const att = D.filter(d => d.channel === "instagram" && d.language === "english" && d.template.label === "Attack vs Defense");
-    FX.posts["ig-fans"] = att.map((d, i) => ({ externalId: "igf" + i, ts: new Date(Date.parse(d.sentAt) + 90e3).toISOString(), text: d.caption }));
-    now = at("2026-10-04T13:25:00Z");
-    st = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }); wa = mkWa();
-    await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, now, force: true });
-    const igf = Object.values(st.ledger.deliveries).find(e => e.chId === "ig-fans" && e.card === "Attack vs Defense");
-    ok(igf.status === "verified", "once the 18+ restriction is lifted, Instagram EN is verified automatically", igf.status);
-    delete FX.posts["ig-fans"];
+    const igPost = FX.posts["ig-vn"].find(p => Date.parse(p.ts) > at("2026-10-04T12:55:00Z") && Date.parse(p.ts) < at("2026-10-04T13:10:00Z"));
+    const colI = t => async chs => ({ results: chs.map(c => FX.posts[c.id] ? { channelId: c.id, ok: true, source: "stub",
+      posts: FX.posts[c.id].filter(p => Date.parse(p.ts) <= t && p !== igPost) } : { channelId: c.id, ok: false, note: "no posts found" }) });
+    const si = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), wi = mkWa();
+    const cards = [], teamsI = { configured: () => true, card: require("../pipeline/teams.js").card, post: async () => {}, flush: async q => { cards.push(...q.map(m => m.payload)); return { left: [], log: [] }; } };
+    for (const t of ["13:21:00", "13:22:00", "13:23:00"]) { const n = at("2026-10-04T" + t + "Z"); await tick({ fm: fmAt(n), collect: colI(n), store: si, wa: wi, teams: teamsI, now: n, force: true }); }
+    const ig = Object.values(si.ledger.deliveries).find(e => e.chId === "ig-vn" && e.card === "Attack vs Defense");
+    const out = wi.out.join("\n"), rep18 = wi.out.find(t => /DROP REPORT — 18:30/.test(t)) || "";
+    ok(ig.status === "not_visible" && /⚠️ \*Check by hand\* — Instagram VN · 18:30 "Attack vs Defense" — not on the public profile 20 min after FM sent it\. It may be 18\+ restricted by Instagram \(our reader can't see those\) or not posted — please check in the app\./.test(out) && !/Missing\* — Instagram/.test(out),
+       "an Instagram post not on the profile is a short 'check by hand' alert (maybe 18+, maybe not posted) — not 'missing'", ig.status);
+    ok(/⚠️ \*1 to check by hand\* · 13\/14 channels confirmed/.test(rep18) && /• Instagram — ⚠ Not found — maybe 18\+, check the app/.test(rep18) &&
+       /\*Needs attention:\*\n⚠️ Instagram VN — not on the public profile — maybe 18\+ restricted by Instagram/.test(rep18),
+       "…and the drop report says the same, as something to check — not a problem");
+    /* the section that says it, and the drop report's header, are amber — red is for problems only */
+    const sections = cards.flatMap(c => c.attachments[0].content.body).filter(b => b.type === "Container");
+    const checkBox = sections.find(b => /Check by hand/.test(JSON.stringify(b)));
+    const dropBox = sections.map(b => (b.items || []).find(i => i.type === "Container" && /Drop report — 18:30/.test(JSON.stringify(i)))).find(Boolean);
+    ok(checkBox && checkBox.style === "warning" && dropBox && dropBox.style === "warning", "…in Teams it is amber, not red",
+       `${checkBox && checkBox.style} / ${dropBox && dropBox.style}`);
   }
 
   /* FM failed / stuck */
@@ -276,7 +292,7 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
     ? { ...d, state: "failed", failureStage: "fm", error: "upload rejected" }
     : d.channel === "telegram" && d.language === "english" && d.template.label === "Attack vs Defense" ? { ...d, state: "queued", sentAt: null } : d);
   await tick({ fm: async () => twisted.filter(d => Date.parse(d.queuedAt) <= now), collect: mkCollect(now), store: st, wa, now, force: true });
-  ok(/FM failed\* — YouTube EN · 18:30 "Attack vs Defense" — stage: fm — upload rejected/.test(wa.out.join("\n")), "an FM failure is alerted with its stage and error");
+  ok(/🛑 \*Not sent — FM failed\* — YouTube EN · 18:30 "Attack vs Defense" — upload rejected/.test(wa.out.join("\n")), "an FM failure is alerted in plain words, with its error");
   ok(/Stuck in FM\* — Telegram EN · scheduled 18:30/.test(wa.out.join("\n")), "a card still queued 15+ min after its time is alerted");
 
   /* FM unreachable for 15+ min */
@@ -318,7 +334,7 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   const blocks = JSON.stringify(c0.content.body);
   ok(/"style":"attention"/.test(blocks) && /\*\*Missing\*\* — X VN · 10:30/.test(blocks), "a missing post is a red section, in Teams' **bold**");
   const clean = cards.map(c => JSON.stringify(c)).find(j => /Drop report — 18:30 IST/.test(j)) || "";
-  ok(/"style":"good"/.test(clean) && /All delivered · 13\/13/.test(clean) && /"title":"Sent"/.test(clean) && /\*\*Channel\*\*/.test(clean),
+  ok(/"style":"good"/.test(clean) && /All delivered · 14\/14 channels confirmed/.test(clean) && /"title":"Sent"/.test(clean) && /\*\*Channel\*\*/.test(clean),
      "a fully delivered drop is a green report card: overview facts and a per-language table");
   ok(cards.every(c => JSON.stringify(c).length < 28000), "every card stays under Teams' 28 KB limit", cards.map(c => JSON.stringify(c).length).join(","));
 
@@ -401,7 +417,7 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
       await tick({ fm: fmS(t), collect: mkCollect(t), store: ss, wa: ws, now: t, force: true });
     const out = ws.out.join("\n");
     const rep = ws.out.find(t => /DROP REPORT — 18:30/.test(t)) || "";
-    ok(!/FM skipped/.test(out) && !/Card:\* card\b/.test(out) && !/0\/0/.test(out), "a failed attempt the content team sent again is never alerted, and is no drop of its own");
+    ok(!/Not sent —/.test(out) && !/Card:\* card\b/.test(out) && !/0\/0/.test(out), "a failed attempt the content team sent again is never alerted, and is no drop of its own");
     ok(/\*Note:\* A first attempt at 18:29 was skipped by the CMS/.test(rep) && /sent it again at 18:30/.test(rep) && /✅ \*All delivered\*/.test(rep),
        "…the card's report says so in a note, and the card is all delivered", (rep.match(/\*Note:\*[^\n]*/) || [""])[0]);
     ok(Object.values(ss.ledger.deliveries).filter(e => e.status === "superseded").length === skipped.filter(d => routeOf(d.channel, d.language).mode !== "skip").length,
@@ -414,8 +430,8 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
     ok(!wl.out.length && Object.values(sl.ledger.deliveries).every(e => e.status === "fm_failing"), "an FM failure is held for 5 minutes in case it is sent again");
     await tick({ fm: async () => lone, collect: mkCollect(t0 + 5 * 60e3), store: sl, wa: wl, now: t0 + 5 * 60e3, force: true });
     const lo = wl.out.join("\n");
-    ok(/FM skipped\* — Facebook EN · 18:29 "Multi match reels" — stage: cms — No facebook image/.test(lo), "…then alerted, named by its collection when FM gives no template",
-       (lo.match(/FM skipped[^\n]*/) || [""])[0].slice(0, 110));
+    ok(/🛑 \*Not sent — the CMS skipped it\* — Facebook EN · 18:29 "Multi match reels" — No facebook image/.test(lo), "…then alerted in plain words, named by its collection when FM gives no template",
+       (lo.match(/Not sent —[^\n]*/) || [""])[0].slice(0, 110));
     ok(/🛑 \*Not sent\* — FM\/CMS failed on \d+ channels, nothing went out/.test(lo) && !/0\/0/.test(lo), "…and its report says nothing went out — not '0/0 checked'");
   }
   {
@@ -458,13 +474,37 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
     const H = healthOf(sh.ledger, t, { teams: true, push: true, whatsapp: false });
     const R = H.groups.find(g => g.id === "readers").items;
     const fbBr = R.find(i => i.id === "fb-br"), ytVn = R.find(i => i.id === "yt-vn"), igFans = R.find(i => i.id === "ig-fans");
-    ok(R.length === 14 && ytVn.state === "ok" && /posts in 30 h/.test(ytVn.detail) && fbBr.state !== "ok" && igFans.state === "warn" && /18\+/.test(igFans.detail),
-       "the Health page lists every reader: working, failing (with why), Instagram EN 18+", `${fbBr.state}: ${fbBr.detail.slice(0, 60)}`);
+    ok(R.length === 14 && ytVn.state === "ok" && /posts in 30 h/.test(ytVn.detail) && fbBr.state !== "ok" && igFans.state === "ok",
+       "the Health page lists every reader: working (Instagram EN too), failing with why", `${fbBr.state}: ${fbBr.detail.slice(0, 60)}`);
     ok(H.groups.find(g => g.id === "pipeline").items[0].state === "ok" && H.groups.find(g => g.id === "fm").items[0].state === "ok" &&
        H.groups.find(g => g.id === "alerts").items.find(i => i.id === "whatsapp").state === "off" && H.overall === "degraded",
        "…the clock, FM and the alert channels too, with one overall verdict", H.overall + " — " + H.summary);
     const late = healthOf({ ...sh.ledger, lastTickAt: t - 30 * 60e3 }, t, {});
     ok(late.overall === "down" && late.groups[0].items[0].state === "bad", "a stopped clock is 'down'");
+  }
+
+  console.log("\n── the day's summary (23:00 IST)");
+  {
+    const sd = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), wd = mkWa();
+    const cards = [], teamsD = { configured: () => true, card: require("../pipeline/teams.js").card, post: async () => {}, flush: async q => { cards.push(...q.map(m => m.payload)); return { left: [], log: [] }; } };
+    for (const t of ["15:30:00", "15:31:00", "17:31:00", "17:40:00"]) { const n = at("2026-10-04T" + t + "Z"); await tick({ fm: fmAt(n), collect: mkCollect(n), store: sd, wa: wd, teams: teamsD, now: n, force: true }); }
+    const sums = wd.out.filter(t => /DAILY SUMMARY/.test(t)), sum = sums[0] || "";
+    if (process.env.SHOW) console.log("\n" + sum + "\n");
+    ok(sums.length === 1 && !/DROP REPORT/.test(sum), "one summary a day, a message of its own", sums.length + " summaries");
+    ok(/^📊 \*DAILY SUMMARY — Sun, 4 Oct 2026\*\n⚠️ \*37 of 38 posts confirmed on their channels\* · 1 needs attention\n/.test(sum),
+       "it opens with the day and the result in one line", sum.split("\n").slice(0, 2).join(" | "));
+    ok(/\*Today:\* \d+ drops · 46 deliveries from FM · 97% confirmed/.test(sum) && /\*By language:\* 🇻🇳 Vietnamese \d+\/\d+ · 🇬🇧 English \d+\/\d+ · 🇧🇷 Portuguese \d+\/\d+/.test(sum),
+       "…then the totals and each language");
+    ok(/\*Needs attention \(1\):\*\n❌ 10:30 X VN — Triple Match Roundup: not on X — caption 315\/280 as X counts it, so X refused it/.test(sum),
+       "…then a short list of what needs attention, each with its time and why");
+    ok(/• Viber: 8 taken on FM's word \(Viber can't be read\)/.test(sum) && !/18\+|IG 18|unverifiable|≈ \d+ Viber assumed/.test(sum),
+       "…notes in plain words, nothing stale (no '18+', no codes)");
+    const dc = JSON.stringify(cards.find(c => /Daily summary/.test(JSON.stringify(c))) || {});
+    ok(/Daily summary — Sun, 4 Oct 2026/.test(dc) && /\*\*Language\*\*/.test(dc) && /"title":"Confirmed on the channel","value":"37 of 38 \(97%\)"/.test(dc) && dc.length < 28000,
+       "in Teams: a card of its own — totals, a table per language, what needs attention", dc.length + " bytes");
+    const { dayData, dayText } = require("../pipeline/report.js");
+    const clean = dayText(dayData(Object.values(sd.ledger.deliveries).filter(e => !(e.channel === "x" && e.card === "Triple Match Roundup")), "2026-10-04"));
+    ok(/✅ \*All 37 posts confirmed on their channels\*/.test(clean) && /\*Needs attention:\* nothing/.test(clean), "a clean day says so plainly");
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);

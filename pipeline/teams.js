@@ -7,33 +7,40 @@
  *      the team and channel → Save → copy the webhook URL it shows.
  *   2. Vercel → Settings → Environment Variables:  TEAMS_WEBHOOK_URL = that URL. Redeploy.
  *
- * Each tick's alerts go out as ONE Adaptive Card: a coloured section per alert (red for a problem,
- * green for a drop that was fully delivered), the drop's per-channel lines, and a link to the Live
- * page. Workflows does not render buttons, so the link is a markdown link. Limits: 28 KB per
- * message, 4 requests a second — one card per tick stays far inside both.
+ * One Adaptive Card per message: the problems of a tick together (a coloured section each — red for a
+ * problem, amber for something to check), every drop report and the day's summary as a card of its
+ * own, and a link to the Live page. Workflows does not render buttons, so the link is a markdown link.
+ * Limits: 28 KB per message, 4 requests a second — far inside both.
  */
-const { dropCardItems } = require("./report.js");
+const { dropCardItems, dayCardItems } = require("./report.js");
 const URL_ = () => String(process.env.TEAMS_WEBHOOK_URL || "").trim();
 const configured = () => /^https:\/\//.test(URL_());
 
-const STYLE = { missing: "attention", fm_failed: "attention", fm_down: "attention", pipeline: "attention", reader_down: "warning",
+const STYLE = { missing: "attention", fm_failed: "attention", fm_down: "attention", pipeline: "attention", not_visible: "warning", reader_down: "warning",
                 reader_failed: "warning", caption: "warning", fm_stuck: "warning", fm_unconfirmed: "warning", late: "emphasis",
                 reader_up: "good", digest: "emphasis", test: "good" };
 /* WhatsApp's *bold* is Teams markdown's **bold** */
 const md = s => String(s).replace(/\*([^*\n]+)\*/g, "**$1**");
+/* how serious one alert is: a problem, something to check by hand, or fine */
+const level = a => a.report ? (a.report.problems.some(p => !p.check) ? "bad" : a.report.problems.length ? "warn" : "ok")
+  : a.digest ? (a.digest.attention.some(x => !x.check) ? "bad" : a.digest.attention.length ? "warn" : "ok")
+  : STYLE[a.kind] === "attention" ? "bad" : STYLE[a.kind] === "warning" ? "warn" : "ok";
 
 function card(alerts, { title = "SportsFC · FM ↔ channels", link = "" } = {}) {
-  const bad = alerts.some(a => STYLE[a.kind] === "attention" || (a.report ? a.report.problems.length > 0 : a.kind === "slot" && /problem/.test(a.text)));
+  const levels = alerts.map(level);
+  const color = levels.includes("bad") ? "Attention" : levels.includes("warn") ? "Warning" : "Good";
   const body = [
-    { type: "TextBlock", text: title, weight: "Bolder", size: "Medium", color: bad ? "Attention" : "Good", wrap: true },
+    { type: "TextBlock", text: title, weight: "Bolder", size: "Medium", color, wrap: true },
     { type: "TextBlock", text: `${alerts.length} update${alerts.length === 1 ? "" : "s"} · ${new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 16).replace("T", " ")} IST`,
       isSubtle: true, spacing: "None", size: "Small" },
   ];
   for (const a of alerts) {
     /* a drop that settled: its full report — overview, a table per language, problems */
     if (a.report) { body.push({ type: "Container", spacing: "Large", separator: true, items: dropCardItems(a.report) }); continue; }
+    /* the day's summary: totals, a table per language, what needs attention */
+    if (a.digest) { body.push({ type: "Container", spacing: "Large", separator: true, items: dayCardItems(a.digest) }); continue; }
     const [head, ...rest] = String(a.text).split("\n");
-    const style = a.kind === "slot" ? (/problem/.test(head) ? "attention" : "good") : (STYLE[a.kind] || "default");
+    const style = STYLE[a.kind] || "default";
     body.push({ type: "Container", style, bleed: false, spacing: "Medium", items: [
       { type: "TextBlock", text: md(head), wrap: true, weight: "Bolder" },
       ...(rest.length ? [{ type: "TextBlock", text: rest.map(md).join("\n\n"), wrap: true, spacing: "Small" }] : []),

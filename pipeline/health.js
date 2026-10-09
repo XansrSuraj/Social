@@ -70,7 +70,7 @@ function healthOf(led, now, outputs = {}) {
     const readAge = h && h.lastReadAt ? now - h.lastReadAt : null;
     let state, detail;
     if (!h || !h.lastReadAt && !h.lastOkAt) { state = "warn"; detail = "not read yet — it will be within " + PROBE_MIN + " min"; }
-    else if (v.soft && !h.ok) { state = "warn"; detail = `can't be read while the account is 18+ — checked on every drop, verified automatically once the restriction is lifted`; }
+    else if (v.soft && !h.ok) { state = "warn"; detail = `can't be read right now — this account is checked quietly (no alerts) and verified automatically once it can be read`; }
     else if (h.ok && readAge != null && readAge > (2 * PROBE_MIN + 5) * 60e3) { state = "warn"; detail = `last read ${ago(now, h.lastReadAt)} — older than it should be`; }
     else if (h.ok) { state = "ok"; detail = `read ${ago(now, h.lastReadAt || h.lastOkAt)} · ${h.posts != null ? h.posts + " posts in 30 h" : "ok"}` + (h.newestPostAt ? ` · newest post ${ago(now, h.newestPostAt)}` : ""); }
     else if (h.down) { state = "bad"; detail = `not readable since ${ago(now, h.failingSince || h.lastFailAt)} — ${String(h.lastError || "").replace(/ — the paid fallback is skipped on automatic checks/, "").slice(0, 160)} · retried every minute`; }

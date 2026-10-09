@@ -6,11 +6,11 @@
  *   3. for each delivery FM has sent, read only the channels now due and look for the post —
  *      matched on time AND words (FM gives the exact caption); every reader is also read at least
  *      every 30 min whether a card is due or not, so its health on the website is always current
- *   4. decide: verified (inside 20 min) · late · missing · reader failed · assumed (Viber) ·
- *      not watched (no link yet) · can't verify (Instagram 18+) · FM failed / stuck · superseded
+ *   4. decide: verified (inside 20 min) · late · missing · not visible (Instagram — maybe 18+, check by
+ *      hand) · reader failed · assumed (Viber) · not watched (no link yet) · FM failed / stuck · superseded
  *   5. merge what was read into the daily-check report, so the website stays current
- *   6. alerts: problems the moment they are known, one report when a drop is fully settled, a digest
- *      at night — every alert sent once (keys in the ledger), and NEVER about anything old
+ *   6. alerts: problems the moment they are known, one report when a drop is fully settled, the day's
+ *      summary at 23:00 IST — every alert sent once (keys in the ledger), and NEVER about anything old
  *
  * Two rules that keep alerts true (both broke on 9 Oct 2026):
  *   - A drop's identity is fixed the moment it is formed (led.drops). The old code re-derived drops
@@ -27,7 +27,7 @@
 const { routeOf, labelOf, FM_CHANNELS } = require("./channels.js");
 const { captionProblem, assign } = require("./rules.js");
 const realTeams = require("./teams.js");
-const { dropData, dropText } = require("./report.js");
+const { dropData, dropText, dayData, dayText } = require("./report.js");
 
 const WINDOW_MIN = 20;            // every channel normally shows the post within ~5 min; 20 is the buffer
 const FIRST_CHECK_MIN = 2;        // first look 2 min after FM sent it
@@ -56,7 +56,12 @@ const MIN_TICK_GAP_MS = 40000;
 const PIPELINE_URL = "https://aiko-social-distribution-check.vercel.app/#/live";
 
 const FINAL = new Set(["verified", "late", "assumed", "unwatched", "unverifiable", "fm_failed", "fm_unconfirmed"]);
-const SETTLED = new Set([...FINAL, "missing", "reader_failed", "unchecked"]);
+const SETTLED = new Set([...FINAL, "missing", "not_visible", "reader_failed", "unchecked"]);
+/* Not found on the channel. On Instagram that is "not_visible", not "missing": Instagram puts an 18+ wall on
+   single posts by itself (9 Oct 22:30, Instagram PT — a betting-style reel), and no logged-out reader, Apify
+   included, can see such a post at all — so "missing" there could be wrong. It is still flagged, to be checked
+   by hand in the app. */
+const MISS = new Set(["missing", "not_visible"]);
 const SENDABLE = new Set(["queued", "sending", "sent"]);
 const ist = ms => new Date(ms + 5.5 * 3600e3).toISOString().slice(11, 16);
 const istDay = ms => new Date(ms + 5.5 * 3600e3).toISOString().slice(0, 10);
@@ -117,6 +122,8 @@ function fresh(led, now) {
     }
   }
   delete led.slots;
+  /* an Instagram post not found before the not_visible verdict existed (9 Oct 22:30) — said the new way */
+  for (const e of Object.values(led.deliveries)) if (e.channel === "instagram" && e.status === "missing") e.status = "not_visible";
   return led;
 }
 
@@ -224,7 +231,7 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
         e.capProblem = problem;
         const atLimit = /may be rejected/.test(problem);
         raise(`cap:${e.cardId}`, "caption", `⚠️ *Caption ${atLimit ? "at the limit" : "too long"}* — ${e.label} · ${ist(when)} "${e.card}" — ${problem}` +
-          (atLimit ? "" : ". The platform will likely reject it."), when);
+          (atLimit ? "." : ". The platform will refuse it — shorten the caption."), when);
       }
     }
     led.deliveries[d.cardId] = e;
@@ -243,8 +250,8 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
       const since = T(e.queuedAt) || e.when;
       if (now - since < FAIL_HOLD_MIN * 60e3) { e.status = "fm_failing"; continue; }
       e.status = "fm_failed";
-      raise(`fmfail:${e.cardId}`, "fm_failed", `🛑 *FM ${e.fmState}* — ${e.label} · ${ist(e.when)} "${e.card}"` +
-        (e.failureStage ? ` — stage: ${e.failureStage}` : "") + (e.fmError ? ` — ${e.fmError}` : ""), e.when);
+      raise(`fmfail:${e.cardId}`, "fm_failed", `🛑 *Not sent — ${e.failureStage === "cms" ? "the CMS skipped it" : "FM failed"}* — ${e.label} · ${ist(e.when)} "${e.card}"` +
+        (e.fmError ? ` — ${e.fmError}` : ""), e.when);
     } else if (e.fmState === "unknown") {
       e.status = "fm_unconfirmed";
       raise(`fmunk:${e.cardId}`, "fm_unconfirmed", `❔ *FM can't confirm* — ${e.label} · ${ist(e.when)} "${e.card}" — FM does not know whether it went out`, e.when);
@@ -271,7 +278,7 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     /* past the late limit only a catch-up check (a delivery the pipeline didn't see in time — the read covers
        30 h) is made, and only until it has a verdict */
     if (m > LATE_MAX_MIN && (e.checks || 0) > 0 && SETTLED.has(e.status)) return false;
-    if ((e.status === "missing" || e.status === "reader_failed") && e.lastCheckAt && now - e.lastCheckAt < RECHECK_MISSING_MIN * 60e3) return false;
+    if ((MISS.has(e.status) || e.status === "reader_failed") && e.lastCheckAt && now - e.lastCheckAt < RECHECK_MISSING_MIN * 60e3) return false;
     return true;
   });
   const reads = {};
@@ -347,10 +354,10 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     const m = sinceSent(e);
     if (!r || !r.ok) {
       e.readNote = r ? String(r.note || "").slice(0, 200) : "not read this tick";
-      if (m >= WINDOW_MIN && e.status !== "missing") {
-        /* Instagram's 18+ wall (its embed shows no posts): nothing to wait for. Any other failure is
-           retried every minute for READ_GRACE_MIN more before the drop is reported without it — a
-           scraper hiccup of a minute or two must never decide a verdict. */
+      if (m >= WINDOW_MIN && !MISS.has(e.status)) {
+        /* a soft channel whose page shows no posts at all (an account-wide age wall): nothing to wait for.
+           Any other failure is retried every minute for READ_GRACE_MIN more before the drop is reported
+           without it — a scraper hiccup of a minute or two must never decide a verdict. */
         if (e.soft && /no posts found/i.test(e.readNote)) e.status = "unverifiable";
         else if (m >= WINDOW_MIN + READ_GRACE_MIN) e.status = "reader_failed";
       }
@@ -363,7 +370,7 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
         postAt: hit.post.ts, postUrl: hit.post.permalink || "", lag: Math.round(hit.lag * 10) / 10,
         sim: hit.sim == null ? null : Math.round(hit.sim * 100), readNote: null });
       claimed.add(e.chId + ":" + e.postId);
-      if (e.status === "late" && (was === "missing" || was === "reader_failed"))
+      if (e.status === "late" && (MISS.has(was) || was === "reader_failed"))
         raise(`late:${e.cardId}`, "late", `🕒 *Arrived late* — ${e.label} · ${ist(e.when)} "${e.card}" — appeared ${Math.round(hit.lag)} min after FM sent it`, e.when);
       continue;
     }
@@ -385,11 +392,15 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
         continue;
       }
       e.absent = (e.absent || 0) + 1;
-      if (e.status !== "missing" && e.absent < 2) continue;
-      if (e.status !== "missing") {
+      if (!MISS.has(e.status) && e.absent < 2) continue;
+      if (!MISS.has(e.status) && e.channel === "instagram") {
+        e.status = "not_visible";
+        raise(`miss:${e.cardId}`, "not_visible", `⚠️ *Check by hand* — ${e.label} · ${ist(e.when)} "${e.card}" — not on the public profile 20 min after FM sent it. ` +
+          `It may be 18+ restricted by Instagram (our reader can't see those) or not posted — please check in the app.`, e.when);
+      } else if (!MISS.has(e.status)) {
         e.status = "missing";
         raise(`miss:${e.cardId}`, "missing", `❌ *Missing* — ${e.label} · ${ist(e.when)} "${e.card}" — FM sent it at ${ist(T(e.sentAt))}, not on the channel after ${WINDOW_MIN} min` +
-          (e.capProblem ? ` (likely why: ${e.capProblem})` : ""), e.when);
+          (e.capProblem ? ` — likely why: ${e.capProblem}` : ""), e.when);
       }
     }
   }
@@ -432,32 +443,33 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     raise(`slot:${key}`, "slot", dropText(d), drop.last, { report: d, title });
   }
 
-  /* ── 8. the nightly digest (after 23:00 IST, once a day) ── */
+  /* ── 8. the day's summary (after 23:00 IST, once a day): what reached the channels, what needs attention ── */
   const day = istDay(now);
   if (new Date(now + 5.5 * 3600e3).getUTCHours() >= 23 && led.lastDigestDay !== day) {
     led.lastDigestDay = day;
-    const todays = Object.values(led.deliveries).filter(e => istDay(e.when) === day && e.status !== "superseded");
-    if (todays.length) {
-      const c = s => todays.filter(e => e.status === s).length;
-      raise(`digest:${day}`, "digest", [`📊 *Today ${day}* — ${todays.length} FM deliveries in ${new Set(todays.map(e => e.dropKey || e.setId)).size} drops`,
-        `✓ ${c("verified") + c("late")} confirmed (${c("late")} late) · ❌ ${c("missing")} missing · 🔧 ${c("reader_failed")} couldn't check`,
-        `≈ ${c("assumed")} Viber assumed · – ${c("unwatched")} not watched yet · ? ${c("unverifiable")} IG 18+`,
-        `🛑 FM failed ${c("fm_failed")} · caption problems ${todays.filter(e => e.capProblem).length}`].join("\n"));
+    const todays = Object.values(led.deliveries).filter(e => istDay(e.when) === day);
+    if (todays.some(e => e.status !== "superseded")) {
+      const s = dayData(todays, day);
+      raise(`digest:${day}`, "digest", dayText(s), null, { digest: s,
+        title: (s.attention.length ? "⚠️ " : "✅ ") + `Daily summary ${day.slice(8)}/${day.slice(5, 7)} — ${s.ok}/${s.checked} reached` +
+          (s.attention.length ? ` · ${s.attention.length} need${s.attention.length === 1 ? "s" : ""} attention` : "") });
     }
   }
 
   /* ── 9. notify: problems together in one message; every drop report as a message of its own ──
      (a report is a few KB — several in one would pass ntfy's 4 KB and Teams' 28 KB) */
   if (news.length) {
-    const order = ["pipeline", "fm_down", "fm_failed", "missing", "caption", "fm_stuck", "fm_unconfirmed", "reader_down", "reader_failed", "late", "reader_up", "slot", "digest"];
+    const order = ["pipeline", "fm_down", "fm_failed", "missing", "not_visible", "caption", "fm_stuck", "fm_unconfirmed", "reader_down", "reader_failed", "late", "reader_up", "slot", "digest"];
     news.sort((x, y) => order.indexOf(x.kind) - order.indexOf(y.kind));
-    const plain = news.filter(x => !x.report), reports = news.filter(x => x.report);
+    /* a drop report and the day's summary are each a message of their own */
+    const plain = news.filter(x => !x.report && !x.digest), reports = news.filter(x => x.report || x.digest);
     const messages = [];
     if (plain.length) messages.push({ kind: plain[0].kind, alerts: plain,
       text: `*SportsFC · FM ↔ channels*\n\n${plain.map(x => x.text).join("\n\n")}\n\n${PIPELINE_URL}`,
       title: (plain[0].title || plain[0].text.split("\n")[0].replace(/\*/g, "")).slice(0, 110) + (plain.length > 1 ? `  (+${plain.length - 1} more)` : ""),
-      problem: plain.some(x => !["digest", "reader_up"].includes(x.kind)) });
-    for (const r of reports) messages.push({ kind: "slot", alerts: [r], text: `${r.text}\n\n${PIPELINE_URL}`, title: r.title || "Drop report", problem: r.report.problems.length > 0 });
+      problem: plain.some(x => !["reader_up"].includes(x.kind)) });
+    for (const r of reports) messages.push({ kind: r.kind, alerts: [r], text: `${r.text}\n\n${PIPELINE_URL}`, title: r.title || "Drop report",
+      problem: r.report ? r.report.problems.length > 0 : r.digest.attention.length > 0 });
     for (const m of messages) {
       led.outbox.push({ at: now, kind: m.kind, text: m.text });
       if (teams.configured()) led.teamsOutbox = [...(led.teamsOutbox || []), { at: now, kind: m.kind, payload: teams.card(m.alerts, { link: PIPELINE_URL }) }];
