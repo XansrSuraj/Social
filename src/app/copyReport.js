@@ -11,7 +11,8 @@ export function reportText(E, vm) {
       : rep.expected + " post(s) per channel"}`, "",
     "SOURCES",
     `  free readers   ${gotFrom(srvIds)}/${srvIds.length} channel(s)` +
-      (checks.lastRun ? `  last collected ${new Date(checks.lastRun).toLocaleString()}` : "  never collected"),
+      /* a press of Run or the automatic pipeline's read, whichever was later */
+      ([checks.lastRun, checks.autoAt].filter(Boolean).sort().pop() ? `  last collected ${new Date([checks.lastRun, checks.autoAt].filter(Boolean).sort().pop()).toLocaleString()}` : "  never collected"),
     `  social         ${gotFrom(brwIds)}/${brwIds.length} channel(s)  ` +
       (E.extReady ? "extension standing by" + (E.extVersion ? ` v${E.extVersion}` : "") : "extension not detected") +
       (pendingN ? `  ${pendingN} run(s) waiting to be merged` : ""),

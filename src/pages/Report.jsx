@@ -74,7 +74,7 @@ export default function Report() {
             {tab === "log" && <PostLog E={E} vm={vm} />}
             {tab === "chan" && <Channels E={E} vm={vm} />}
           </div>
-          <div className="foot-note">{checks.lastRun ? "Collected " + new Date(checks.lastRun).toLocaleString() : "Never collected by hand"}{checks.autoAt ? " · auto-checked " + new Date(checks.autoAt).toLocaleString() : ""}</div>
+          <div className="foot-note">{checks.autoAt ? "Checked automatically " + new Date(checks.autoAt).toLocaleString() + " · " : ""}{checks.lastRun ? "last run by hand " + new Date(checks.lastRun).toLocaleString() : "never run by hand"}</div>
         </div>
       </section>
       {confirmNode}

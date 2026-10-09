@@ -9,17 +9,25 @@ open the website and press Run; the website is where you look when an alert says
 Live page: **`#/live`** on the site. Code: `pipeline/` + `api/pipeline.js`. Tests: `test/pipeline.test.js`
 (replays the real 4 Oct 2026 FM day).
 
-## How a tick works (every 5 minutes)
+## How a tick works (every minute)
 
 1. **FM** — reads FM Deliveries (prod) for the last 36 h, by queued and by sent time. Scheduled cards,
    cards sent "now", weekend batches, retries — they all simply appear in the feed and are handled the
    same way.
-2. **Caption check** — the moment a card is seen: X over 280 by X's own count (270+ is flagged as "at
-   the limit" — a 280 one never reached X on 4 Oct), Telegram over 1024 on a video, Instagram over
-   2200 characters or 30 hashtags, TikTok over 2200.
+2. **Caption check** — the moment a card is seen: X over 280 by X's count **of the caption as posted**
+   — distribution puts the short link and a blank line in front, and X counts every `sportsfc.fans` as a
+   link (23). That count equals X's own for every X VN post of 4–9 Oct; every one over 280 went missing,
+   the longest that posted was 277. FM's text alone came out 25–44 short (8 Oct 16:35: 251 → 285).
+   270+ is flagged as "at the limit". Telegram over 1024 on a video, Instagram over 2200 characters
+   or 30 hashtags, TikTok over 2200.
 3. **Look for the post** — from 2 minutes after FM sent it, only the channels that are due are read
-   (free readers only — no Apify), and the post is matched on **time and caption words** (FM gives the
-   exact caption; every real match on 4 Oct scored 100%).
+   (free readers only — no Apify — and always a read of *now*: never a cached read, a "last good read"
+   or posts pushed in earlier), and the post is matched on **time and caption words** (FM gives the
+   exact caption; every real match on 4 Oct scored 100%). Every reader is also read at least **every
+   30 minutes whether a card is due or not** (3 per tick, stalest first), so its health is always live.
+   A post is called **missing only when it is absent from two reads a minute apart**, each complete
+   (not partial — e.g. YouTube's Shorts tab refusing), with posts in it, and reaching back past the
+   post's time. A read that proves nothing is "couldn't check", never "missing".
 4. **Verdict** per delivery:
 
    | Status | Meaning | Alert |
@@ -31,14 +39,32 @@ Live page: **`#/live`** on the site. Code: `pipeline/` + `api/pipeline.js`. Test
    | ≈ assumed | Viber — nothing can read it, FM's "sent" is taken as delivered (agreed exception) | — |
    | – not watched | a platform FM added later that isn't configured here | — |
    | ? can't verify | Instagram `sportsfc.fans` while it is 18+ | — |
-   | FM failed / stuck / can't confirm | FM itself failed, or a card still queued 15 min after its time | 🛑 ⏳ ❔ immediately |
+   | FM failed / stuck / can't confirm | FM itself failed, or a card still queued 15 min after its time | 🛑 held 5 min (see below) · ⏳ ❔ immediately |
+   | ↻ superseded | a failed/skipped attempt the content team **sent again** (same card, same language, ≥ 20 s later) | — (a note in that send's drop report) |
    | · not checked | sent before the pipeline was watching | — |
 
 5. **Report** — everything read is merged into the daily-check report (conditionally — a browser's own
    save is never overwritten), so `#/report` stays current with nobody pressing Run.
-6. **WhatsApp** — problems as soon as they are known; one summary per drop once all its channels are
-   settled ("✅ 18:30 Attack vs Defense — 13/13 checked channels received it · Viber 3 assumed · …");
-   a digest after 23:00 IST. Every alert is sent once, batched into as few messages as possible.
+6. **Alerts** (Teams, phone, WhatsApp) — problems as soon as they are known; one full report per drop
+   once all its channels are settled; a digest after 23:00 IST. Every alert is sent once.
+
+### Two rules that keep alerts true (since 10 Oct 2026)
+
+- **A drop's report goes out once, ever.** A drop (one card on every channel and language within 20 min)
+  is fixed the moment it forms (`led.drops`) and cleaned up only as a whole, 3 days later. Until 9 Oct
+  drops were re-derived each tick from what was left; when the clean-up removed a drop's first posts the
+  rest looked new, and 6 Oct's reports went out again on 9 Oct with removed channels shown as "not sent
+  by content team". `test/pipeline.test.js` replays three days of clean-up and checks nothing returns.
+- **Old news is never news.** Nothing whose time is not today (IST) or within the last 6 hours is
+  notified or logged, whatever the ledger says.
+
+### An FM failure that was already fixed
+
+On 9 Oct 18:22 the CMS skipped a card (no channel images; FM leaves template and caption empty) and the
+content team sent it again 58 s later. Then: five "FM skipped" alerts and a report "Card: card · 0/0".
+Now an FM failure is **held 5 minutes**; a later send of the same card supersedes it (no alert, no drop
+of its own, a note in the new send's report). With no second send it is alerted after 5 minutes, named
+after its card (or its collection), and its report says plainly that nothing went out.
 
 A delivery whose channel failed to read for free gets **one** paid (Apify) attempt at its last chance —
 never on every tick — so the pipeline costs nothing on a normal day.
@@ -84,7 +110,12 @@ replacement, the **Workflows** app.
 The card shows as posted by the Workflows (flow) bot; the workflow belongs to whoever created it, so add
 a co-owner in Workflows so it keeps working if that person leaves.
 
-## The pipeline's own health
+## The pipeline's own health — the System health page (`#/health`)
+
+One page shows whether every part works right now: the clock (checks in the last hour), the last
+check's run, the report sync, the FM feed (answer time, newest delivery), **every channel reader** —
+its method, last read, posts seen, newest post, and its last 30 reads as bars — and every alert
+channel. It refreshes every 15 s; the Live page carries a one-line summary of it.
 
 - **A check crashes** → 🚨 "Pipeline check failed" on every channel at once (at most every 30 min while
   it keeps retrying each minute).

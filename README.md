@@ -10,7 +10,7 @@ Brazilian Portuguese), so the site is exactly this: an overview of the channels 
 report a run produces.
 Adding a channel is a one-line code change, not a UI.
 
-**Automatic, end to end.** Every card FM Deliveries sends is checked on its real channel every 5 minutes, and problems (missing post, caption too long, FM failure, a broken reader) go to WhatsApp — see [PIPELINE.md](PIPELINE.md) and the **Live** page (`#/live`).
+**Automatic, end to end.** Every card FM Deliveries sends is checked on its real channel every minute, and problems (missing post, caption too long, FM failure) go to Teams and the phone — see [PIPELINE.md](PIPELINE.md), the **Live** page (`#/live`) and **System health** (`#/health`: the clock, FM, every reader and every alert channel, live).
 
 **Two brands, one site.** The switch in the nav moves between them; each has its own channels,
 overview, report and saved history, and never mixes with the other:
@@ -74,7 +74,7 @@ The tokens are at the top of `src/styles.css`.
 | `src/app/` | the React glue: the engine provider, nav/footer, the report view-model, copy-as-text |
 | `src/pages/` | `Home.jsx` (the overview) and `Report.jsx`, with one file per tab under `report/` |
 | `src/styles.css`, `src/report.css` | the design system and the report's styles |
-| `public/fm-deliveries.html` | the FM Deliveries dashboard, served as-is |
+| `src/pages/Fm.jsx` | the FM Deliveries viewer (`#/fm`); `public/fm-deliveries.html` only forwards old links there, filters included |
 | `legacy-index.html` | the pre-React page, kept for reference only — not served |
 | `api/collect.js` | `POST` read recent posts per channel — every platform, all server-side, with each Apify run's cost |
 | `api/apify-usage.js` | `GET` Apify credit used / left this month and recent run costs (read-only) |
@@ -297,10 +297,15 @@ than clobbering a newer one, and the stored blob is shape-checked and size-cappe
 
 ## FM Deliveries dashboard
 
-`fm-deliveries.html` (linked from the header — **FM Deliveries**) is a separate, read-only viewer
-over the FM Deliveries feed: a different CMS's record of every card the content team published to
-the Football Module, including the ones that never went out. It shares this site's visual style but
-none of its code or data — it does not touch the daily check, its state, or `orghub_state` at all.
+`#/fm` (linked from the header — **FM Deliveries**; since 10 Oct 2026 a page of the app in the same
+design, the old `fm-deliveries.html` forwards to it) is a read-only viewer over the FM Deliveries feed: a
+different CMS's record of every card the content team published to the Football Module, including the
+ones that never went out. It does not touch the daily check, its state, or `orghub_state` at all.
+
+**Language:** the feed's `language` filter matches `fmLanguageKey`, and FM files Portuguese as
+**`portuguese-br`** — `language=portuguese` found nothing (9 Oct). The page offers FM's own keys, and
+the proxy maps the everyday names (`portuguese`, `pt`, `pt-br` → `portuguese-br`; `en`, `vi`/`vn`)
+and echoes the key it used in the `X-FM-Language` header.
 
 It talks to the feed through two proxy routes (`api/fm-deliveries.js`, `api/fm-deliveries-meta.js`,
 sharing `fm-deliveries-client.js`) so the feed's `x-api-key` stays server-side per environment,

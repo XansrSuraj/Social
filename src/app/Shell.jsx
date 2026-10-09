@@ -49,7 +49,8 @@ export function Nav({ route }) {
             {link(home, "Overview")}
             {link(path("/report"), "Report")}
             {brand.id === "sportsfc" && link("/live", "Live")}
-            <a href="/fm-deliveries.html">FM Deliveries</a>
+            {brand.id === "sportsfc" && link("/health", "Health")}
+            {link("/fm", "FM Deliveries")}
           </nav>
           <button className={`btn btn-sm nav-cta ${solid ? "btn-red" : "btn-white"}`} disabled={running} onClick={runIt}>
             {running ? <Loader2 className="spin" /> : <Play />}{running ? "Checking…" : "Run daily check"}
@@ -65,7 +66,8 @@ export function Nav({ route }) {
         <a href={"#" + home} style={{ marginTop: 14 }}>Overview</a>
         <a href={"#" + path("/report")}>Report</a>
         {brand.id === "sportsfc" && <a href="#/live">Live pipeline</a>}
-        <a href="/fm-deliveries.html">FM Deliveries</a>
+        {brand.id === "sportsfc" && <a href="#/health">System health</a>}
+        <a href="#/fm">FM Deliveries</a>
         <button className="btn btn-red btn-lg" style={{ marginTop: 18 }} disabled={running} onClick={runIt}>
           {running ? <Loader2 className="spin" /> : <Play />}{running ? "Checking…" : `Run ${brand.name} check`}
         </button>
@@ -82,7 +84,7 @@ export function Footer() {
         <span>{brand.name} · Daily check — did today's content reach every channel?</span>
         <span>
           {BRANDS.map(b => <a key={b.id} href={"#" + (b.base || "/")}>{b.name}</a>).reduce((a, x) => [...a, " · ", x], []).slice(1)}
-          {" · "}<a href={"#" + path("/report")}>Report</a> · <a href="/fm-deliveries.html">FM Deliveries</a>
+          {" · "}<a href={"#" + path("/report")}>Report</a> · <a href="#/health">Health</a> · <a href="#/fm">FM Deliveries</a>
         </span>
       </div>
     </footer>

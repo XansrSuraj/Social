@@ -117,7 +117,8 @@ collect({ method: "POST", body: { channels: CHANNELS, days: 6 } }, {
         refused++;
         console.log(`  warn  x-vn — the platform refused: ${r.note}`);
       } else {
-        check(r.source === "x-web", "x-vn names the route it used", String(r.source));
+        /* x-free (FxTwitter) since 3 Oct; x-web is the older page route */
+        check(["x-free", "x-web"].includes(r.source), "x-vn names the route it used", String(r.source));
         check((r.posts || []).every(x => /^\d{5,25}$/.test(x.externalId)),
               "x-vn post ids are numeric status ids");
         check((r.posts || []).every(x => /^https:\/\/x\.com\/[^/]+\/status\/\d+$/.test(x.permalink || "")),

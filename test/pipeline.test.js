@@ -8,7 +8,7 @@
  */
 const fs = require("fs");
 const path = require("path");
-const { xLength, captionProblem, similarity, bestMatch } = require("../pipeline/rules.js");
+const { xLength, xPostedLength, captionProblem, similarity, bestMatch } = require("../pipeline/rules.js");
 const { FM_CHANNELS, routeOf } = require("../pipeline/channels.js");
 const { tick } = require("../pipeline/tick.js");
 const { mergeInto, Conflict } = require("../pipeline/store.js");
@@ -26,7 +26,20 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   const xPt = find("x", "portuguese", "Triple Match Roundup"), xVn = find("x", "vietnamese", "Triple Match Roundup");
   ok(xLength(xPt.caption) === 305, "the Portuguese X caption is 305 by X's count", xLength(xPt.caption));
   ok(/X allows 280/.test(captionProblem("x", xPt.caption)), "…and is flagged as too long");
-  ok(/right at X's 280 limit/.test(captionProblem("x", xVn.caption)), "the Vietnamese one (280, never reached X) is flagged as at the limit", captionProblem("x", xVn.caption));
+  ok(xLength(xVn.caption) === 280 && /X allows 280/.test(captionProblem("x", xVn.caption)),
+     "the Vietnamese one (280 by FM's text, never reached X) is flagged as too long — 315 as posted", captionProblem("x", xVn.caption));
+  /* every X VN caption of 4–9 Oct: counted as posted (short link in front, sportsfc.fans as a link) the
+     count equals X's own count of the post, and it alone tells which ones X refused */
+  {
+    const XR = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "x-vn-2026-10.json"), "utf8")).rows;
+    const posted = XR.filter(x => x.posted), refused = XR.filter(x => !x.posted);
+    ok(posted.every(x => xPostedLength(x.caption) === x.xCountOfPost), "the as-posted count equals X's own count of every post that appeared",
+       posted.filter(x => xPostedLength(x.caption) !== x.xCountOfPost).length + " differ");
+    ok(refused.length >= 5 && refused.every(x => xPostedLength(x.caption) > 280) && posted.every(x => xPostedLength(x.caption) <= 280),
+       "every caption X refused is over 280 as posted, every one it took is not", refused.map(x => xPostedLength(x.caption)).join(","));
+    ok(refused.every(x => /X allows 280/.test(captionProblem("x", x.caption))) && posted.every(x => !/X allows 280/.test(captionProblem("x", x.caption))),
+       "…so the caption warning names exactly the ones that went missing (8 Oct 16:35 and 9 Oct 14:30 were missed before)");
+  }
   ok(captionProblem("x", find("x", "english", "Attack vs Defense").caption) === "", "a normal X caption is not flagged");
   ok(xLength("https://sfc.my/r/abcdefghijklmnopqrstuvwxyz1234567890 hi") === 26, "a link counts 23 whatever its length");
   ok(xLength("🔥🔥") === 4 && xLength("ạ") === 2 && xLength("a") === 1, "emoji and accented Vietnamese weigh 2, plain letters 1");
@@ -125,7 +138,7 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   const visibleAt = now => id => (FX.posts[id] || []).filter(p => Date.parse(p.ts) <= now);
   const mkCollect = (now, broken = []) => {
     const calls = [];
-    const fn = async (channels, opts) => { calls.push({ ids: channels.map(c => c.id), noPaid: opts.noPaid });
+    const fn = async (channels, opts) => { calls.push({ ids: channels.map(c => c.id), noPaid: opts.noPaid, fresh: opts.fresh });
       return { results: channels.map(c => broken.includes(c.id) ? { channelId: c.id, ok: false, note: "HTTP 429" }
         : !FX.posts[c.id] ? { channelId: c.id, ok: false, note: "free read failed (no posts found on the page)" }
         : { channelId: c.id, ok: true, source: "stub", posts: visibleAt(now)(c.id) }) }; };
@@ -138,6 +151,11 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   let now = at("2026-10-04T15:30:00Z");
   let st = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), wa = mkWa(), col = mkCollect(now);
   let r = await tick({ fm: fmAt(now), collect: col, store: st, wa, now, force: true });
+  ok(!/Missing\*/.test(wa.out.join("\n")) && Object.values(st.ledger.deliveries).some(e => e.absent === 1 && e.status === "waiting"),
+     "one read without the post is not enough to call it missing");
+  /* …the post must be absent from two reads a minute apart */
+  now += 60e3;
+  r = await tick({ fm: fmAt(now), collect: col, store: st, wa, now });
   const E = Object.values(st.ledger.deliveries);
   const c = s => E.filter(e => e.status === s).length;
   ok(E.length === 46, "46 of the 62 FM deliveries are kept — the 16 to accounts not created yet are ignored", E.length);
@@ -173,7 +191,8 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   }
   if (process.env.SHOW) console.log("\n" + wa.out[0] + "\n");
   ok(!/@/.test(JSON.stringify(Object.values(st.ledger.deliveries).map(e => e.publishedBy))), "no editor email is stored");
-  ok(col.calls.length === 1 && col.calls[0].noPaid === true, "one batched read, free readers only", JSON.stringify(col.calls.map(x => x.ids.length)));
+  ok(col.calls.length === 2 && col.calls.every(c => c.noPaid === true && c.fresh === true), "one batched read per tick, free readers only, never a cached read",
+     JSON.stringify(col.calls.map(x => x.ids.length)));
   ok(Object.keys(st.report.posts).length === 13 && st.report.autoAt, "what was read is merged into the daily-check report");
 
   /* a second tick a few minutes later: nothing new to say, nothing re-sent */
@@ -279,8 +298,10 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   wa = { ...mkWa(), pushConfigured: () => true, push: async (text, o) => { pushed.push({ text, problem: o.problem }); } };
   now = at("2026-10-04T15:30:00Z");
   await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, now, force: true });
+  pushed.length = 0;                       // the second read is the one that settles X VN 10:30
+  await tick({ fm: fmAt(now + 60e3), collect: mkCollect(now), store: st, wa, now: now + 60e3 });
   ok(pushed[0] && pushed[0].problem && /Missing\* — X VN/.test(pushed[0].text), "the problems are pushed to the phone first, flagged as a problem");
-  ok(pushed.filter(p => /DROP REPORT/.test(p.text)).length >= 3 && pushed.every(p => p.text.length < 4000), "…then each drop report as its own push, each under ntfy's 4 KB",
+  ok(pushed.filter(p => /DROP REPORT/.test(p.text)).length >= 1 && pushed.every(p => p.text.length < 4000), "…then each drop report as its own push, each under ntfy's 4 KB",
      pushed.map(p => p.text.length).join(","));
 
   console.log("\n── Microsoft Teams, and the pipeline's own health");
@@ -290,7 +311,8 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   now = at("2026-10-04T15:30:00Z");
   st = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }); wa = mkWa();
   await tick({ fm: fmAt(now), collect: mkCollect(now), store: st, wa, teams: teamsStub, now, force: true });
-  const c0 = cards[0] && cards[0].attachments[0];
+  await tick({ fm: fmAt(now + 60e3), collect: mkCollect(now), store: st, wa, teams: teamsStub, now: now + 60e3 });
+  const c0 = (cards.find(c => /Missing/.test(JSON.stringify(c))) || cards[0]).attachments[0];
   ok(cards.length >= 4 && cards.every(c => c.attachments[0].contentType === "application/vnd.microsoft.card.adaptive" && c.attachments[0].content.type === "AdaptiveCard"),
      "Adaptive Cards go to the Teams channel: the problems, then one card per drop report", cards.length + " cards");
   const blocks = JSON.stringify(c0.content.body);
@@ -319,6 +341,131 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
   }
   ok(crashed === 3 && pushes.length === 1 && /Pipeline check failed/.test(pushes[0]), "a crashing tick alerts exactly once per 30 min", `${crashed} crashes, ${pushes.length} alert(s)`);
   ok(st.ledger.lock === null && st.ledger.lastCrash, "…and the ledger is never left locked by a crash");
+
+  console.log("\n── never an old report, never a superseded failure, never a verdict from a bad read (9–10 Oct)");
+  {
+    /* 9 Oct: drops of 6 Oct were reported again on 9 Oct — the 3-day clean-up removed a drop's first posts
+       and the rest looked like a new drop. Replay 4 Oct, then run the clock on for three days through
+       every moment a delivery of that day turns 3 days old. */
+    now = at("2026-10-04T15:30:00Z");
+    st = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }); wa = mkWa();
+    const fm36 = t => async () => D.filter(d => Date.parse(d.queuedAt) <= t && Date.parse(d.queuedAt) >= t - 36 * 3600e3);
+    await tick({ fm: fm36(now), collect: mkCollect(now), store: st, wa, now, force: true });
+    await tick({ fm: fm36(now + 60e3), collect: mkCollect(now), store: st, wa, now: now + 60e3 });
+    const reportsBefore = wa.out.filter(t => /DROP REPORT/.test(t)).length;
+    const whens = Object.values(st.ledger.deliveries).map(e => e.when);
+    const times = new Set();
+    for (let t = now + 2 * 60e3; t <= at("2026-10-07T16:00:00Z"); t += 9 * 60e3) times.add(t);
+    for (const w of whens) for (let k = -3; k <= 3; k++) times.add(Math.floor((w + 3 * 86400e3) / 60e3) * 60e3 + k * 60e3);
+    for (const t of [...times].sort((a, b) => a - b)) await tick({ fm: fm36(t), collect: mkCollect(t), store: st, wa, now: t, force: true });
+    const later = wa.out.slice(0).filter(t => /DROP REPORT/.test(t)).length - reportsBefore;
+    ok(reportsBefore >= 3 && later === 0, "a drop's report goes out once — three days on, as its posts are cleaned up, nothing is reported again",
+       `${reportsBefore} reports on the day, ${later} later`);
+    ok(!wa.out.some(t => /Not sent by content team/.test(t) && /Sun, 4 Oct/.test(t) && wa.out.indexOf(t) >= reportsBefore + 2),
+       "…and no channel that was sent is ever listed as 'not sent by content team'");
+    ok(!Object.keys(st.ledger.deliveries).length && !Object.keys(st.ledger.drops).length, "…and the day is cleaned up as a whole, drops and all");
+
+    /* a ledger from before this version (drops not fixed yet): its old drops are never reported */
+    const v1 = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), wv = mkWa();
+    now = at("2026-10-04T15:30:00Z");
+    await tick({ fm: fm36(now), collect: mkCollect(now), store: v1, wa: wv, now, force: true });
+    await tick({ fm: fm36(now + 60e3), collect: mkCollect(now), store: v1, wa: wv, now: now + 60e3 });
+    const old = v1.ledger;
+    delete old.drops; old.slots = {};
+    for (const e of Object.values(old.deliveries)) if (e.dropKey) old.slots[e.dropKey] = {};   // v1 forgot it had sent them
+    wv.out.length = 0;
+    const t9 = at("2026-10-05T09:00:00Z");
+    await tick({ fm: async () => [], collect: mkCollect(t9), store: v1, wa: wv, now: t9, force: true });
+    ok(!wv.out.some(t => /DROP REPORT/.test(t)), "an old ledger's drops (from before fixed drops) are never reported again", wv.out.length + " message(s)");
+
+    /* old news is never news: a delivery from two days ago turning up now raises nothing */
+    const xOld = { ...find("x", "vietnamese", "Triple Match Roundup"), cardId: "old-x", sentAt: "2026-10-02T05:00:00Z", queuedAt: "2026-10-02T05:00:00Z", scheduledAt: null };
+    const so = mkStore({ startedAt: at("2026-10-01T00:00:00Z") }), wo = mkWa();
+    const tOld = at("2026-10-04T05:00:00Z");
+    await tick({ fm: async () => [xOld], collect: mkCollect(tOld), store: so, wa: wo, now: tOld, force: true });
+    await tick({ fm: async () => [xOld], collect: mkCollect(tOld + 60e3), store: so, wa: wo, now: tOld + 60e3 });
+    ok(!wo.out.length && !so.ledger.alerts.length, "a delivery from an earlier day is never alerted — not its caption, not a miss", wo.out.join(" | ").slice(0, 120));
+  }
+  {
+    /* 9 Oct 18:22: the CMS skipped a card (no channel images; FM leaves template and caption empty) and the
+       content team sent it again 58 s later. No alert, no "Card: card · 0/0" report — one report, with a note. */
+    const card = D.filter(d => d.template.label === "Attack vs Defense" && d.language === "english");
+    const t0 = Math.min(...card.map(d => Date.parse(d.queuedAt)));
+    const skipped = card.map(d => ({ ...d, cardId: d.cardId + "-first", rowId: "first", state: "skipped", outcome: "failed", failureStage: "cms",
+      error: `No ${d.channel} image for this caption (template + language) — regenerate, or untick ${d.channel}.`,
+      template: { id: null, key: null, label: null, kind: null }, caption: null, sentAt: null, scheduledAt: null, deliveryMode: null,
+      queuedAt: new Date(t0 - 58e3).toISOString() }));
+    const fmS = t => async () => [...skipped, ...D].filter(d => Date.parse(d.queuedAt) <= t);
+    const ss = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), ws = mkWa();
+    for (const t of [t0 - 30e3, t0 + 60e3, t0 + 6 * 60e3, t0 + 22 * 60e3, t0 + 23 * 60e3])
+      await tick({ fm: fmS(t), collect: mkCollect(t), store: ss, wa: ws, now: t, force: true });
+    const out = ws.out.join("\n");
+    const rep = ws.out.find(t => /DROP REPORT — 18:30/.test(t)) || "";
+    ok(!/FM skipped/.test(out) && !/Card:\* card\b/.test(out) && !/0\/0/.test(out), "a failed attempt the content team sent again is never alerted, and is no drop of its own");
+    ok(/\*Note:\* A first attempt at 18:29 was skipped by the CMS/.test(rep) && /sent it again at 18:30/.test(rep) && /✅ \*All delivered\*/.test(rep),
+       "…the card's report says so in a note, and the card is all delivered", (rep.match(/\*Note:\*[^\n]*/) || [""])[0]);
+    ok(Object.values(ss.ledger.deliveries).filter(e => e.status === "superseded").length === skipped.filter(d => routeOf(d.channel, d.language).mode !== "skip").length,
+       "…its rows are kept as 'superseded'");
+
+    /* the same failure with no second send: held 5 min, then alerted, and reported as not sent at all */
+    const lone = skipped.map(d => ({ ...d, setId: "lone", cardId: d.cardId + "-lone", collection: "multi-match-reels" }));
+    const sl = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), wl = mkWa();
+    await tick({ fm: async () => lone, collect: mkCollect(t0), store: sl, wa: wl, now: t0, force: true });
+    ok(!wl.out.length && Object.values(sl.ledger.deliveries).every(e => e.status === "fm_failing"), "an FM failure is held for 5 minutes in case it is sent again");
+    await tick({ fm: async () => lone, collect: mkCollect(t0 + 5 * 60e3), store: sl, wa: wl, now: t0 + 5 * 60e3, force: true });
+    const lo = wl.out.join("\n");
+    ok(/FM skipped\* — Facebook EN · 18:29 "Multi match reels" — stage: cms — No facebook image/.test(lo), "…then alerted, named by its collection when FM gives no template",
+       (lo.match(/FM skipped[^\n]*/) || [""])[0].slice(0, 110));
+    ok(/🛑 \*Not sent\* — FM\/CMS failed on \d+ channels, nothing went out/.test(lo) && !/0\/0/.test(lo), "…and its report says nothing went out — not '0/0 checked'");
+  }
+  {
+    /* a read that proves nothing never makes a verdict: no posts at all, or a partial read */
+    const yt = find("youtube", "vietnamese", "Attack vs Defense"), sent = Date.parse(yt.sentAt);
+    for (const [label, res] of [["no posts", { ok: true, source: "stub", posts: [] }],
+                                ["partial", { ok: true, source: "stub", partialRead: true, note: "Partial: a tab refused", posts: FX.posts["yt-vn"].filter(p => Date.parse(p.ts) < sent - 3600e3) }]]) {
+      const se = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), we = mkWa();
+      const colE = async chs => ({ results: chs.map(c => ({ channelId: c.id, ...res })) });
+      for (const m of [21, 22, 31, 32]) await tick({ fm: async () => [yt], collect: colE, store: se, wa: we, now: sent + m * 60e3, force: true });
+      const e = se.ledger.deliveries[yt.cardId];
+      ok(e.status === "reader_failed" && !/Missing/.test(we.out.join("\n")), `a successful read with ${label} is "couldn't check", never "missing"`, `${e.status} — ${e.readNote}`);
+    }
+
+    /* a post with no caption goes to the card that made it: card A (12:00) never posted, card B (12:10)
+       posted a bare reel at 12:11 — read at 12:11:30, before B is due, A must not take it */
+    const base = { setId: "s", collection: "c", channel: "youtube", language: "vietnamese", state: "sent", deliveryMode: "scheduled", publishedBy: "cron:x" };
+    const A = { ...base, cardId: "A", template: { label: "Card A" }, caption: "Một hai ba bốn năm sáu bảy tám chín mười hôm nay", queuedAt: "2026-10-04T06:30:00Z", sentAt: "2026-10-04T06:30:00Z" };
+    const B = { ...base, cardId: "B", setId: "s2", template: { label: "Card B" }, caption: "Trận cầu đinh cuối tuần này ai sẽ thắng đây các bạn", queuedAt: "2026-10-04T06:40:00Z", sentAt: "2026-10-04T06:40:00Z" };
+    const older = FX.posts["yt-vn"].filter(p => Date.parse(p.ts) < at("2026-10-04T06:00:00Z"));
+    const bare = { externalId: "bare", ts: "2026-10-04T06:41:00Z", text: "" };
+    const sb = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), wb = mkWa();
+    const colB = async chs => ({ results: chs.map(c => ({ channelId: c.id, ok: true, source: "stub", posts: [bare, ...older] })) });
+    for (const t of ["06:41:30", "06:43:00", "06:50:00", "06:51:00", "07:01:00"]) await tick({ fm: async () => [A, B], collect: colB, store: sb, wa: wb, now: at("2026-10-04T" + t + "Z"), force: true });
+    ok(sb.ledger.deliveries.B.status === "verified" && sb.ledger.deliveries.B.postId === "bare" && sb.ledger.deliveries.A.status === "missing",
+       "a caption-less post is given to the card sent just before it, not to an older card that never posted",
+       `A ${sb.ledger.deliveries.A.status}, B ${sb.ledger.deliveries.B.status}`);
+  }
+  {
+    /* health: every reader is read at least every 30 min whether a card is due or not, and the Health page
+       says per part what works */
+    const { healthOf } = require("../pipeline/health.js");
+    const sh = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), wh = mkWa();
+    const colH = mkCollect(at("2026-10-04T15:30:00Z"), ["fb-br"]);
+    let t = at("2026-10-04T15:30:00Z");
+    for (let i = 0; i < 6; i++, t += 60e3) await tick({ fm: async () => [], collect: colH, store: sh, wa: wh, now: t, force: true });
+    const read = Object.entries(sh.ledger.readers).filter(([, h]) => h.lastReadAt);
+    ok(read.length === 14 && colH.calls.every(c => c.ids.length <= 3), "with nothing due, every one of the 14 readers is still read — 3 per tick, stalest first",
+       `${read.length} read, ${colH.calls.map(c => c.ids.length).join("/")} per tick`);
+    const H = healthOf(sh.ledger, t, { teams: true, push: true, whatsapp: false });
+    const R = H.groups.find(g => g.id === "readers").items;
+    const fbBr = R.find(i => i.id === "fb-br"), ytVn = R.find(i => i.id === "yt-vn"), igFans = R.find(i => i.id === "ig-fans");
+    ok(R.length === 14 && ytVn.state === "ok" && /posts in 30 h/.test(ytVn.detail) && fbBr.state !== "ok" && igFans.state === "warn" && /18\+/.test(igFans.detail),
+       "the Health page lists every reader: working, failing (with why), Instagram EN 18+", `${fbBr.state}: ${fbBr.detail.slice(0, 60)}`);
+    ok(H.groups.find(g => g.id === "pipeline").items[0].state === "ok" && H.groups.find(g => g.id === "fm").items[0].state === "ok" &&
+       H.groups.find(g => g.id === "alerts").items.find(i => i.id === "whatsapp").state === "off" && H.overall === "degraded",
+       "…the clock, FM and the alert channels too, with one overall verdict", H.overall + " — " + H.summary);
+    const late = healthOf({ ...sh.ledger, lastTickAt: t - 30 * 60e3 }, t, {});
+    ok(late.overall === "down" && late.groups[0].items[0].state === "bad", "a stopped clock is 'down'");
+  }
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

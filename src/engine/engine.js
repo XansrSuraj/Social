@@ -144,11 +144,19 @@ try{
 }catch(e){}
 let reportUpdatedAt = null;          // instant the shared report row was last stored (concurrency)
 let reportPushT = null;              // debounce handle for the cloud push
+let reportDirty = false;             // a local change not yet stored in the shared row
+/* What this device is LOOKING AT — the window (today / a picked date…) and the region tab — is this
+   device's own. It used to travel in the shared row, so one person picking "3 Oct" showed every
+   device 3 Oct as its report (the row still said date "2026-10-03" on 10 Oct). Kept in localStorage
+   only; never sent, and ignored when the shared row is read. */
+const VIEW_KEYS = ["window", "date", "regionView"];
+const withoutView = o => { const c = { ...(o || {}) }; for (const k of VIEW_KEYS) delete c[k]; return c; };
 
 /* localStorage FIRST, always — that is the copy that survives an offline moment or an unconfigured
    deployment. Then, if cloud storage is on, share it so every other device sees the same report. */
 const saveChecks = () => {
   try{ localStorage.setItem(CKEY, JSON.stringify(checks)); }catch(e){}
+  reportDirty = true;
   pushReport();
 };
 
@@ -161,7 +169,7 @@ async function pullReport(){
     const r = await fetch(REPORT_URL, { cache:"no-store" });
     const j = await r.json();
     if(j && j.ok && j.data && typeof j.data === "object"){
-      checks = { ...checks, ...j.data };
+      checks = { ...checks, ...withoutView(j.data) };
       reportUpdatedAt = j.updatedAt || null;
       saveLocalChecksOnly();                       // mirror the shared copy into localStorage too
     }
@@ -171,9 +179,13 @@ const saveLocalChecksOnly = () => { try{ localStorage.setItem(CKEY, JSON.stringi
 
 /* Share the report after a check. Debounced, so the burst of saveChecks() a single run fires
    collapses into one write. Because localStorage already holds the copy, a failed push is silent:
-   the next save retries and the browser never loses anything. On a 409 another device ran the
-   check meanwhile — take theirs rather than clobber it. */
-function pushReport(){
+   the next save retries and the browser never loses anything.
+   On a 409 the shared row changed meanwhile — usually the automatic pipeline, which merges what it
+   reads every minute. Taking the shared copy wholesale (as this used to) threw away the check just
+   run: "14 read, 6 new", then the old picture. Now the two are merged — every post from both, each
+   channel's newer read, the later run time, this device's hand answers over the row's — and pushed
+   again on top of the new row. */
+function pushReport(attempt = 0){
   if(cloud.mode !== "cloud") return;
   clearTimeout(reportPushT);
   reportPushT = setTimeout(async () => {
@@ -181,13 +193,63 @@ function pushReport(){
       const r = await fetch(REPORT_URL, {
         method:"PUT",
         headers:{ "Content-Type":"application/json", "x-admin-key":adminKey() },
-        body:JSON.stringify({ data:checks, baseUpdatedAt:reportUpdatedAt })
+        body:JSON.stringify({ data:withoutView(checks), baseUpdatedAt:reportUpdatedAt })
       });
       const j = await r.json().catch(() => ({}));
-      if(r.status === 409){ await pullReport(); render(); return; }
-      if(j && j.ok && j.updatedAt) reportUpdatedAt = j.updatedAt;
+      if(r.status === 409){
+        if(attempt < 3 && await mergeShared()){ render(); pushReport(attempt + 1); }
+        return;
+      }
+      if(j && j.ok && j.updatedAt){ reportUpdatedAt = j.updatedAt; reportDirty = false; }
     }catch(e){ /* stays in localStorage; the next save will try again */ }
-  }, 400);
+  }, attempt ? 300 : 400);
+}
+/* the shared row read again and this device's unsaved changes laid over it (see pushReport) */
+async function mergeShared(){
+  try{
+    const r = await fetch(REPORT_URL, { cache:"no-store" });
+    const j = await r.json();
+    if(!(j && j.ok && j.data && typeof j.data === "object")) return false;
+    const theirs = withoutView(j.data), mine = checks;
+    const out = { ...mine, ...theirs };
+    for(const k of VIEW_KEYS) if(k in mine) out[k] = mine[k];
+    out.posts = { ...(theirs.posts || {}) };
+    for(const [id, list] of Object.entries(mine.posts || {})){
+      const byId = new Map((out.posts[id] || []).map(p => [p.externalId, p]));
+      for(const p of list || []){
+        if(!p || !p.externalId) continue;
+        const old = byId.get(p.externalId);
+        if(!old){ byId.set(p.externalId, p); continue; }
+        const merged = { ...old };
+        for(const [k, v] of Object.entries(p)) if(v !== null && v !== undefined && v !== "") merged[k] = v;
+        byId.set(p.externalId, merged);
+      }
+      out.posts[id] = [...byId.values()].sort((a, b) => new Date(b.ts) - new Date(a.ts));
+    }
+    out.meta = { ...(theirs.meta || {}) };
+    for(const [id, m] of Object.entries(mine.meta || {})) if(!out.meta[id] || (m && m.at || 0) > (out.meta[id].at || 0)) out.meta[id] = m;
+    out.confirms = { ...(theirs.confirms || {}) };
+    for(const [id, c] of Object.entries(mine.confirms || {})) out.confirms[id] = { ...(out.confirms[id] || {}), ...c };
+    out.counts = { ...(theirs.counts || {}) };
+    for(const [d, c] of Object.entries(mine.counts || {})) out.counts[d] = { ...(out.counts[d] || {}), ...c };
+    out.captions = { ...(theirs.captions || {}), ...(mine.captions || {}) };
+    out.ytIds = { ...(theirs.ytIds || {}), ...(mine.ytIds || {}) };
+    out.lastRun = [theirs.lastRun, mine.lastRun].filter(Boolean).sort().pop() || null;
+    out.autoAt = [theirs.autoAt, mine.autoAt].filter(Boolean).sort().pop() || null;
+    checks = out;
+    reportUpdatedAt = j.updatedAt || null;
+    saveLocalChecksOnly();
+    return true;
+  }catch(e){ return false; }
+}
+/* An open tab stays current: the shared row is read again every minute while the tab is visible (the
+   pipeline merges new posts into it all the time), and "today" is worked out afresh on each redraw —
+   so a tab left open overnight shows the new day, not yesterday's report. Never while this device has
+   changes still on their way to the row. */
+async function sync(){
+  if(cloud.mode !== "cloud" || reportDirty) { render(); return; }
+  await pullReport();
+  render();
 }
 
 /* The whole store travels in one shared report row (capped at 2 MB server-side) and no window looks
@@ -1511,7 +1573,8 @@ function absorbRun(run){
         if(!had) byKey.set(k, c);
         else for(const f in c) if(c[f] && !had[f]) had[f] = c[f];
       }
-      checks.captions[res.channelId] = [...byKey.values()].slice(0, 60);
+      /* the newest 60 — new captions are added at the end */
+      checks.captions[res.channelId] = [...byKey.values()].slice(-60);
     }
 
     if(res.posts && res.posts.length){ added += mergePosts(res.channelId, res.posts); }
@@ -1833,6 +1896,6 @@ return {
   reconcile, mergeReports, detectLang, normLang, contentDate, hhmm, hhmmss, fmtWhen, fmtGap, dayRange,
   windowOpt, tzLabel, TZS, WINDOWS, CELL, compact, num2, dur, clean, thumbSrc,
   collectServer, runEverything, absorbBrowserRun, refreshApifyUsage, downloadReportCard,
-  saveChecks, update, resetReport, pendingBrowserRuns, boot,
+  saveChecks, update, resetReport, pendingBrowserRuns, boot, sync,
 };
 }

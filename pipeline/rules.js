@@ -23,14 +23,22 @@ function xLength(text) {
   }
   return n;
 }
+/* What X really gets is not FM's caption: distribution puts the card's short link and a blank line in
+   front ("https://sfc.my/r/…\n\n") and X turns every "sportsfc.fans" into a link (23 each, not 13).
+   Measured on 2026-10-09 against every X VN post of 4–9 Oct: this count equals X's own count of the
+   post exactly (18 of 18), every caption over 280 by it never appeared (5 of 5), the longest that did
+   was 277. Counting FM's caption alone came out 25–44 short — which is why 8 Oct 16:35 (285 as posted,
+   251 by FM's text) and 9 Oct 14:30 (293 vs 249) went missing without a caption warning. */
+const xPostedLength = caption =>
+  xLength("https://sfc.my/r/XXXXXXXX\n\n" + String(caption || "").replace(/(?<![\w@\/.])sportsfc\.fans\b(\/\S*)?/gi, "https://sportsfc.fans"));
 const hashtags = text => (String(text || "").match(/#[\p{L}\p{N}_]+/gu) || []).length;
 
 /* What each platform refuses. X's limit is the hard one; the others are the documented caps a
    caption must stay under (Telegram's applies to a media caption — every FM card carries a video). */
 const CAPTION_RULES = {
-  /* 270+ is flagged too: on 2026-10-04 a caption this counter put at exactly 280 never reached X */
-  x:               t => { const n = xLength(t); return n > 280 ? `caption is ${n} characters by X's count — X allows 280`
-                                                     : n >= 270 ? `caption is ${n} characters by X's count — right at X's 280 limit, may be rejected` : ""; },
+  /* counted as posted (above); 270+ is flagged as at the limit */
+  x:               t => { const n = xPostedLength(t); return n > 280 ? `caption is ${n} characters by X's count as posted (with the link distribution adds) — X allows 280`
+                                                     : n >= 270 ? `caption is ${n} characters by X's count as posted — right at X's 280 limit, may be rejected` : ""; },
   telegram:        t => { const n = [...String(t || "")].length; return n > 1024 ? `caption is ${n} characters — Telegram allows 1024 on a video` : ""; },
   telegram_direct: t => { const n = [...String(t || "")].length; return n > 1024 ? `caption is ${n} characters — Telegram allows 1024 on a video` : ""; },
   instagram:       t => { const n = [...String(t || "")].length, h = hashtags(t);
@@ -46,6 +54,9 @@ const captionProblem = (channel, caption) => (CAPTION_RULES[channel] ? CAPTION_R
 const words = s => new Set(String(s || "").toLowerCase()
   .replace(/(…|\.\.\.)?\s*(see more|xem thêm|ver mais|more)\s*$/i, " ")     // a platform's own clip marker
   .replace(/https?:\/\/\S+/g, " ").replace(/[#@][\p{L}\p{N}_.]+/gu, " ")
+  /* a bare domain too: FM writes "SPORTSFC.FANS", the post shows "https://SPORTSFC.FANS" (dropped above)
+     — counted on one side only it costs a short caption its match */
+  .replace(/(?<![\p{L}\p{N}])(?:[\p{L}\p{N}-]+\.)+(?:fans|com|net|org|io|my|co|tv|app|me|gg|br|vn)\b\S*/giu, " ")
   .replace(/[^\p{L}\p{N} ]+/gu, " ").split(/\s+/).filter(w => w.length > 2));
 function similarity(a, b) {
   const A = words(a), B = words(b);
@@ -105,4 +116,4 @@ function assign(deliveries, posts, used, windowMin, lateMin) {
   return out;
 }
 
-module.exports = { xLength, captionProblem, similarity, bestMatch, assign, MATCH_MIN, MATCH_LATE_MIN };
+module.exports = { xLength, xPostedLength, captionProblem, similarity, bestMatch, assign, MATCH_MIN, MATCH_LATE_MIN };

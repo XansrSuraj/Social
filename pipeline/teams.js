@@ -23,7 +23,7 @@ const STYLE = { missing: "attention", fm_failed: "attention", fm_down: "attentio
 const md = s => String(s).replace(/\*([^*\n]+)\*/g, "**$1**");
 
 function card(alerts, { title = "SportsFC · FM ↔ channels", link = "" } = {}) {
-  const bad = alerts.some(a => STYLE[a.kind] === "attention" || /problem/.test(a.text) && a.kind === "slot");
+  const bad = alerts.some(a => STYLE[a.kind] === "attention" || (a.report ? a.report.problems.length > 0 : a.kind === "slot" && /problem/.test(a.text)));
   const body = [
     { type: "TextBlock", text: title, weight: "Bolder", size: "Medium", color: bad ? "Attention" : "Good", wrap: true },
     { type: "TextBlock", text: `${alerts.length} update${alerts.length === 1 ? "" : "s"} · ${new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 16).replace("T", " ")} IST`,

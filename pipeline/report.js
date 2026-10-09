@@ -8,7 +8,7 @@
  * Sent automatically when a drop settles (pipeline/tick.js), and on request for a past drop
  * (/api/pipeline?op=report&at=16:30).
  */
-const { xLength } = require("./rules.js");
+const { xPostedLength } = require("./rules.js");
 const { FM_CHANNELS } = require("./channels.js");
 
 const SHORT = { youtube: "YouTube", telegram: "Telegram", telegram_direct: "Telegram bot", x: "X", facebook: "Facebook", instagram: "Instagram", tiktok: "TikTok", viber: "Viber" };
@@ -27,7 +27,9 @@ const headline = list => {
     .find(l => l.length > 8) || "";
 };
 
-function dropData(list) {
+/* `retried`: a failed first attempt of this card the content team sent again (pipeline/tick.js —
+   superseded) — not a problem, but the report says it happened */
+function dropData(list, { retried = [] } = {}) {
   const first = Math.min(...list.map(e => e.when));
   const sentTimes = list.filter(e => e.sentAt).map(e => Date.parse(e.sentAt));
   const checked = list.filter(e => e.mode === "verify" && e.fmState === "sent" && e.status !== "unverifiable");
@@ -52,21 +54,29 @@ function dropData(list) {
       };
     });
     const viberConfigured = !!FM_CHANNELS["viber/" + lg];
-    const x = mine.find(e => e.channel === "x");
+    const x = mine.find(e => e.channel === "x" && e.caption);
     return { lg, flag, name, rows, ok: rows.filter(r => r.status === "verified" || r.status === "late").length,
              checkable: rows.filter(r => !["not_sent", "unverifiable"].includes(r.status)).length,
              notSent: rows.filter(r => r.status === "not_sent").length,
              viber: mine.filter(e => e.status === "assumed").length, viberNotSent: viberConfigured && !mine.some(e => e.channel === "viber"),
-             xLen: x ? xLength(x.caption) : null };
+             xLen: x ? xPostedLength(x.caption) : null };
   });
+  /* nothing went out at all: every delivery of the drop failed in FM / the CMS */
+  const notSent = list.length > 0 && list.every(e => e.status === "fm_failed");
+  const retriedAt = retried.map(e => Date.parse(e.queuedAt)).filter(isFinite);
   return {
+    notSent,
+    retried: retried.length ? `A first attempt at ${istHM(Math.min(...retriedAt))} was ${retried[0].fmState} by ${retried[0].failureStage === "cms" ? "the CMS" : "FM"}` +
+      `${retried[0].fmError ? ` (${retried[0].fmError.replace(/\s*—.*$/, "")})` : ""} on ${retried.length} channel${retried.length === 1 ? "" : "s"}; the content team sent it again` +
+      `${retried[0].resentAt ? ` at ${istHM(retried[0].resentAt)}` : ""} — that send is this report.` : "",
     when: first, card: [...new Set(list.map(e => e.card))].join(" + "), headline: headline(list),
     mode: now ? "sent right away by an editor" : `scheduled${list[0].scheduledAt ? " for " + istHM(Date.parse(list[0].scheduledAt)) : ""} (sent by the scheduler)`,
     fmFrom: sentTimes.length ? Math.min(...sentTimes) : null, fmTo: sentTimes.length ? Math.max(...sentTimes) : null,
     checked: checked.length, ok: ok.length, viber: list.filter(e => e.status === "assumed").length,
     lagMin: lags.length ? Math.min(...lags) : null, lagMax: lags.length ? Math.max(...lags) : null,
     lagAvg: lags.length ? lags.reduce((a, b) => a + b, 0) / lags.length : null,
-    problems: bad.map(e => ({ label: e.label, why: PROBLEM[e.status] || e.status, extra: e.capProblem || (e.status === "reader_failed" ? e.readNote : "") || "" })),
+    problems: bad.map(e => ({ label: e.label, why: PROBLEM[e.status] || e.status,
+      extra: e.capProblem || (e.status === "reader_failed" ? e.readNote : e.status === "fm_failed" ? [e.failureStage && `stage: ${e.failureStage}`, e.fmError].filter(Boolean).join(" — ") : "") || "" })),
     captionWarnings: list.filter(e => e.capProblem && !BAD.includes(e.status)).map(e => `${e.label}: ${e.capProblem}`),
     languages,
   };
@@ -75,14 +85,14 @@ function dropData(list) {
 function dropText(d, link) {
   const L = [];
   L.push(`📊 *DROP REPORT — ${istHM(d.when)} IST · ${istDate(d.when)}*`);
-  L.push(d.problems.length ? `⚠️ *${d.problems.length} problem${d.problems.length === 1 ? "" : "s"}* · ${d.ok}/${d.checked} checked channels received it`
-                           : `✅ *All delivered* · ${d.ok}/${d.checked} checked channels received it`);
+  L.push(headLine(d, "*"));
   L.push("");
   L.push(`*Card:* ${d.card}`);
   if (d.headline) L.push(`*Post:* ${d.headline.slice(0, 120)}`);
   L.push(`*Sent:* ${d.mode}`);
   if (d.fmFrom) L.push(`*FM sent:* ${istT(d.fmFrom)}${d.fmTo !== d.fmFrom ? "–" + istT(d.fmTo) : ""} IST`);
   if (d.lagMin != null) L.push(`*Arrived:* ${d.lagMin.toFixed(1)}–${d.lagMax.toFixed(1)} min after FM (average ${d.lagAvg.toFixed(1)} min)`);
+  if (d.retried) L.push(`*Note:* ${d.retried}`);
   for (const g of d.languages) {
     L.push("");
     L.push(`${g.flag} *${g.name.toUpperCase()}* — ${g.ok}/${g.checkable} delivered${g.notSent ? ` · ${g.notSent} not sent by content team` : ""}`);
@@ -99,6 +109,14 @@ function dropText(d, link) {
   return L.join("\n");
 }
 
+/* the result in one line: all delivered · N problems · or nothing went out at all */
+function headLine(d, b = "") {
+  const n = d.problems.length, s = n === 1 ? "" : "s";
+  if (d.notSent) return `🛑 ${b}Not sent${b} — FM/CMS failed on ${n} channel${s}, nothing went out`;
+  return n ? `⚠️ ${b}${n} problem${s}${b} · ${d.ok}/${d.checked} checked channels received it`
+           : `✅ ${b}All delivered${b} · ${d.ok}/${d.checked} checked channels received it`;
+}
+
 /* Adaptive Card items for one drop — a header, an overview, then a table per language */
 function dropCardItems(d, link) {
   const bad = d.problems.length > 0;
@@ -106,8 +124,7 @@ function dropCardItems(d, link) {
   const items = [
     { type: "Container", style: bad ? "attention" : "good", bleed: true, items: [
       { type: "TextBlock", text: `📊 Drop report — ${istHM(d.when)} IST · ${istDate(d.when)}`, weight: "Bolder", size: "Large", wrap: true },
-      { type: "TextBlock", text: bad ? `⚠️ ${d.problems.length} problem${d.problems.length === 1 ? "" : "s"} · ${d.ok}/${d.checked} checked channels received it`
-                                     : `✅ All delivered · ${d.ok}/${d.checked} checked channels received it`, weight: "Bolder", wrap: true, spacing: "Small" },
+      { type: "TextBlock", text: headLine(d), weight: "Bolder", wrap: true, spacing: "Small" },
     ] },
     { type: "FactSet", spacing: "Medium", facts: [
       { title: "Card", value: d.card },
@@ -115,6 +132,7 @@ function dropCardItems(d, link) {
       { title: "Sent", value: d.mode },
       ...(d.fmFrom ? [{ title: "FM sent", value: `${istT(d.fmFrom)}${d.fmTo !== d.fmFrom ? " – " + istT(d.fmTo) : ""} IST` }] : []),
       ...(d.lagMin != null ? [{ title: "Arrived", value: `${d.lagMin.toFixed(1)} – ${d.lagMax.toFixed(1)} min after FM (avg ${d.lagAvg.toFixed(1)} min)` }] : []),
+      ...(d.retried ? [{ title: "Note", value: d.retried }] : []),
     ] },
   ];
   for (const g of d.languages) {

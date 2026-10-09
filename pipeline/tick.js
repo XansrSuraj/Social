@@ -1,20 +1,30 @@
 /**
- * One tick of the FM → channels pipeline. Run every few minutes (api/pipeline.js?op=tick).
+ * One tick of the FM → channels pipeline. Run every minute (api/pipeline.js?op=tick).
  *
  *   1. read FM Deliveries (prod) for the last 36 h — what was scheduled / sent, to which channel
- *   2. check every new card's caption against the platform's limits (X 280 by X's own count, …)
+ *   2. check every new card's caption against the platform's limits (X 280 by X's count as posted, …)
  *   3. for each delivery FM has sent, read only the channels now due and look for the post —
- *      matched on time AND words (FM gives the exact caption)
+ *      matched on time AND words (FM gives the exact caption); every reader is also read at least
+ *      every 30 min whether a card is due or not, so its health on the website is always current
  *   4. decide: verified (inside 20 min) · late · missing · reader failed · assumed (Viber) ·
- *      not watched (no link yet) · can't verify (Instagram 18+) · FM failed / stuck
+ *      not watched (no link yet) · can't verify (Instagram 18+) · FM failed / stuck · superseded
  *   5. merge what was read into the daily-check report, so the website stays current
- *   6. WhatsApp: problems the moment they are known, a summary when a drop is fully settled,
- *      a digest at night — every alert sent once (keys in the ledger), batched into few messages
+ *   6. alerts: problems the moment they are known, one report when a drop is fully settled, a digest
+ *      at night — every alert sent once (keys in the ledger), and NEVER about anything old
+ *
+ * Two rules that keep alerts true (both broke on 9 Oct 2026):
+ *   - A drop's identity is fixed the moment it is formed (led.drops). The old code re-derived drops
+ *     from whatever deliveries were left each tick; when the 3-day clean-up removed a drop's first
+ *     posts, the rest looked like a new drop and its report went out again three days late, with the
+ *     removed channels listed as "not sent by content team". Now a drop is cleaned up only as a whole,
+ *     and its report is sent once, ever.
+ *   - Old news is never news: nothing whose time is not today (IST) or within the last 6 hours is
+ *     notified, whatever the ledger says. A drop report is about today's drops only.
  *
  * Every outside thing is passed in (fm, collect, store, wa, now), so the whole tick is tested
  * end to end without a network (test/pipeline.test.js).
  */
-const { routeOf, labelOf } = require("./channels.js");
+const { routeOf, labelOf, FM_CHANNELS } = require("./channels.js");
 const { captionProblem, assign } = require("./rules.js");
 const realTeams = require("./teams.js");
 const { dropData, dropText } = require("./report.js");
@@ -24,59 +34,89 @@ const FIRST_CHECK_MIN = 2;        // first look 2 min after FM sent it
 const LATE_MAX_MIN = 180;         // keep looking for a missing post this long, to report a late arrival
 const RECHECK_MISSING_MIN = 15;   // …but only every 15 min once it is past the window
 const READ_GRACE_MIN = 10;        // a channel that can't be read at the 20-min mark gets 10 more minutes of retries
-/* Scraper health — a reader failing, coming back, a post that couldn't be checked — is shown on the Live
-   page (System status) and never sent as a notification: the free readers hiccup for a minute or two and
-   recover on their own (FxTwitter answering 404 for X, 8 Oct), and the drop report already says when a
-   channel could not be checked. (2026-10-08, at the user's request.) */
+/* Scraper health — a reader failing, coming back, a post that couldn't be checked — is shown on the
+   website (Health page) and never sent as a notification: the free readers hiccup for a minute or two
+   and recover on their own (FxTwitter answering 404 for X, 8 Oct). (2026-10-08, at the user's request.) */
 const INTERNAL = new Set(["reader_down", "reader_up", "reader_failed"]);
 const STUCK_MIN = 15;             // FM still not sent 15 min after the scheduled time
 const FM_DOWN_MIN = 15;
+/* An FM failure is held 5 min before it is alerted: on 9 Oct the CMS skipped a card at 18:22 (no channel
+   images) and the content team sent it again 58 s later — the failure was already handled. A later send
+   of the same card (same set, same language, queued ≥ 20 s after — one send's rows are queued within ~8 s)
+   supersedes the failed one: no alert, and it is not a drop of its own. */
+const FAIL_HOLD_MIN = 5;
+const RESEND_GAP_MS = 20000;
+const FRESH_H = 6;                // nothing older than this, and not from today (IST), is ever notified
+const DROP_SPAN_MIN = 20;         // the same card going out within 20 min (every language, every channel) is one drop
+const PROBE_MIN = 30;             // every reader is read at least this often — the Health page stays live
+const PROBES_PER_TICK = 3;        // …a few per tick, stalest first, so a tick stays short
 const BACKFILL_QUIET_H = 3;       // on the very first tick, stay quiet about anything older than this
 const KEEP_DAYS = 3;
 const MIN_TICK_GAP_MS = 40000;
 const PIPELINE_URL = "https://aiko-social-distribution-check.vercel.app/#/live";
 
-const SHORT = { youtube: "YouTube", telegram: "Telegram", telegram_direct: "Bot", x: "X", facebook: "Facebook", instagram: "Instagram", tiktok: "TikTok", viber: "Viber" };
-const FLAG = { vietnamese: "🇻🇳 ", english: "🇬🇧 ", portuguese: "🇧🇷 ", hindi: "🇮🇳 " };
-const LANG_SHORT = { vietnamese: "VN", english: "EN", portuguese: "PT", hindi: "HI" };
-const PROBLEM = { missing: `not on the channel 20 min after FM sent it`, reader_failed: "couldn't be checked — the channel couldn't be read",
-                  fm_failed: "FM failed to send it", fm_unconfirmed: "FM can't confirm it went out" };
-
 const FINAL = new Set(["verified", "late", "assumed", "unwatched", "unverifiable", "fm_failed", "fm_unconfirmed"]);
 const SETTLED = new Set([...FINAL, "missing", "reader_failed", "unchecked"]);
+const SENDABLE = new Set(["queued", "sending", "sent"]);
 const ist = ms => new Date(ms + 5.5 * 3600e3).toISOString().slice(11, 16);
 const istDay = ms => new Date(ms + 5.5 * 3600e3).toISOString().slice(0, 10);
 const T = (iso) => Date.parse(iso);
+/* "multi-match-reels" → "Multi-match reels" — a card's name when FM gives no template */
+const pretty = s => String(s || "").replace(/[-_]+/g, " ").replace(/^\w/, c => c.toUpperCase()).replace(/\bmatch reels\b/i, "match reels");
 
-/* Group deliveries into drops: the same card going out within 20 min (every language, every channel)
-   is one drop. Keyed by card + the first delivery's minute; each delivery carries its dropKey so
-   the Live page groups exactly the same way. */
-function dropsOf(deliveries) {
-  const groups = [];
-  for (const e of Object.values(deliveries).sort((a, b) => a.when - b.when)) {
-    const g = groups.find(x => x.card === e.card && e.when - x.first <= 20 * 60e3);
-    if (g) g.list.push(e); else groups.push({ card: e.card, first: e.when, list: [e] });
+/* Every delivery belongs to one drop, fixed once formed (see the header). A delivery joins the drop of the
+   same card that started within 20 min of it and has not been reported yet; otherwise it starts one. A
+   delivery whose drop was already reported stays there; one that no longer fits an unreported drop (a
+   rescheduled card, a card renamed once FM filled in its template) is placed again. A superseded failed
+   attempt belongs to no drop. Returns the drops' members. */
+function placeDrops(led) {
+  const drops = led.drops, span = DROP_SPAN_MIN * 60e3;
+  const list = Object.values(led.deliveries).sort((a, b) => a.when - b.when);
+  for (const e of list) {
+    if (e.status === "superseded") { e.dropKey = null; continue; }
+    const cur = e.dropKey && drops[e.dropKey];
+    if (cur && (cur.summarySent || (cur.card === e.card && Math.abs(e.when - cur.anchor) <= span))) continue;
+    const fit = Object.entries(drops).find(([, d]) => !d.summarySent && d.card === e.card && Math.abs(e.when - d.anchor) <= span);
+    if (fit) { e.dropKey = fit[0]; continue; }
+    let key = `${e.card}@${new Date(e.when).toISOString().slice(0, 16)}`;
+    while (drops[key]) key += "+";
+    drops[key] = { card: e.card, anchor: e.when, first: e.when, last: e.when, summarySent: null };
+    e.dropKey = key;
   }
-  const out = {};
-  for (const g of groups) {
-    const key = `${g.card}@${new Date(g.first).toISOString().slice(0, 16)}`;
-    for (const e of g.list) e.dropKey = key;
-    out[key] = g.list;
+  const members = {};
+  for (const e of list) if (e.dropKey) (members[e.dropKey] = members[e.dropKey] || []).push(e);
+  for (const [k, d] of Object.entries(drops)) {
+    const m = members[k] || [];
+    if (!m.length) { if (!d.summarySent) delete drops[k]; continue; }
+    d.first = Math.min(...m.map(e => e.when));
+    d.last = Math.max(...m.map(e => e.when));
   }
-  return out;
+  return members;
 }
 
 function fresh(led, now) {
-  led.v = 1;
+  led.v = 2;
   led.deliveries = led.deliveries || {};
   led.alerts = led.alerts || [];
   led.outbox = led.outbox || [];
   led.readers = led.readers || {};
-  led.slots = led.slots || {};
   led.fm = led.fm || {};
   led.waLog = led.waLog || [];
   led.sent = led.sent || {};                 // alert keys already sent
   led.startedAt = led.startedAt || now;
+  if (!led.drops) {
+    /* from the v1 ledger: its drops as they stand now become fixed; one already summarised (or settled
+       and old) is marked reported, so nothing from before this version is ever reported again */
+    led.drops = {};
+    const groups = {};
+    for (const e of Object.values(led.deliveries)) if (e.dropKey) (groups[e.dropKey] = groups[e.dropKey] || []).push(e);
+    for (const [k, m] of Object.entries(groups)) {
+      const first = Math.min(...m.map(e => e.when)), last = Math.max(...m.map(e => e.when));
+      const sent = (led.slots && led.slots[k] && led.slots[k].summarySent) || (now - last > FRESH_H * 3600e3 ? now : null);
+      led.drops[k] = { card: m[0].card, anchor: first, first, last, summarySent: sent };
+    }
+  }
+  delete led.slots;
   return led;
 }
 
@@ -109,9 +149,13 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
 
   const news = [];                           // alerts raised in this tick
   const quiet = when => when < led.startedAt - BACKFILL_QUIET_H * 3600e3;
+  /* today (IST) or the last 6 h — a card scheduled ahead counts as current */
+  const current = when => istDay(when) === istDay(now) || now - when <= FRESH_H * 3600e3;
   const raise = (key, kind, text, when, extra) => {
     if (led.sent[key]) return;
     led.sent[key] = now;
+    /* old news is never news: whatever the ledger says, nothing from an earlier day is notified or logged */
+    if (when != null && !current(when)) return;
     const a = { at: now, kind, text, ...(INTERNAL.has(kind) ? { internal: true } : {}) };
     led.alerts.unshift(a);                       // the log keeps the text; the full report rides on the alert only
     if (!INTERNAL.has(kind) && !quiet(when == null ? now : when)) news.push({ ...a, ...(extra || {}) });
@@ -124,40 +168,56 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
 
   /* ── 1. FM ── */
   let fmRows = null;
+  const fmT0 = Date.now();
   try {
     fmRows = await fm({ since: new Date(now - 36 * 3600e3).toISOString() });
-    led.fm = { ok: true, lastOkAt: now, count: fmRows.length };
+    if (!Array.isArray(fmRows)) throw new Error("FM answered with something that is not a list of deliveries");
+    const newest = Math.max(...fmRows.map(d => T(d && (d.sentAt || d.queuedAt))).filter(isFinite));
+    led.fm = { ok: true, lastOkAt: now, count: fmRows.length, ms: Date.now() - fmT0, newestAt: isFinite(newest) ? newest : null,
+               history: [{ at: now, ok: true }, ...((led.fm && led.fm.history) || [])].slice(0, 30) };
   } catch (e) {
     const since = led.fm.failingSince || now;
-    led.fm = { ...led.fm, ok: false, lastError: String(e.message || e).slice(0, 300), failingSince: since };
+    led.fm = { ...led.fm, ok: false, lastError: String(e.message || e).slice(0, 300), failingSince: since, lastFailAt: now,
+               history: [{ at: now, ok: false }, ...((led.fm && led.fm.history) || [])].slice(0, 30) };
     if (now - since >= FM_DOWN_MIN * 60e3) raise(`fmdown:${istDay(since)}:${Math.floor(since / 7200e3)}`, "fm_down",
       `📡 *FM Deliveries feed unreachable* for ${Math.round((now - since) / 60e3)} min — ${led.fm.lastError}`);
     errors.push("fm: " + led.fm.lastError);
+    /* a feed that answers with garbage is the pipeline's own crash (alerted once per 30 min) */
+    if (/not a list/.test(led.fm.lastError)) throw e;
   }
 
   /* ── 2. ledger entries from FM ── */
-  for (const d of fmRows || []) {
-    if (!d || !d.cardId) continue;
+  const rows = (fmRows || []).filter(d => d && d.cardId);
+  /* a card's name when FM leaves the template empty (a CMS-skipped attempt has no template): the
+     name its sibling rows of the same set carry */
+  const labelOfSet = {};
+  for (const d of rows) if (d.setId && d.template && d.template.label && !labelOfSet[d.setId]) labelOfSet[d.setId] = d.template.label;
+  const resentAfter = d => rows.find(s => s !== d && s.setId === d.setId && s.language === d.language && s.cardId !== d.cardId &&
+                                          SENDABLE.has(s.state) && T(s.queuedAt) - T(d.queuedAt) >= RESEND_GAP_MS);
+  for (const d of rows) {
     const route = routeOf(d.channel, d.language);
     /* an account that does not exist yet: FM sends, distribution drops it — not ours to judge */
     if (route.mode === "skip") { delete led.deliveries[d.cardId]; continue; }
     const e = led.deliveries[d.cardId] || { cardId: d.cardId, firstSeen: now, checks: 0, status: "new" };
     const prevMode = e.mode;
+    const resend = (d.state === "failed" || d.state === "skipped") ? resentAfter(d) : null;
     Object.assign(e, {
       setId: d.setId, channel: d.channel, language: d.language, label: labelOf(d.channel, d.language),
-      card: (d.template && d.template.label) || d.collection || "card",
+      card: (d.template && d.template.label) || labelOfSet[d.setId] || (e.card && e.card !== "card" ? e.card : "") || pretty(d.collection) || "card",
       caption: String(d.caption || "").slice(0, 700),
       scheduledAt: d.scheduledAt || null, queuedAt: d.queuedAt || null, sentAt: d.sentAt || null,
       fmState: d.state, fmError: d.error ? String(d.error).slice(0, 200) : null, failureStage: d.failureStage || null,
       mode: route.mode, soft: !!route.soft, why: route.why || null, chId: route.read ? route.read.id : null,
       /* who published is kept only as scheduler / editor — the status page is public, an email is not */
       deliveryMode: d.deliveryMode || null, publishedBy: d.publishedBy ? (/^cron:/.test(d.publishedBy) ? "scheduler" : "editor") : null,
+      resentAt: resend ? T(resend.queuedAt) : null, resentSame: resend ? rows.some(s => s.setId === d.setId && s.language === d.language &&
+        s.channel === d.channel && s.cardId !== d.cardId && SENDABLE.has(s.state) && T(s.queuedAt) > T(d.queuedAt)) : null,
     });
     /* a channel switched to "verify" since this delivery was filed (its link was added): check it from now on */
     if (prevMode && prevMode !== e.mode && e.mode === "verify" && ["assumed", "unwatched", "unverifiable"].includes(e.status)) e.status = "waiting";
     const when = T(e.sentAt || e.scheduledAt || e.queuedAt) || now;
     e.when = when;
-    if (!e.capChecked) {
+    if (!e.capChecked && d.caption) {
       e.capChecked = true;
       const problem = captionProblem(d.channel, d.caption);
       if (problem) {
@@ -179,6 +239,9 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
   /* ── 3. FM-side states ── */
   for (const e of Object.values(led.deliveries)) {
     if (e.fmState === "failed" || e.fmState === "skipped") {
+      if (e.resentAt) { e.status = "superseded"; continue; }      // the content team sent it again
+      const since = T(e.queuedAt) || e.when;
+      if (now - since < FAIL_HOLD_MIN * 60e3) { e.status = "fm_failing"; continue; }
       e.status = "fm_failed";
       raise(`fmfail:${e.cardId}`, "fm_failed", `🛑 *FM ${e.fmState}* — ${e.label} · ${ist(e.when)} "${e.card}"` +
         (e.failureStage ? ` — stage: ${e.failureStage}` : "") + (e.fmError ? ` — ${e.fmError}` : ""), e.when);
@@ -194,7 +257,7 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
       if (e.mode === "assume") e.status = "assumed";
       else if (e.mode === "unwatched") e.status = "unwatched";
       else if (e.mode === "unverifiable") e.status = "unverifiable";
-      else if (e.status === "new" || e.status === "fm_pending") e.status = "waiting";
+      else if (["new", "fm_pending", "fm_failing", "fm_failed", "superseded"].includes(e.status)) e.status = "waiting";
     }
   }
 
@@ -205,18 +268,27 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     if (e.status === "verified" || e.status === "late" || e.status === "unverifiable") return false;
     const m = sinceSent(e);
     if (m < FIRST_CHECK_MIN) return false;
-    /* past the late limit only a delivery never looked at gets its one catch-up check (the read covers 30 h) */
-    if (m > LATE_MAX_MIN && (e.checks || 0) > 0) return false;
+    /* past the late limit only a catch-up check (a delivery the pipeline didn't see in time — the read covers
+       30 h) is made, and only until it has a verdict */
+    if (m > LATE_MAX_MIN && (e.checks || 0) > 0 && SETTLED.has(e.status)) return false;
     if ((e.status === "missing" || e.status === "reader_failed") && e.lastCheckAt && now - e.lastCheckAt < RECHECK_MISSING_MIN * 60e3) return false;
     return true;
   });
   const reads = {};
   for (const e of due) if (!reads[e.chId]) reads[e.chId] = routeOf(e.channel, e.language).read;
+  /* health probes: a reader not read for 30 min is read now, card due or not (stalest first, a few a tick) */
+  const allReaders = {}, softReader = new Set();
+  for (const v of Object.values(FM_CHANNELS)) if (v.read && v.mode !== "skip") { allReaders[v.read.id] = v.read; if (v.soft) softReader.add(v.read.id); }
+  const lastRead = id => (led.readers[id] || {}).lastReadAt || 0;
+  const probes = Object.values(allReaders).filter(rd => !reads[rd.id] && now - lastRead(rd.id) >= PROBE_MIN * 60e3)
+    .sort((a, b) => lastRead(a.id) - lastRead(b.id)).slice(0, PROBES_PER_TICK);
+  for (const rd of probes) reads[rd.id] = rd;
 
   const byCh = {};
   if (Object.keys(reads).length) {
     try {
-      const out = await collect(Object.values(reads), { hours: 30, noPaid: true });
+      /* fresh: a read of NOW — never a cached or earlier read (api/collect.js, freshOnly) */
+      const out = await collect(Object.values(reads), { hours: 30, noPaid: true, fresh: true });
       for (const r of out.results || []) byCh[r.channelId] = r;
     } catch (e) { errors.push("collect: " + String(e.message || e)); }
     /* a free read that failed at a delivery's last chance gets ONE paid attempt — never on every tick */
@@ -225,18 +297,22 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     if (lastChance.length && Date.now() - t0 < 30000) {
       for (const e of due) if (lastChance.includes(e.chId)) e.paidTried = true;
       try {
-        const out = await collect(lastChance.map(id => reads[id]), { hours: 30, noPaid: false });
+        const out = await collect(lastChance.map(id => reads[id]), { hours: 30, noPaid: false, fresh: true });
         for (const r of out.results || []) if (r.ok) byCh[r.channelId] = r;
       } catch (e) { errors.push("collect (paid retry): " + String(e.message || e)); }
     }
   }
 
-  /* reader health — a channel failing twice in a row counts as down (shown on the Live page with since
-     when and why), and its recovery too; neither is a notification (INTERNAL) */
-  const softIds = new Set(due.filter(e => e.soft).map(e => e.chId));
-  for (const [id, r] of Object.entries(byCh)) {
+  /* reader health — every read is recorded (when, how many posts, the newest one), a channel failing twice
+     in a row counts as down (shown on the Health page with since when and why), and its recovery too;
+     neither is a notification (INTERNAL) */
+  for (const id of Object.keys(reads)) {
+    const r = byCh[id] || { ok: false, note: "not answered this tick" };
     const h = led.readers[id] || { fails: 0 };
-    if (softIds.has(id)) { led.readers[id] = { ...h, ok: !!r.ok, soft: true, ...(r.ok ? { lastOkAt: now, source: r.source } : { lastFailAt: now, lastError: String(r.note || "").slice(0, 300) }) }; continue; }
+    const newest = Math.max(...(r.posts || []).map(p => T(p.ts)).filter(isFinite));
+    Object.assign(h, { lastReadAt: now, history: [{ at: now, ok: !!r.ok }, ...(h.history || [])].slice(0, 30),
+      ...(r.ok ? { posts: (r.posts || []).length, newestPostAt: isFinite(newest) ? newest : null } : {}) });
+    if (softReader.has(id)) { led.readers[id] = { ...h, ok: !!r.ok, soft: true, ...(r.ok ? { lastOkAt: now, source: r.source, failingSince: null } : { lastFailAt: now, lastError: String(r.note || "").slice(0, 300) }) }; continue; }
     if (r.ok) {
       if (h.down) raise(`up:${id}:${now}`, "reader_up", `🟢 *Reader back* — ${id} is being read again (${r.source})`);
       Object.assign(h, { ok: true, fails: 0, down: false, failingSince: null, lastOkAt: now, source: r.source, lastError: h.lastError || null });
@@ -253,11 +329,16 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
 
   /* ── 5. match ── */
   const claimed = new Set(Object.values(led.deliveries).filter(e => e.postId).map(e => e.chId + ":" + e.postId));
-  /* per channel, all due deliveries against all posts at once — best pairs first */
+  /* per channel, every sent and still unmatched delivery against all posts at once — best pairs first.
+     Not only the due ones: a post with no caption is matched on time alone, and a card sent a minute
+     ago must be there to claim its own post, or an older card that never posted takes it (and the new
+     one is then called missing). Only the due deliveries' results are used this tick. */
   const hits = new Map();
   for (const [id, r] of Object.entries(byCh)) if (r.ok) {
     const used = new Set([...claimed].filter(k => k.startsWith(id + ":")).map(k => k.slice(id.length + 1)));
-    for (const [d, m] of assign(due.filter(e => e.chId === id), r.posts || [], used, WINDOW_MIN, LATE_MAX_MIN)) hits.set(d, m);
+    const open = [...new Set([...due.filter(e => e.chId === id), ...Object.values(led.deliveries).filter(e => e.chId === id && e.mode === "verify" &&
+      e.fmState === "sent" && e.sentAt && !e.postId && sinceSent(e) <= LATE_MAX_MIN)])];
+    for (const [d, m] of assign(open, r.posts || [], used, WINDOW_MIN, LATE_MAX_MIN)) if (due.includes(d)) hits.set(d, m);
   }
   for (const e of due.sort((a, b) => T(a.sentAt) - T(b.sentAt))) {
     const r = byCh[e.chId];
@@ -286,14 +367,25 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
         raise(`late:${e.cardId}`, "late", `🕒 *Arrived late* — ${e.label} · ${ist(e.when)} "${e.card}" — appeared ${Math.round(hit.lag)} min after FM sent it`, e.when);
       continue;
     }
-    /* nothing yet: only call it missing once the window is over AND the read reached back that far */
-    const oldest = Math.min(...(r.posts || []).map(p => T(p.ts)).filter(isFinite));
-    const covered = !(r.posts || []).length || oldest <= T(e.sentAt) + 60e3;
+    /* nothing yet: only call it missing once the window is over AND the read could have shown it — it
+       reached back past the post's time (a post may be stamped up to 5 min before FM's send), it was
+       complete, and it had posts at all (a read with none proves nothing). And never on one read: the
+       post must be absent from two reads at least a minute apart. */
+    const posts = r.posts || [];
+    const oldest = Math.min(...posts.map(p => T(p.ts)).filter(isFinite));
+    const covered = posts.length > 0 && !r.partialRead && oldest <= T(e.sentAt) - 5 * 60e3;
     if (m >= WINDOW_MIN) {
       /* a catch-up check of a delivery from before the pipeline ran: the read no longer reaches back that far.
          Nothing is known either way — neutral, not a problem */
       if (!covered && m > LATE_MAX_MIN) { e.readNote = "too old to check — sent before the pipeline was watching"; e.status = "unchecked"; continue; }
-      if (!covered) { e.readNote = "the read did not reach back to this post's time"; e.status = "reader_failed"; continue; }
+      if (!covered) {
+        e.readNote = !posts.length ? "the read returned no posts" : r.partialRead ? "the read was partial — " + String(r.note || "").slice(0, 140)
+          : "the read did not reach back to this post's time";
+        if (m >= WINDOW_MIN + READ_GRACE_MIN) e.status = "reader_failed";
+        continue;
+      }
+      e.absent = (e.absent || 0) + 1;
+      if (e.status !== "missing" && e.absent < 2) continue;
       if (e.status !== "missing") {
         e.status = "missing";
         raise(`miss:${e.cardId}`, "missing", `❌ *Missing* — ${e.label} · ${ist(e.when)} "${e.card}" — FM sent it at ${ist(T(e.sentAt))}, not on the channel after ${WINDOW_MIN} min` +
@@ -319,28 +411,32 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     catch (e) { errors.push("report merge: " + String(e.message || e)); }
   }
 
-  /* ── 7. drop summaries, once every delivery of a drop is settled ── */
-  const bySet = dropsOf(led.deliveries);
-  for (const [setId, list] of Object.entries(bySet)) {
-    const slot = led.slots[setId] = led.slots[setId] || {};
-    if (slot.summarySent) continue;
-    const sentOnes = list.filter(e => e.fmState === "sent");
+  /* ── 7. drop reports: once every delivery of a drop is settled — once per drop, ever, and only a current one ── */
+  const members = placeDrops(led);
+  for (const [key, list] of Object.entries(members)) {
+    const drop = led.drops[key];
+    if (drop.summarySent) continue;
     if (!list.every(e => SETTLED.has(e.status))) continue;
     if (list.some(e => e.mode === "verify" && e.fmState === "sent" && sinceSent(e) < WINDOW_MIN)) continue;
-    slot.summarySent = now;
+    drop.summarySent = now;
+    if (!current(drop.last)) { drop.stale = true; continue; }     // never a report about an earlier day
     /* the full drop report (pipeline/report.js): every channel per language, when it landed, how fast,
-       what wasn't checked and why, and every problem with its reason */
-    const d = dropData(list);
+       what wasn't checked and why, every problem with its reason — and a first attempt the content team
+       sent again */
+    const sets = new Set(list.map(e => e.setId));
+    const retried = Object.values(led.deliveries).filter(e => e.status === "superseded" && sets.has(e.setId));
+    const d = dropData(list, { retried });
     const title = (d.problems.length ? "⚠️ " : "✅ ") + `${ist(d.when)} ${d.card} — ` +
-      (d.problems.length ? `${d.problems.length} problem${d.problems.length === 1 ? "" : "s"}` : `all delivered (${d.ok}/${d.checked})`);
-    raise(`slot:${setId}`, "slot", dropText(d), d.when, { report: d, title });
+      (d.notSent ? `not sent — FM/CMS failed on ${d.problems.length} channel${d.problems.length === 1 ? "" : "s"}`
+        : d.problems.length ? `${d.problems.length} problem${d.problems.length === 1 ? "" : "s"}` : `all delivered (${d.ok}/${d.checked})`);
+    raise(`slot:${key}`, "slot", dropText(d), drop.last, { report: d, title });
   }
 
   /* ── 8. the nightly digest (after 23:00 IST, once a day) ── */
   const day = istDay(now);
   if (new Date(now + 5.5 * 3600e3).getUTCHours() >= 23 && led.lastDigestDay !== day) {
     led.lastDigestDay = day;
-    const todays = Object.values(led.deliveries).filter(e => istDay(e.when) === day);
+    const todays = Object.values(led.deliveries).filter(e => istDay(e.when) === day && e.status !== "superseded");
     if (todays.length) {
       const c = s => todays.filter(e => e.status === s).length;
       raise(`digest:${day}`, "digest", [`📊 *Today ${day}* — ${todays.length} FM deliveries in ${new Set(todays.map(e => e.dropKey || e.setId)).size} drops`,
@@ -392,20 +488,25 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     } catch (e) { errors.push("whatsapp: " + String(e.message || e)); }
   }
 
-  /* ── 10. tidy and save ── */
+  /* ── 10. tidy and save — a drop is cleaned up only as a whole (see the header) ── */
   const keepFrom = now - KEEP_DAYS * 86400e3;
-  for (const [k, e] of Object.entries(led.deliveries)) if ((e.when || e.firstSeen) < keepFrom) delete led.deliveries[k];
-  for (const k of Object.keys(led.slots)) if (!bySet[k]) delete led.slots[k];
-  for (const [k, at] of Object.entries(led.sent)) if (at < keepFrom) delete led.sent[k];
+  for (const [k, d] of Object.entries(led.drops)) if (d.last < keepFrom) {
+    for (const e of members[k] || []) delete led.deliveries[e.cardId];
+    delete led.drops[k];
+  }
+  for (const [k, e] of Object.entries(led.deliveries)) if (!e.dropKey && (e.when || e.firstSeen) < keepFrom) delete led.deliveries[k];
+  /* alert keys outlive what they are about by a day, so nothing is ever "new" twice */
+  for (const [k, at] of Object.entries(led.sent)) if (at < keepFrom - 86400e3) delete led.sent[k];
   led.alerts = led.alerts.slice(0, 300);
   led.outbox = led.outbox.slice(-20);
   led.lastTickAt = now;
   led.ticks = (led.ticks || 0) + 1;
-  led.lastTick = { at: now, ms: Date.now() - t0, fm: fmRows ? fmRows.length : null, read: Object.keys(reads), checked: due.length,
-                   alerts: news.length, errors };
+  led.lastTick = { at: now, ms: Date.now() - t0, fm: fmRows ? fmRows.length : null, read: Object.keys(reads), probes: probes.map(p => p.id),
+                   checked: due.length, alerts: news.length, errors };
+  led.tickLog = [{ at: now, ms: led.lastTick.ms, errors: errors.length }, ...(led.tickLog || [])].slice(0, 60);
   await store.saveLedger(led, lock.updatedAt, true);
   return { ok: true, ...led.lastTick };
   }
 }
 
-module.exports = { tick, WINDOW_MIN, PIPELINE_URL };
+module.exports = { tick, placeDrops, WINDOW_MIN, PIPELINE_URL, FRESH_H, PROBE_MIN };

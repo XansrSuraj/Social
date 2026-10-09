@@ -4,9 +4,13 @@
  * Read-only proxy in front of the real FM Deliveries feed (docs: "FM Deliveries API — consumer
  * guide"). Exists so the dashboard's own x-api-key per environment stays server-side
  * (FM_DELIVERIES_API_KEY_DEV/TEST/PROD in fm-deliveries-client.js) instead of shipping to the
- * browser. Every filter the upstream accepts is passed through as-is — nothing here defaults,
- * renames or validates a value beyond what the query string already says, so a 400 for a bad filter
- * is the CMS's own message, not a guess of ours.
+ * browser. Every filter the upstream accepts is passed through — nothing here defaults or validates
+ * a value, so a 400 for a bad filter is the CMS's own message, not a guess of ours.
+ *
+ * One rename: `language` matches FM's fmLanguageKey, and FM files Portuguese as "portuguese-br" —
+ * so `language=portuguese` (what every card's own `language` field says) found nothing at all
+ * (9 Oct 2026). The everyday names are mapped to FM's keys; the key used is echoed in the
+ * X-FM-Language header.
  *
  * GET only. There is no other method handler because this dashboard never writes anything.
  */
@@ -16,6 +20,10 @@ const PASSTHROUGH = [
   "since", "until", "timeField", "channel", "language", "state", "outcome",
   "cardId", "setId", "matchId", "attempts", "limit", "page",
 ];
+const LANGUAGE_KEY = { portuguese: "portuguese-br", pt: "portuguese-br", "pt-br": "portuguese-br", brazilian: "portuguese-br",
+                       en: "english", vi: "vietnamese", vn: "vietnamese" };
+const fmLanguage = v => String(v).split(",").map(x => x.trim()).filter(Boolean)
+  .map(x => LANGUAGE_KEY[x.toLowerCase()] || x).join(",");
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -30,6 +38,7 @@ module.exports = async (req, res) => {
     if (v === undefined) continue;
     query[k] = Array.isArray(v) ? v.join(",") : v;
   }
+  if (query.language) { query.language = fmLanguage(query.language); res.setHeader("X-FM-Language", query.language); }
 
   const { status, body } = await upstreamGet(req.query && req.query.env, "/api/fm-deliveries-feed", query);
   return res.status(status).json(body);

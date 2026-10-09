@@ -36,6 +36,16 @@ export function EngineProvider({ children }) {
   const E = engines.current[brand.id];
   const booted = useRef(new Set());
   useEffect(() => { if (!booted.current.has(brand.id)) { booted.current.add(brand.id); E.boot(); } }, [E, brand.id]);
+  /* keep an open tab current (engine.js, sync): the shared report every minute while visible, and at
+     once when the tab comes back — never mid-check */
+  const busy = useRef(false);
+  busy.current = !!running[brand.id];
+  useEffect(() => {
+    const tick = () => { if (!document.hidden && !busy.current && E.sync) E.sync(); };
+    const t = setInterval(tick, 60000);
+    document.addEventListener("visibilitychange", tick);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", tick); };
+  }, [E]);
 
   /* one press reads every channel of every region of this brand; the page follows along */
   const run = useCallback(async (serverOnly) => {

@@ -21,6 +21,7 @@ const teams = require("../pipeline/teams.js");
 const { dropData, dropText } = require("../pipeline/report.js");
 const { tick, PIPELINE_URL } = require("../pipeline/tick.js");
 const { FM_CHANNELS, labelOf } = require("../pipeline/channels.js");
+const { healthOf } = require("../pipeline/health.js");
 
 /* every FM delivery queued OR sent since `since` (both time fields, so nothing falls between) */
 async function fmDeliveries({ since }) {
@@ -141,6 +142,8 @@ module.exports = async (req, res) => {
       .map(({ caption, ...e }) => ({ ...e, captionHead: String(caption || "").replace(/\s+/g, " ").slice(0, 140) }));
     return res.status(200).json({
       ok: true, now: new Date().toISOString(),
+      /* the Health page: one verdict per part — clock, FM, every reader, every alert channel */
+      health: healthOf(led, Date.now(), { teams: teams.configured(), push: wa.pushConfigured(), whatsapp: wa.configured() }),
       lastTick: led.lastTick || null, lastTickAt: led.lastTickAt || null, ticks: led.ticks || 0, startedAt: led.startedAt || null,
       lastCrash: led.lastCrash || null, fm: led.fm || null, readers: led.readers || {},
       whatsapp: { configured: wa.configured(), push: wa.pushConfigured(), teams: teams.configured(), outbox: (led.outbox || []).length, log: led.waLog || [] },

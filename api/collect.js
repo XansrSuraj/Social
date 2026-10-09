@@ -29,6 +29,11 @@ const { AsyncLocalStorage } = require("async_hooks");
    paid for. Held per request (AsyncLocalStorage) so two requests sharing an instance never mix. */
 const policy = new AsyncLocalStorage();
 const noPaid = () => !!(policy.getStore() && policy.getStore().noPaid);
+/* { fresh: true } — the pipeline decides "the post is not there" from a read, so a read must be of NOW:
+   no cached Apify / twitterapi.io / Telegram-session read, no "last good read" fallback, no posts pushed
+   in earlier (ingest). Each of those comes back ok:true with yesterday's picture and would turn a post
+   made since into a false "missing". (2026-10-10 review.) */
+const freshOnly = () => !!(policy.getStore() && policy.getStore().fresh);
 
 const TIMEOUT = 12000;
 const MAX_CHANNELS = 40;
@@ -256,6 +261,7 @@ const apifyItemError = it => it && (it.errorDescription || it.error || it.errorM
 /* Cache of a paid read. Repeated "Run daily check" clicks inside the window cost nothing. */
 const APIFY_CACHE_MS = 15 * 60e3;
 async function apifyCached(cacheName) {
+  if (freshOnly()) return null;
   try { const c = await ingest.cacheGet(cacheName, APIFY_CACHE_MS); return c && c.length ? c : null; }
   catch (e) { return null; }
 }
@@ -272,6 +278,7 @@ const CACHED_COST = { usd: 0, cached: true };
    read / unknown", never a false cross. (This is exactly what a prolonged outage — e.g. Apify's
    monthly free credits running out — must not turn into invented misses.) */
 async function staleRead(cacheName) {
+  if (freshOnly()) return null;
   try { const c = await ingest.cacheGet(cacheName, 20 * 60e3); return c && c.length ? c : null; }
   catch (e) { return null; }
 }
@@ -667,7 +674,9 @@ function ytPost(vid, j, isShort) {
   /* uploadDate carries the offset and publishDate is the same instant; without either the video
      cannot be placed on the timeline, so it counts as unread rather than as undated */
   const when = mf && (mf.uploadDate || mf.publishDate);
-  if (!when) return null;
+  /* a bare date ("2026-10-09") would land the video at midnight UTC and never match its card —
+     a video without its time is unread, not undated */
+  if (!when || !/T\d\d:\d\d/.test(when)) return null;
   const at = new Date(when);
   if (isNaN(at.getTime())) return null;
   const title = (vd && vd.title) || ytText(mf && mf.title);
@@ -704,6 +713,9 @@ async function collectYouTubeWeb(ch, cutoff) {
   ]);
   const pages = [vTab, sTab].filter(p => typeof p === "string");
   if (!pages.length) throw new Error(String(vTab.message || vTab));
+  /* one tab refusing (not "no such tab") leaves its videos unseen — the read is partial, and the
+     pipeline never calls a post missing on a partial read (every SportsFC card is a Short) */
+  const tabFailed = [vTab, sTab].filter(p => p instanceof Error && p.status !== 404).map(p => String(p.message || p).slice(0, 120));
 
   const found = pages[0].match(/"externalId"\s*:\s*"(UC[\w-]{20,})"/);
   const id = t.id || (found && found[1]) || "";
@@ -735,13 +747,15 @@ async function collectYouTubeWeb(ch, cutoff) {
 
   const posts = [];
   const why = { route: "", tried: "" };
-  let read = 0, looked = 0;
+  let read = 0, looked = 0, missed = 0;
   for (let i = 0; i < order.length && looked < YT_MAX; i += YT_ROUND) {
     const batch = order.slice(i, i + YT_ROUND);
     looked += batch.length;
     const got = await Promise.all(
       batch.map(v => ytMeta(v, creds, why).then(j => ytPost(v, j, shorts.has(v)))));
     let fresh = 0;
+    /* a video in the newest round that could not be described is most likely the one just posted */
+    if (i === 0) missed = got.filter(p => !p).length;
     for (const p of got) {
       if (!p) continue;
       read++;
@@ -768,8 +782,11 @@ async function collectYouTubeWeb(ch, cutoff) {
 
   return {
     posts, resolved, source: "youtube-web",
+    partialRead: tabFailed.length > 0 || missed > 0,
     note: "Read from the channel page via " + (why.route || "InnerTube") + " — no API key is " +
-          "set. Setting YOUTUBE_API_KEY switches this to the official API, which is sturdier.",
+          "set. Setting YOUTUBE_API_KEY switches this to the official API, which is sturdier." +
+          (tabFailed.length ? " Partial: " + tabFailed.join("; ") : "") +
+          (missed ? ` Partial: ${missed} of the newest videos could not be described.` : ""),
   };
 }
 
@@ -970,7 +987,7 @@ function collectXApify(handle) {
 /* 2) twitterapi.io — kept as a second paid route for when Apify cannot answer. */
 async function collectXTwitterApi(handle) {
   const cacheName = "x:" + handle.toLowerCase();
-  try {
+  if (!freshOnly()) try {
     const cached = await ingest.cacheGet(cacheName, 10 * 60e3);
     if (cached && cached.length) return { posts: cached, source: "x-api", note: "read via twitterapi.io (cached ~10 min to save credits)" };
   } catch (e) { /* cache miss is fine */ }
@@ -1594,9 +1611,11 @@ async function collectTgBot(ch) {
     throw new Error("Telegram bot needs TG_API_ID / TG_API_HASH / TG_SESSION set (run tg-login.js once)");
 
   const cacheName = "tgbot:" + target.toLowerCase();
+  /* a session login is slow, so the website's runs share a 15-min copy; the pipeline takes one only if
+     it is under a minute old (one tick) */
   try {
-    const c = await ingest.cacheGet(cacheName, 15 * 60e3);
-    if (c && c.length) return { posts: c, source: "telegram-mtproto", note: "read via Telegram user-session (cached ~15 min)" };
+    const c = await ingest.cacheGet(cacheName, freshOnly() ? 60e3 : 15 * 60e3);
+    if (c && c.length) return { posts: c, source: "telegram-mtproto", note: freshOnly() ? "read via Telegram user-session" : "read via Telegram user-session (cached ~15 min)" };
   } catch (e) { /* cache miss is fine */ }
 
   let messages;
@@ -1679,7 +1698,7 @@ async function collectOne(ch, cutoff, pushedAll) {
      channel — not re-read here. A run of N channels used to fire up to 2N separate full-table
      reads (one, sometimes two, per channel) against the same Supabase row just to answer "was
      anything pushed for this one", all in parallel; one shared read serves all of them. */
-  try {
+  if (!freshOnly()) try {
     const arr = k => (Array.isArray(pushedAll[k]) ? pushedAll[k] : []);
     let pushed = arr(ch.id);
     if (!pushed.length) {
@@ -1769,7 +1788,7 @@ module.exports = async (req, res) => {
 async function collectChannels(channels, opts) {
   const hours = (opts && opts.hours) || 24;
   const cutoff = Date.now() - hours * 3600e3;
-  return policy.run({ noPaid: !!(opts && opts.noPaid) }, async () => {
+  return policy.run({ noPaid: !!(opts && opts.noPaid), fresh: !!(opts && opts.fresh) }, async () => {
     /* One read for the whole batch — see the comment in collectOne for why. An unreachable store
        must never take a readable channel down with it, so a failure here just means every channel
        finds nothing pushed and falls through to its own collector, exactly as before. */

@@ -17,6 +17,8 @@ const STATUS = {
   unverifiable:   { g: "?", cls: "na",   t: "can't be checked (Instagram 18+)" },
   fm_pending:     { g: "…", cls: "none", t: "FM hasn't sent it yet" },
   fm_failed:      { g: "✗", cls: "miss", t: "FM failed to send it" },
+  fm_failing:     { g: "…", cls: "none", t: "FM failed — waiting 5 min in case the content team sends it again" },
+  superseded:     { g: "↻", cls: "na",   t: "a failed first attempt — the content team sent it again" },
   fm_unconfirmed: { g: "?", cls: "lang", t: "FM can't confirm" },
   unchecked:      { g: "·", cls: "na",   t: "not checked — sent before the pipeline was watching" },
 };
@@ -33,7 +35,9 @@ export default function Live() {
   const [s, setS] = useState(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState("");
-  const [day, setDay] = useState(istDay(Date.now()));
+  /* null = today, worked out on every render — an open tab moves on to the new day at midnight */
+  const [picked, setDay] = useState(null);
+  const day = picked || istDay(Date.now());
   const load = useCallback(async () => {
     try { const r = await fetch("api/pipeline", { cache: "no-store" }); const j = await r.json(); if (!j.ok) throw new Error(j.error || "failed"); setS(j); setErr(""); }
     catch (e) { setErr(String(e.message || e)); }
@@ -58,15 +62,19 @@ export default function Live() {
     </div></section>
   );
 
-  const days = [...new Set(s.deliveries.map(e => istDay(e.when)))].sort().reverse();
-  const list = s.deliveries.filter(e => istDay(e.when) === day);
+  /* today is always a tab — an empty one says so — and is first */
+  const days = [...new Set([istDay(Date.now()), ...s.deliveries.map(e => istDay(e.when))])].sort().reverse();
+  const dayAll = s.deliveries.filter(e => istDay(e.when) === day);
+  /* a superseded attempt is not a drop of its own — it is a note on the drop that was sent instead */
+  const list = dayAll.filter(e => e.status !== "superseded");
+  const retried = dayAll.filter(e => e.status === "superseded");
   const sets = {};
   for (const e of list) (sets[e.dropKey || e.setId] = sets[e.dropKey || e.setId] || []).push(e);
   const drops = Object.values(sets).sort((a, b) => Math.min(...b.map(e => e.when)) - Math.min(...a.map(e => e.when)));
   const checked = list.filter(e => e.mode === "verify" && e.fmState === "sent" && e.status !== "unverifiable");
   const okN = checked.filter(e => e.status === "verified" || e.status === "late").length;
   const problems = list.filter(e => ["missing", "fm_failed", "reader_failed", "fm_unconfirmed"].includes(e.status)).length;
-  const readers = Object.entries(s.readers || {});
+  const readers = ((s.health && s.health.groups.find(g => g.id === "readers")) || { items: [] }).items;
   const tickFresh = s.lastTickAt && Date.now() - s.lastTickAt < 12 * 60e3;
 
   return (
@@ -77,7 +85,7 @@ export default function Live() {
             <div>
               <span className="eyebrow">SportsFC · Live pipeline</span>
               <h1 className="display l">FM → <b>every channel</b></h1>
-              <div className="rp-when">Every card FM sends is looked for on each channel within 20 minutes — automatically, every 5 minutes. Every result and problem goes to Teams, your phone (ntfy) and WhatsApp.</div>
+              <div className="rp-when">Every card FM sends is looked for on each channel within 20 minutes — automatically, every minute. Every result and problem goes to Teams, your phone (ntfy) and WhatsApp.</div>
             </div>
             <div className="rp-actions">
               <button className="btn btn-line btn-sm" disabled={!!busy} onClick={() => act("tick", "Check")}>{busy === "tick" ? <Loader2 className="spin" /> : <Play />}Check now</button>
@@ -104,14 +112,17 @@ export default function Live() {
                 ? (s.whatsapp.log[0] ? `last: ${s.whatsapp.log[0].ok ? "sent" : "failed"}${s.whatsapp.log[0].via ? " (" + s.whatsapp.log[0].via + ")" : ""} ${ago(s.whatsapp.log[0].at)}` : "nothing sent yet")
                 : "set TEAMS_WEBHOOK_URL, NTFY_TOPIC or WhatsApp"}</div></div>
           </div>
-          <SystemStatus s={s} />
+          <HealthStrip h={s.health} />
 
           <div className="tabs">
             {days.map(d => <button key={d} className={`tab${d === day ? " on" : ""}`} onClick={() => setDay(d)}>{d === istDay(Date.now()) ? "Today" : d}</button>)}
-            {!days.length && <span className="label" style={{ alignSelf: "center" }}>No FM deliveries yet</span>}
+
           </div>
 
           <div className="drops">
+            {!drops.length && <div className="card empty" style={{ padding: 28 }}>{day === istDay(Date.now())
+              ? <><b>Nothing from FM yet today.</b><div>Every card FM sends today appears here within a minute, and is checked on every channel.</div></>
+              : <b>No FM deliveries on {day}.</b>}</div>}
             {drops.map(ds => {
               const first = Math.min(...ds.map(e => e.when));
               const bad = ds.filter(e => ["missing", "fm_failed", "reader_failed", "fm_unconfirmed"].includes(e.status));
@@ -122,8 +133,8 @@ export default function Live() {
                     <b className="mono">{ist(first)}</b>
                     <span className="pill un">{[...new Set(ds.map(e => e.card))].join(" + ")}</span>
                     <span className="pill un">{ds.some(e => e.deliveryMode === "now") ? "sent now" : "scheduled"}</span>
-                    <span className={`pill ${bad.length ? "short" : ds.some(e => ["waiting", "new", "fm_pending"].includes(e.status)) ? "sg" : "ok"}`}>
-                      {bad.length ? `${bad.length} problem${bad.length === 1 ? "" : "s"}` : ds.some(e => ["waiting", "new", "fm_pending"].includes(e.status)) ? "checking…" : "delivered"}</span>
+                    <span className={`pill ${bad.length ? "short" : ds.some(e => ["waiting", "new", "fm_pending", "fm_failing"].includes(e.status)) ? "sg" : "ok"}`}>
+                      {bad.length ? `${bad.length} problem${bad.length === 1 ? "" : "s"}` : ds.some(e => ["waiting", "new", "fm_pending", "fm_failing"].includes(e.status)) ? "checking…" : "delivered"}</span>
                   </div>
                   {langs.map(lg => (
                     <div key={lg} className="live-row">
@@ -142,6 +153,8 @@ export default function Live() {
                       </div>
                     </div>
                   ))}
+                  {(() => { const sets = new Set(ds.map(e => e.setId)); const r = retried.filter(e => sets.has(e.setId));
+                    return r.length ? <div className="note-warn">A first attempt at {ist(Math.min(...r.map(e => Date.parse(e.queuedAt) || e.when)))} was {r[0].fmState} by {r[0].failureStage === "cms" ? "the CMS" : "FM"} on {r.length} channel{r.length === 1 ? "" : "s"}{r[0].fmError ? ` (${r[0].fmError.replace(/\s*—.*$/, "")})` : ""} — the content team sent it again; this is that send.</div> : null; })()}
                   {bad.map(e => <div key={e.cardId} className="note-miss">{e.label}: {STATUS[e.status].t}{e.capProblem ? ` — likely why: ${e.capProblem}` : ""}{e.readNote ? ` — ${e.readNote}` : ""}</div>)}
                   {ds.filter(e => e.capProblem && !bad.includes(e)).map(e => <div key={e.cardId + "c"} className="note-warn">{e.label}: {e.capProblem}</div>)}
                 </div>
@@ -158,11 +171,11 @@ export default function Live() {
               )) : <div className="empty" style={{ padding: 20 }}>No alerts yet.</div>}
             </div>
             <div className="card live-panel">
-              <h3><Activity /> Readers</h3>
-              {readers.length ? readers.sort().map(([id, h]) => (
-                <div key={id} className="live-reader"><span className={`dot ${h.down ? "bad" : h.ok ? "ok" : h.soft ? "" : "warn"}`} /><b>{(s.readerLabels || {})[id] || id}</b>
-                  <span>{h.ok ? `${h.source || "ok"} · ${ago(h.lastOkAt)}` : h.soft ? "18+ — waiting for the age restriction to be lifted" : `failing · ${String(h.lastError || "").slice(0, 80)}`}</span></div>
-              )) : <div className="empty" style={{ padding: 20 }}>Readers are only asked when a card is due.</div>}
+              <h3><Activity /> Readers <a href="#/health" className="tg" style={{ marginLeft: "auto" }}>full health →</a></h3>
+              {readers.map(i => (
+                <div key={i.id} className="live-reader" title={i.detail}><span className={`dot ${i.state === "ok" ? "ok" : i.state === "bad" ? "bad" : "warn"}`} /><b>{i.name}</b>
+                  <span>{i.detail}</span></div>
+              ))}
               <h3 style={{ marginTop: 20 }}><Radio /> What FM sends, and how it's checked</h3>
               {(s.coverage || []).map(c => (
                 <div key={c.fm} className="live-reader"><span className={`dot ${c.mode === "verify" ? "ok" : c.mode === "assume" ? "warn" : ""}`} /><b>{c.fm}</b>
@@ -179,64 +192,20 @@ export default function Live() {
   );
 }
 
-/* What is down right now, and what was recently. Scraper health lives here rather than in notifications:
-   the free readers hiccup for a minute or two and recover on their own, so this page is where to look. */
-function SystemStatus({ s }) {
-  const now = Date.now();
-  const names = s.readerLabels || {};
-  const rename = text => Object.entries(names).reduce((t, [id, label]) => t.split(id).join(label), String(text || ""));
-  const rows = [];
-
-  const tickAge = s.lastTickAt ? now - s.lastTickAt : null;
-  const clockOk = tickAge != null && tickAge < 12 * 60e3;
-  rows.push({ ok: clockOk, name: "Automatic checks",
-    text: tickAge == null ? "not run yet" : clockOk ? `running · last check ${ago(s.lastTickAt)}`
-      : `no check for ${Math.round(tickAge / 60e3)} min — the clock (cron-job.org) may be down` });
-
-  const fm = s.fm || {};
-  rows.push({ ok: !!fm.ok, name: "FM Deliveries feed",
-    text: fm.ok ? `OK · ${fm.count} deliveries in the last 36 h`
-      : fm.failingSince ? `down since ${ist(fm.failingSince)} — ${fm.lastError || "no answer"}` : "not read yet" });
-
-  const readers = Object.entries(s.readers || {});
-  const failing = readers.filter(([, h]) => !h.ok);
-  rows.push({ ok: !failing.length, name: "Channel readers",
-    text: readers.length ? `${readers.length - failing.length} of ${readers.length} working` : "asked only when a card is due",
-    sub: failing.map(([id, h]) => `${names[id] || id} — not readable since ${ist(h.failingSince || h.lastFailAt)}: ` +
-      `${String(h.lastError || "").replace(/ — the paid fallback is skipped on automatic checks/, "").slice(0, 100)} · retrying every minute`) });
-
-  const log = (s.whatsapp && s.whatsapp.log) || [];
-  const lastOf = via => log.find(l => (l.via || "whatsapp") === via);
-  const outs = [["teams", "Teams", s.whatsapp.teams], ["push", "Phone (ntfy)", s.whatsapp.push], ["whatsapp", "WhatsApp", s.whatsapp.configured]];
-  const broken = outs.filter(([via, , on]) => on && lastOf(via) && !lastOf(via).ok);
-  rows.push({ ok: !broken.length, name: "Alerts",
-    text: outs.map(([, label, on]) => `${label} ${on ? "✓" : "— not set up"}`).join(" · "),
-    sub: broken.map(([via, label]) => `${label}: the last send failed ${ago(lastOf(via).at)} — ${lastOf(via).error || "no reason given"}`) });
-
-  const issues = rows.filter(r => !r.ok).length;
-  const recent = (s.alerts || []).filter(a => READER_KINDS.has(a.kind)).slice(0, 6);
+/* The system's health in one line — the full picture is the Health page (#/health). Scraper hiccups live
+   there rather than in notifications: the free readers fail for a minute or two and recover on their own. */
+function HealthStrip({ h }) {
+  if (!h) return null;
+  const bad = h.groups.flatMap(g => g.items).filter(i => i.state === "bad");
   return (
-    <div className="card sys">
-      <div className="sys-head">
-        <h3><Activity /> System status</h3>
-        <span className={`pill ${issues ? "short" : "ok"}`}>{issues ? `${issues} issue${issues === 1 ? "" : "s"}` : "All systems working"}</span>
+    <div className="card live-health">
+      <div>
+        <span className={`dot ${h.overall === "ok" ? "ok live" : h.overall === "down" ? "bad live" : "warn live"}`} />
+        <b>System health</b>
+        <span className={`pill ${h.overall === "ok" ? "ok" : h.overall === "down" ? "short" : "sg"}`}>{h.overall === "ok" ? "All systems working" : h.overall === "down" ? "Not working" : "Working, with things to check"}</span>
+        <span style={{ color: "var(--muted)" }}>{bad.length ? bad.map(i => `${i.name}: ${i.detail}`).join(" · ").slice(0, 220) : h.summary}</span>
       </div>
-      {rows.map(r => (
-        <div key={r.name} className="sys-row">
-          <span className={`dot ${r.ok ? "ok" : "bad"}`} />
-          <b>{r.name}</b>
-          <span>{r.text}{(r.sub || []).map((x, i) => <span key={i} className="sys-sub">{x}</span>)}</span>
-        </div>
-      ))}
-      {recent.length > 0 && (
-        <div className="sys-recent">
-          <div className="label">Recent reader incidents · shown here only, not sent as notifications</div>
-          {recent.map((a, i) => (
-            <div key={i} className="sys-inc"><span className="mono">{istDay(a.at).slice(5)} {ist(a.at)}</span>
-              <span>{rename(a.text).replace(/\*/g, "").replace(/ — the paid fallback is skipped on automatic checks/g, "")}</span></div>
-          ))}
-        </div>
-      )}
+      <a className="btn btn-line btn-sm" href="#/health"><Activity />Open System health</a>
     </div>
   );
 }
