@@ -89,6 +89,22 @@ never on every tick — so the pipeline costs nothing on a normal day.
 Ticks closer than 40 s apart, or overlapping, do nothing — so several clocks are safe; and a late tick
 catches up on everything that is due.
 
+## Staying on Supabase's free plan
+
+Supabase's free plan counts every byte it **sends back** (egress, 5 GB a month). Reading the whole ledger
+(~0.4 MB) every minute, and getting it back again on every write, used ~300 MB a day — the quota was
+exceeded in September 2026 (grace period to 21 Oct). Since 10 Oct:
+
+- a tick takes the lock by a conditional write onto the copy its instance already holds — no read at all
+  unless something else wrote the row (`pipeline/store.js`); every write gets back only the row's id;
+- the Live and Health pages are answered from that copy when it is under a minute old;
+- the shared daily-check report is merged into at most every 15 min, and only when a read found a new post;
+- the website's every-minute sync asks "changed since my copy?" (a few bytes) before reading the report;
+- the pipeline's reads never open the ingest row.
+
+`test/store.test.js` checks it: ten ticks read the ledger once. Supabase → Usage shows the real figure
+(it refreshes hourly).
+
 ## WhatsApp setup (once, by the phone's owner — never paste the key in chat)
 
 1. In WhatsApp, send **`I allow callmebot to send me messages`** to **+34 644 05 92 17** (CallMeBot,

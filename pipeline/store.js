@@ -61,21 +61,43 @@ async function writeRow(id, data, base) {
   return now;
 }
 
-/* ── the ledger, with a lock so two ticks never work on it at once ── */
+/* ── the ledger, with a lock so two ticks never work on it at once ──
+   Supabase's free plan counts every byte it sends back (egress, 5 GB a month), and reading the whole
+   ledger every minute used most of it — the quota was exceeded in September 2026. So this instance keeps
+   the copy it last read or wrote, and a tick takes the lock by writing onto that copy *conditionally*
+   (compare-and-set on updated_at): if the row is still what this instance last saw, no read is needed at
+   all; if anything else wrote it meanwhile (another instance, a test alert), the write is refused and the
+   row is read as before. Writes send the row (ingress, free) and get back only its id. */
 const LOCK_MS = 150000;
+const clone = o => (o == null ? o : JSON.parse(JSON.stringify(o)));
+let mem = null;                                   // { data, updatedAt, at } — this instance's last known copy
+const remember = (data, updatedAt) => { mem = { data: clone(data), updatedAt, at: Date.now() }; };
 async function lockLedger(owner) {
+  if (mem && !(mem.data && mem.data.lock && mem.data.lock.until > Date.now())) {
+    const mine = { ...clone(mem.data || {}), lock: { owner, until: Date.now() + LOCK_MS } };
+    try { const ts = await writeRow(LEDGER_ROW, mine, mem.updatedAt); remember(mine, ts); return { ledger: mine, updatedAt: ts }; }
+    catch (e) { if (!(e instanceof Conflict)) throw e; mem = null; }    // changed elsewhere — read it below
+  }
   const { data, updatedAt } = await readRow(LEDGER_ROW);
   const led = data || {};
-  if (led.lock && led.lock.until > Date.now()) return null;           // another tick is running
+  if (led.lock && led.lock.until > Date.now()) { remember(led, updatedAt); return null; }   // another tick is running
   const mine = { ...led, lock: { owner, until: Date.now() + LOCK_MS } };
-  try { return { ledger: mine, updatedAt: await writeRow(LEDGER_ROW, mine, updatedAt) }; }
-  catch (e) { if (e instanceof Conflict) return null; throw e; }
+  try { const ts = await writeRow(LEDGER_ROW, mine, updatedAt); remember(mine, ts); return { ledger: mine, updatedAt: ts }; }
+  catch (e) { if (e instanceof Conflict) { mem = null; return null; } throw e; }
 }
 async function saveLedger(ledger, updatedAt, release) {
   const out = release ? { ...ledger, lock: null } : ledger;
-  return writeRow(LEDGER_ROW, out, updatedAt);
+  try { const ts = await writeRow(LEDGER_ROW, out, updatedAt); remember(out, ts); return ts; }
+  catch (e) { mem = null; throw e; }
 }
-const readLedger = async () => (await readRow(LEDGER_ROW)).data || {};
+/* the status endpoint (Live and Health pages, every minute): this instance's copy if it is under a
+   minute old — the pipeline itself only changes once a minute — else one read */
+async function readLedger() {
+  if (mem && Date.now() - mem.at < 60e3) return clone(mem.data) || {};
+  const { data, updatedAt } = await readRow(LEDGER_ROW);
+  remember(data || {}, updatedAt);
+  return data || {};
+}
 
 /* ── the daily-check report: merge freshly read posts, never clobber a browser's save ── */
 const POST_KEEP_DAYS = 14;

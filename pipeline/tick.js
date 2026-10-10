@@ -429,7 +429,8 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
      shared report row (~0.5 MB), and the health probes read 3 channels every minute. */
   const seen = id => new Set((led.readers[id] || {}).seenIds || []);
   const okReads = Object.values(byCh).filter(r => r.ok && (r.posts || []).some(p => p && p.externalId && !seen(r.channelId).has(p.externalId)));
-  if (okReads.length) {
+  /* …and at most every 15 min: a post read now is still on its channel at the next read, and is merged then */
+  if (okReads.length && now - ((led.lastReportMerge || {}).at || 0) >= 15 * 60e3) {
     try {
       const m = await store.mergeIntoReport(okReads, now);
       led.lastReportMerge = { at: now, added: m.added, channels: okReads.length };

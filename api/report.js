@@ -81,6 +81,18 @@ module.exports = async (req, res) => {
   try {
     /* ---------------- read ---------------- */
     if (req.method === "GET") {
+      /* ?since=<updatedAt the browser holds>: if the row is still that version, say so without sending the
+         ~0.5 MB report again (Supabase's free plan counts every byte it sends — an open tab checks every minute) */
+      const since = req.query && req.query.since;
+      if (since) {
+        const c = await fetch(`${SB_URL}/rest/v1/${TABLE}?id=eq.${ROW_ID}&select=updated_at`, { headers: sbHeaders() });
+        if (c.ok) {
+          const rows = await c.json();
+          const cur = Array.isArray(rows) && rows[0] ? rows[0].updated_at : null;
+          const a = new Date(cur).getTime(), b = new Date(since).getTime();
+          if (cur && Number.isFinite(a) && a === b) return res.status(200).json({ ok: true, mode: "cloud", configured: true, unchanged: true, updatedAt: cur });
+        }
+      }
       const r = await fetch(
         `${SB_URL}/rest/v1/${TABLE}?id=eq.${ROW_ID}&select=data,updated_at`,
         { headers: sbHeaders() }
@@ -135,7 +147,8 @@ module.exports = async (req, res) => {
       }
 
       const now = new Date().toISOString();
-      const w = await fetch(`${SB_URL}/rest/v1/${TABLE}`, {
+      /* select=updated_at: the answer is the stored time only, not the whole report sent back */
+      const w = await fetch(`${SB_URL}/rest/v1/${TABLE}?select=updated_at`, {
         method: "POST",
         headers: sbHeaders({ Prefer: "resolution=merge-duplicates,return=representation" }),
         body: JSON.stringify([{ id: ROW_ID, data: body.data, updated_at: now }]),

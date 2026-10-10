@@ -266,6 +266,7 @@ async function apifyCached(cacheName) {
   catch (e) { return null; }
 }
 async function apifyRemember(cacheName, posts) {
+  if (freshOnly()) return;                        // the pipeline never reads the cache back
   try { await ingest.cacheSet(cacheName, posts); } catch (e) { /* caching is best-effort */ }
 }
 const CACHED_COST = { usd: 0, cached: true };
@@ -1613,9 +1614,9 @@ async function collectTgBot(ch) {
   const cacheName = "tgbot:" + target.toLowerCase();
   /* a session login is slow, so the website's runs share a 15-min copy; the pipeline takes one only if
      it is under a minute old (one tick) */
-  try {
-    const c = await ingest.cacheGet(cacheName, freshOnly() ? 60e3 : 15 * 60e3);
-    if (c && c.length) return { posts: c, source: "telegram-mtproto", note: freshOnly() ? "read via Telegram user-session" : "read via Telegram user-session (cached ~15 min)" };
+  if (!freshOnly()) try {
+    const c = await ingest.cacheGet(cacheName, 15 * 60e3);
+    if (c && c.length) return { posts: c, source: "telegram-mtproto", note: "read via Telegram user-session (cached ~15 min)" };
   } catch (e) { /* cache miss is fine */ }
 
   let messages;
@@ -1652,7 +1653,7 @@ async function collectTgBot(ch) {
   }).filter(Boolean).sort((a, b) => new Date(b.ts) - new Date(a.ts));
 
   if (!posts.length) throw new Error("No messages read from @" + target + " — treat this as unknown, not empty.");
-  try { await ingest.cacheSet(cacheName, posts); } catch (e) { /* best-effort */ }
+  if (!freshOnly()) try { await ingest.cacheSet(cacheName, posts); } catch (e) { /* best-effort */ }
   return { posts, source: "telegram-mtproto", note: "read server-side via a Telegram user-session" };
 }
 
@@ -1793,7 +1794,9 @@ async function collectChannels(channels, opts) {
        must never take a readable channel down with it, so a failure here just means every channel
        finds nothing pushed and falls through to its own collector, exactly as before. */
     let pushedAll = {};
-    try { pushedAll = await ingest.readAll(); } catch (e) { pushedAll = {}; }
+    /* the pipeline (fresh) never uses pushed posts — and reading this row on every one of its reads cost
+       Supabase egress for nothing */
+    if (!(opts && opts.fresh)) { try { pushedAll = await ingest.readAll(); } catch (e) { pushedAll = {}; } }
 
     const results = await Promise.all(channels.map(c => collectOne(c, cutoff, pushedAll)));
 

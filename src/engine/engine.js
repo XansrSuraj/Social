@@ -248,6 +248,20 @@ async function mergeShared(){
    changes still on their way to the row. */
 async function sync(){
   if(cloud.mode !== "cloud" || reportDirty) { render(); return; }
+  /* "has it changed since the copy I hold?" costs a few bytes; only a changed report is read in full */
+  if(reportUpdatedAt){
+    try{
+      const r = await fetch(REPORT_URL + (REPORT_URL.includes("?") ? "&" : "?") + "since=" + encodeURIComponent(reportUpdatedAt), { cache:"no-store" });
+      const j = await r.json();
+      if(j && j.ok && j.unchanged){ render(); return; }
+      if(j && j.ok && j.data && typeof j.data === "object" && !reportDirty){
+        checks = { ...checks, ...withoutView(j.data) };
+        reportUpdatedAt = j.updatedAt || null;
+        saveLocalChecksOnly();
+      }
+      render(); return;
+    }catch(e){ render(); return; }
+  }
   await pullReport();
   render();
 }
