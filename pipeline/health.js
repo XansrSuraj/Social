@@ -73,8 +73,8 @@ function healthOf(led, now, outputs = {}) {
     else if (v.soft && !h.ok) { state = "warn"; detail = `can't be read right now — this account is checked quietly (no alerts) and verified automatically once it can be read`; }
     else if (h.ok && readAge != null && readAge > (2 * PROBE_MIN + 5) * 60e3) { state = "warn"; detail = `last read ${ago(now, h.lastReadAt)} — older than it should be`; }
     else if (h.ok) { state = "ok"; detail = `read ${ago(now, h.lastReadAt || h.lastOkAt)} · ${h.posts != null ? h.posts + " posts in 30 h" : "ok"}` + (h.newestPostAt ? ` · newest post ${ago(now, h.newestPostAt)}` : ""); }
-    else if (h.down) { state = "bad"; detail = `not readable since ${ago(now, h.failingSince || h.lastFailAt)} — ${String(h.lastError || "").replace(/ — the paid fallback is skipped on automatic checks/, "").slice(0, 160)} · retried every minute`; }
-    else { state = "warn"; detail = `the last read failed (${ago(now, h.lastFailAt)}) — ${String(h.lastError || "").slice(0, 140)} · retrying`; }
+    else if (h.down) { state = "bad"; detail = `not readable since ${ago(now, h.failingSince || h.lastFailAt)} — ${String(h.lastError || "").replace(/ — the paid fallback is skipped on automatic checks/, "").slice(0, 160)} · read again every minute while a post is due, else every 30 min`; }
+    else { state = "warn"; detail = `the last read failed (${ago(now, h.lastFailAt)}) — ${String(h.lastError || "").slice(0, 140)} · read again every minute while a post is due, else every 30 min`; }
     readers.push({ id: v.read.id, name: labelOf(ch, lg), platform: v.read.platform, account: v.read.url, method: METHOD[v.read.platform] || v.read.platform,
       source: h && h.source || null, state, detail, since: h && !h.ok ? h.failingSince || null : null, lastOkAt: h && h.lastOkAt || null,
       lastReadAt: h && h.lastReadAt || null, uptime: rate(h && h.history), history: (h && h.history || []).slice(0, 30), soft: !!v.soft });
