@@ -3,8 +3,9 @@
  *
  *   GET /api/pipeline                 status for the Live page: today's deliveries and what became of
  *                                     each, reader health, the alert log, when it last ran
- *   GET /api/pipeline?op=tick         run one tick (pipeline/tick.js). Called every 5 minutes by
- *                                     .github/workflows/pipeline.yml and once a day by Vercel's cron.
+ *   GET /api/pipeline?op=tick         run one tick (pipeline/tick.js). Called every minute by cron-job.org
+ *                                     (&fast=1), every 30 min by .github/workflows/pipeline.yml (backup)
+ *                                     and once a day by Vercel's cron.
  *                                     Safe to call by anyone: a tick within 40 s of the last one, or
  *                                     while another runs, does nothing, and it only ever reads.
  *   GET /api/pipeline?op=test-alert   send one test alert to every channel (at most one per 10 minutes)
@@ -89,7 +90,7 @@ module.exports = async (req, res) => {
         catch (e) { left.push(1); log.push({ at: Date.now(), ok: false, via: "push", error: String(e.message || e) }); }
       }
       if (teams.configured()) {
-        try { await teams.post(teams.card([{ kind: "test", text: "✅ *Teams alerts are working* — this channel will get every drop's result, every problem, and a nightly summary." }], { link: PIPELINE_URL }));
+        try { await teams.post(teams.card([{ kind: "test", text: "✅ *Teams alerts are working* — this channel will get every drop's report, every problem, and the daily summary at 23:00 IST." }], { link: PIPELINE_URL }));
               log.push({ at: Date.now(), ok: true, via: "teams", kind: "test" }); }
         catch (e) { left.push(1); log.push({ at: Date.now(), ok: false, via: "teams", error: String(e.message || e) }); }
       }

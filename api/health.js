@@ -24,8 +24,9 @@ module.exports = async (req, res) => {
        it ends it. */
     readers: {
       youtube: process.env.YOUTUBE_API_KEY ? "key set" : "NO KEY — unreadable from this host",
-      free: process.env.FREE_READERS === "off" ? "switched off" : "on — Facebook, Instagram, TikTok read free first",
-      x: process.env.APIFY_TOKEN ? "via Apify" : process.env.TWITTERAPI_KEY ? "twitterapi.io key set" : "free page read only",
+      free: process.env.FREE_READERS === "off" ? "switched off" : "on — X (FxTwitter), Facebook, Instagram, TikTok read free first",
+      x: process.env.FREE_READERS === "off" ? (process.env.APIFY_TOKEN ? "via Apify" : process.env.TWITTERAPI_KEY ? "twitterapi.io key set" : "free page read only")
+        : "free first (FxTwitter)" + (process.env.APIFY_TOKEN ? ", Apify as the fallback" : process.env.TWITTERAPI_KEY ? ", twitterapi.io as the fallback" : ""),
       apify: process.env.APIFY_TOKEN ? "token set — the fallback for every social reader" : "no token",
       telegramBot: process.env.TG_API_ID && process.env.TG_API_HASH && process.env.TG_SESSION
         ? "session set" : "no session",

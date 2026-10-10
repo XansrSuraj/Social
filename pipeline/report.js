@@ -16,7 +16,7 @@ const SHORT = { youtube: "YouTube", telegram: "Telegram", telegram_direct: "Tele
 const LANGS = [["vietnamese", "🇻🇳", "Vietnamese"], ["english", "🇬🇧", "English"], ["portuguese", "🇧🇷", "Portuguese"], ["hindi", "🇮🇳", "Hindi"]];
 /* what needs attention: a problem (❌) — or, on Instagram, a post to check by hand (⚠️): Instagram puts an 18+
    wall on single posts by itself and nothing logged-out can see those, so "not found" there may be either */
-const BAD = ["missing", "not_visible", "reader_failed", "fm_failed", "fm_unconfirmed"];
+const BAD = ["missing", "not_visible", "reader_failed", "fm_failed", "fm_unconfirmed", "fm_stuck"];
 const istT = ms => new Date(ms + 5.5 * 3600e3).toISOString().slice(11, 19);
 const istHM = ms => new Date(ms + 5.5 * 3600e3).toISOString().slice(11, 16);
 const istDate = ms => new Date(ms + 5.5 * 3600e3).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
@@ -33,7 +33,7 @@ const headline = list => {
 /* why one delivery needs attention, in a few words */
 function reason(e) {
   if (e.status === "missing") {
-    const n = e.channel === "x" && e.caption ? xPostedLength(e.caption) : null;
+    const n = e.channel !== "x" ? null : e.xLen != null ? e.xLen : e.caption ? xPostedLength(e.caption) : null;
     return n != null && n > 280 ? `not on X — caption ${n}/280 as X counts it, so X refused it` : "not on the channel 20 min after FM sent it" +
       (e.capProblem ? ` (likely why: ${e.capProblem})` : "");
   }
@@ -41,10 +41,12 @@ function reason(e) {
   if (e.status === "fm_failed") return `not sent — ${e.failureStage === "cms" ? "the CMS skipped it" : "FM failed"}` + (e.fmError ? ` (${e.fmError.replace(/\s*—.*$/, "")})` : "");
   if (e.status === "reader_failed") return "couldn't be checked — the channel couldn't be read" + (e.readNote ? ` (${String(e.readNote).slice(0, 120)})` : "");
   if (e.status === "fm_unconfirmed") return "FM can't confirm it went out";
+  if (e.status === "fm_stuck") return "still queued in FM — not sent at its time";
   return e.status;
 }
 const RESULT = { verified: "✓ Delivered", late: "✓ Late", missing: "✗ Missing", not_visible: "⚠ Not found — maybe 18+, check the app",
-                 reader_failed: "! Couldn't check", fm_failed: "✗ Not sent (FM/CMS)", fm_unconfirmed: "? FM can't confirm", waiting: "⏳ Checking",
+                 reader_failed: "! Couldn't check", fm_failed: "✗ Not sent (FM/CMS)", fm_unconfirmed: "? FM can't confirm", fm_stuck: "✗ Stuck in FM",
+                 fm_other: "· FM state not known here", waiting: "⏳ Checking",
                  unverifiable: "⚠ Can't be read right now" };
 
 /* `retried`: a failed first attempt of this card the content team sent again (pipeline/tick.js —
@@ -70,12 +72,12 @@ function dropData(list, { retried = [] } = {}) {
       };
     });
     const viberConfigured = !!FM_CHANNELS["viber/" + lg];
-    const x = mine.find(e => e.channel === "x" && e.caption);
+    const x = mine.find(e => e.channel === "x" && (e.xLen != null || e.caption));
     return { lg, flag, name, rows, ok: rows.filter(r => r.status === "verified" || r.status === "late").length,
              checkable: rows.filter(r => !["not_sent", "unverifiable"].includes(r.status)).length,
              notSent: rows.filter(r => r.status === "not_sent").length,
              viber: mine.filter(e => e.status === "assumed").length, viberNotSent: viberConfigured && !mine.some(e => e.channel === "viber"),
-             xLen: x ? xPostedLength(x.caption) : null };
+             xLen: x ? (x.xLen != null ? x.xLen : xPostedLength(x.caption)) : null };
   });
   /* nothing went out at all: every delivery of the drop failed in FM / the CMS */
   const notSent = list.length > 0 && list.every(e => e.status === "fm_failed");
@@ -171,7 +173,8 @@ function dropCardItems(d, link) {
 /* ── the daily summary ─────────────────────────────────────────────────────────────────────────────
    `all`: every ledger entry of the day (IST). A superseded first attempt is not a delivery of its own —
    only counted as a card the content team re-sent. */
-function dayData(all, day) {
+/* `pending`: deliveries still being checked at summary time — they are counted in the next summary */
+function dayData(all, day, { pending = 0 } = {}) {
   const list = all.filter(e => e.status !== "superseded");
   const resent = new Set(all.filter(e => e.status === "superseded").map(e => e.setId));
   const checked = checkedOf(list), good = checked.filter(ok);
@@ -183,14 +186,16 @@ function dayData(all, day) {
   });
   const capWarn = list.filter(e => e.capProblem && !BAD.includes(e.status));
   const unwatched = list.filter(e => e.status === "unwatched");
+  const earlier = list.filter(e => new Date(e.when + 5.5 * 3600e3).toISOString().slice(0, 10) < day).length;
   return {
+    earlier,
     day, date: istDate(Date.parse(day + "T12:00:00+05:30")),
     drops: new Set(list.map(e => e.dropKey || e.setId)).size, deliveries: list.length,
     checked: checked.length, ok: good.length, late: checked.filter(e => e.status === "late").length,
     pct: checked.length ? Math.round(100 * good.length / checked.length) : null,
     viber: list.filter(e => e.status === "assumed").length,
     unwatched: unwatched.length, unwatchedWhat: [...new Set(unwatched.map(e => e.label))].join(", "),
-    stillChecking: list.filter(e => ["waiting", "new", "fm_pending", "fm_failing"].includes(e.status)).length,
+    stillChecking: pending + list.filter(e => ["waiting", "new", "fm_pending", "fm_failing"].includes(e.status)).length,
     resent: resent.size,
     captionWarnings: capWarn.map(e => `${e.label} ${istHM(e.when)} — ${e.capProblem}`),
     attention, languages,
@@ -201,8 +206,9 @@ const dayHead = (s, b = "") => !s.checked ? `${b}No posts to check today${b}`
   : !s.attention.length ? `✅ ${b}All ${s.checked} posts confirmed on their channels${b}`
   : `⚠️ ${b}${s.ok} of ${s.checked} posts confirmed on their channels${b} · ${s.attention.length} need${s.attention.length === 1 ? "s" : ""} attention`;
 const dayNotes = s => [
+  s.earlier ? `includes ${plural(s.earlier, "delivery", "deliveries")} from late last night (after the last summary)` : "",
   s.late ? `${plural(s.late, "post")} arrived late (after 20 min)` : "",
-  s.stillChecking ? `${plural(s.stillChecking, "delivery", "deliveries")} still being checked — in tomorrow's reports` : "",
+  s.stillChecking ? `${plural(s.stillChecking, "delivery", "deliveries")} still being checked — counted in tomorrow's summary` : "",
   s.resent ? `${plural(s.resent, "card")} re-sent by the content team after a failed first attempt — counted once` : "",
   s.viber ? `Viber: ${s.viber} taken on FM's word (Viber can't be read)` : "",
   s.unwatched ? `${s.unwatched} to channels not set up here (${s.unwatchedWhat})` : "",

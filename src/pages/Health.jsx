@@ -6,7 +6,7 @@ import { BrandIcon, useApp } from "../app/core.jsx";
    the FM Deliveries feed, every channel reader (scraper), and every place alerts go. Everything here
    comes from GET /api/pipeline → health (pipeline/health.js); the page judges nothing itself. Every
    reader is read at least every 30 min by the pipeline whether a card is due or not, so "last read"
-   is always recent while the clock runs. Refreshes every 15 s. */
+   is always recent while the clock runs. Refreshes every minute, like the pipeline. */
 
 const STATE = { ok: { dot: "ok", pill: "ok", t: "Working" }, warn: { dot: "warn", pill: "sg", t: "Check" },
                 bad: { dot: "bad", pill: "short", t: "Not working" }, off: { dot: "", pill: "un", t: "Not set up" } };
@@ -43,7 +43,7 @@ export default function Health() {
   }, []);
   useEffect(() => {
     load();
-    const t = setInterval(() => { if (!document.hidden) load(); }, 15000);
+    const t = setInterval(() => { if (!document.hidden) load(); }, 60000);
     const vis = () => { if (!document.hidden) load(); };
     document.addEventListener("visibilitychange", vis);
     return () => { clearInterval(t); document.removeEventListener("visibilitychange", vis); };
@@ -107,7 +107,7 @@ export default function Health() {
               {H.counts.warn > 0 && <span className="pill sg">{H.counts.warn} to check</span>}
               {H.counts.bad > 0 && <span className="pill short">{H.counts.bad} not working</span>}
               {H.counts.off > 0 && <span className="pill un">{H.counts.off} not set up</span>}
-              <span className="hl-upd">updated {ago(loadedAt)} · refreshes every 15 s</span>
+              <span className="hl-upd">updated {ago(loadedAt)} · refreshes every minute</span>
             </div>
           </div>
 

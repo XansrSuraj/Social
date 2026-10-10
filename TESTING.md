@@ -1,220 +1,60 @@
-# Testing the daily check — locally, end to end
+# Testing — what runs, and how to check the site without touching production
 
-Everything here runs on `feature/daily-check`. Nothing in this branch writes to the shared
-database, and nothing is deployed until you merge it yourself.
-
-```bash
-git checkout feature/daily-check
-```
-
----
-
-## What this feature does
-
-Answers one question: **did the last 24 hours of content reach every channel, in the right
-language?**
-
-It collects the recent post list per channel, groups posts that landed within a few minutes of
-each other into one *drop* (the same reel arriving everywhere), and lays the result out as a
-matrix — a row per channel, a column per drop:
-
-| | |
-|---|---|
-| ✓ | posted |
-| ✗ | nothing in this drop — a real miss |
-| ⚠ | posted, but the caption is in the wrong language |
-| · | no data for this channel |
-
-Two collectors, because no single one can reach everything:
-
-| Source | Channels | Needs |
-|---|---|---|
-| `api/collect` | YouTube, Telegram | nothing |
-| `extension/` | Facebook, Instagram | you signed into them in Chrome, as normal |
-
-The **Sources** panel at the top shows which of the two has reported and how many channels each
-covers, and offers **Merge N waiting** when an extension run is sitting unread. So the flow is
-explicit: Collect → run the extension → Merge → read the report.
-
-Four tabs:
-
-| Tab | What it shows |
-|---|---|
-| **Summary** | the matrix, the problem list, and hand-entered counts |
-| **What went out** | each drop, its thumbnail, a caption per language, and the exact minute it reached each channel |
-| **Post log** | every post with a second-level timestamp, language, type, views, likes, comments, length and a link |
-| **Per channel** | one card per channel with its own posts and totals |
-
-The window, timezone, drop width and per-period maximum are all selectable in the toolbar.
-24 hours is the default; the collector always fetches wider than the window on screen, so
-widening to 7 days needs no re-collect.
-
-**Delete report** clears everything collected so the next run starts clean.
-
----
-
-## Part 1 · The server collector (no extension needed)
+## The suites
 
 ```bash
-node dev-server.js
+npm run test:unit    # every stubbed suite — no network, ~860 checks
+npm run test:live    # api/collect against the real channels (needs the network)
+npm test             # both
 ```
 
-After `npm run build` it serves the built app from `dist/` and routes `/api/*` to the handlers in `api/`.
-`npx vercel dev` works too, but wants a CLI download, a login and a linked project first.
+| Suite | What it proves |
+|---|---|
+| `test/pipeline.test.js` | the FM → channels pipeline end to end, replaying the real 4 Oct 2026 FM day (`test/fixtures/fm-2026-10-04.json`): verdicts, two-read "missing", Instagram "check by hand", drop reports sent once (a 3-day clean-up replay), superseded CMS failures, X counted as posted (`test/fixtures/x-vn-2026-10.json`, every X VN post of 4–9 Oct), the daily summary, Teams cards, health, "nothing old is ever notified" |
+| `test/reconcile.test.js` | the daily check's engine (`src/engine/engine.js`, read straight from the file): drops, late folding, language detection, windows, alerts |
+| `test/engine.test.js`, `test/report.test.js`, `test/mergeposts.test.js` | the engine's store, the shared report endpoint, post merging |
+| `test/collect.test.js` (live) | `api/collect` against the real channels — fails when a platform changes what it serves; a platform refusing your network (TikTok on some Indian ISPs) is reported as refused, not failed |
+| `test/free.test.js`, `test/fbdate.test.js`, `test/ig-*.test.js`, `test/tt-ext.test.js`, `test/x*.test.js`, `test/youtube.test.js` | each reader's parser, on saved pages |
+| `test/apify*.test.js`, `test/retry.test.js`, `test/collectsplit.test.js` | the Apify fallback: cost caps, caching, retries |
+| `test/ingest.test.js`, `test/thumb.test.js`, `test/health.test.js` | the small endpoints |
 
-Open <http://localhost:3000>, pick an organization, press **Daily check** → **Collect**.
-
-**Expected:** YouTube and Telegram channels fill in with real post counts. With `APIFY_TOKEN` in
-`.env`, Facebook, Instagram, TikTok and X fill in too, and the toast says what the press cost on
-Apify (about $0.10 for the full SportsFC set; a second press within 15 minutes is served from cache
-for $0). Without the token, Facebook and TikTok say they need the extension, and Instagram usually
-does too — its public endpoint is rate-limited per IP.
-
-Things worth poking at:
-
-- **Timezone selector** — decides which day a post belongs to. Default UTC+7 (Vietnam/Thailand).
-  Switching it re-buckets everything; a post near midnight should move between days.
-- **Slot window** — how far apart two posts can be and still count as the same drop. At ±5 min a
-  drop that took 6 minutes to fan out splits into two slots; at ±15 it holds together.
-- **Collect twice** — the second run must add 0 new posts. Runs accumulate rather than replace,
-  so history grows past the ~15–20 posts each source returns.
-- **Copy report** — plain-text version of what is on screen.
-
-### Getting your channels into the local copy
-
-Two ways, both safe:
-
-**A · Local mode (nothing touches the database).** Started with no env vars, the app keeps the
-directory in the browser and starts empty. On the live site: **Settings → Export JSON**. Then in
-the local one: **Settings → Import** that file. Read-only as far as production is concerned.
-
-**B · Point at the real row (read-only).** Put a `.env` next to `dev-server.js`:
-
-```
-SUPABASE_URL=https://xxxx.supabase.co
-SUPABASE_SERVICE_KEY=your-service-role-key
-```
-
-The server reads it on start and the app loads the real directory. This is a `GET` — the daily
-check never writes, and the app only saves when you add, edit or delete something. Leave
-`ADMIN_PASSWORD` out and editing cannot reach the database at all, which makes B hard to get wrong.
-
-`.env` is already covered by `.gitignore`.
-
----
-
-## Part 2 · The extension (Facebook + Instagram)
-
-Load it once:
-
-1. `chrome://extensions` → turn on **Developer mode**
-2. **Load unpacked** → select the `extension/` folder
-3. Pin it to the toolbar
-
-Then:
-
-1. Make sure you are signed into Facebook and Instagram in that Chrome profile — the same as
-   when you click a link. No password goes anywhere, no cookie is read; the browser attaches
-   your session itself.
-2. Keep the dashboard tab open.
-3. Click the extension → set **Dashboard URL** to `http://localhost:3000` → **Load channels**
-4. Check the **Organization** picker. It defaults to whichever org the dashboard tab has open,
-   and only that org's channels are collected — an earlier version swept the whole directory and
-   opened tabs for unrelated orgs, mixing their posts into the report.
-5. **Collect** → **Send to dashboard**
-6. Back in the dashboard, reopen **Daily check** and press **Merge N waiting**
-
-**Expected:**
-
-- **Instagram** — real post counts with timestamps, so it joins the slot matching. This is the
-  path that works where the server-side attempt is rate-limited: same-origin request, your
-  session, your IP.
-- **Facebook** — **≈** cells rather than ✓, because it is matched on what its posts said rather
-  than when they appeared. Hover a cell for the match percentage. **Per channel** lists the
-  caption that matched each drop with the post's banner beside it, which is the quickest way to
-  confirm the same artwork went everywhere.
-- Not signed into Facebook, or captions unreadable → the row reports *unknown* and its cells stay
-  blank. Never a cross: "we could not look" and "nothing was posted" are different facts, and
-  conflating them is the one failure this tool must not produce.
-
-### Handing over
-
-The extension writes its run into the dashboard origin's `localStorage`, and the page picks it up
-on load or on focus. No admin key, no write endpoint, nothing stored server-side.
-
----
-
-## Part 3 · The link checker fix
-
-Press **Check links** on an organization with social channels.
-
-The bug: Instagram answers `HTTP 200` with the same ~610 KB JavaScript shell whether a profile is
-live, dead, or never existed — so a status-only check painted dead channels green. Facebook does
-the same behind its login wall.
-
-Now a green dot means the target was actually confirmed:
-
-| Dot | Meaning | Which channels |
-|---|---|---|
-| green | confirmed to exist | YouTube, Telegram, Instagram (when not rate-limited) |
-| amber | reachable, but the platform will not confirm it | Facebook, TikTok, rate-limited Instagram |
-| red | genuinely broken | 404 from a verifier |
-
-Facebook and TikTok are no longer probed at all — whatever they return says nothing about the
-link, and skipping the request takes about 11 seconds off a full check.
-
-> **Check `instagram.com/funsports.thai`.** Its API answer is a 404, the same as a username
-> invented at random, while a live handle returns 200 with JSON. Open it in your browser to
-> confirm — if it is wrong, fix it in the directory. The old checker showed it green.
-
----
-
-## Automated tests
-
-Verifying the link checker against the live platforms is unreliable — Instagram will rate-limit
-you after a handful of runs, and a rate-limited answer looks nothing like a dead profile. So the
-branch checks the mapping with a stubbed `fetch` instead, covering all twelve outcomes:
+## Running the site locally
 
 ```bash
-npm test                      # all three, 81 assertions
-npm run test:unit             # the two stubbed suites — no network
-npm run test:live             # api/collect against the real channels
+npm install
+npm run dev          # the app with hot reload — http://localhost:5173 (Vite proxies /api to :3000)
+npm run api          # the /api handlers on :3000
 ```
 
-| | |
-|---|---|
-| `test/check.test.js` | every link-checker branch: dead / live / rate-limited / no-probe |
-| `test/reconcile.test.js` | language detection, drop clustering, targets, alerts, window bounds |
-| `test/collect.test.js` | drives `api/collect` against the live platforms |
+or `npm run build` and `node dev-server.js` — the built app and the handlers on one port.
 
-`collect.test.js` hits the network on purpose — it is the one that fails when YouTube or Telegram
-change what they serve. The other two are stubbed, because a test that depends on whether
-Instagram feels like rate-limiting you today proves nothing.
+With no `.env`, everything is local: the daily-check report lives in the browser, the pipeline's
+ledger in `.pipeline.json` (gitignored), and nothing is sent anywhere. **Never put production alert
+settings (`TEAMS_WEBHOOK_URL`, `NTFY_TOPIC`, `CALLMEBOT_*`) or `SUPABASE_*` in a local `.env`** unless
+you mean to write to the real rows and post to the real channels.
 
-`reconcile.test.js` reads the logic out of `src/engine/engine.js` rather than keeping a copy, so the tests
-cannot pass against code that is no longer what ships.
+## Checking the pipeline on real data, safely
 
----
+A local tick reads the real FM feed and the real channels, and writes only local files:
 
-## What to look for before merging
+- `.env` with no Supabase and no alert settings (as above). The FM feed's hosts are only on Vercel, so
+  read FM through the site's own read-only proxy, e.g.
+  `GET https://aiko-social-distribution-check.vercel.app/api/fm-deliveries?env=prod&since=…`.
+- Call `tick()` from `pipeline/tick.js` with that as `fm`, `collectChannels` from `api/collect.js` as
+  `collect`, and `pipeline/store.js` (local mode) as `store`. Its result and `.pipeline.json` show every
+  verdict and every alert it *would* have sent (the outbox).
 
-- [ ] Collect twice — second run adds 0 posts
-- [ ] A window where every channel got everything shows **All clear** at the top
-- [ ] A channel with no data reads **·** and **no data**, never **✗** — an uncollected channel is
-      not a failed post, and confusing the two buries the real gaps
-- [ ] A channel that missed one drop shows **✗** in that column only, and names the time
-- [ ] Window / timezone / drop-width / max-per-period selectors all re-draw the report
-- [ ] **What went out** lists one caption per language for each drop, so both variants are visible
-- [ ] Hand-entered counts stick across a reload, and switch the row off *suggested*
-- [ ] **Clear history** empties the check store and leaves the directory alone
-- [ ] Existing features still fine: QR, Embed, Copy all, add/edit/delete, admin lock
+On production, read-only:
 
-### The language check
+- `GET /api/pipeline` — the ledger as the Live and System health pages see it (`health` is the
+  System health verdict).
+- `#/health` — every part: clock, FM, all 14 readers, alert channels.
+- Never call `?op=tick`, `?op=test-alert` or `?op=report` on production just to look — they run or send.
 
-Worth testing deliberately, since it is the one thing a count can never catch. Set a channel's
-language tag to the wrong value in the directory — mark the English Telegram channel `vietnamese`
-— then re-open the report. Every post on it should turn **⚠** with a *language* alert naming what
-the caption actually looks like. Set it back afterwards.
+## Before a release
 
-Detection is English-UI and Latin/Thai/CJK script aware; anything it cannot place is left blank
-rather than guessed, so a missing verdict means "unclear", not "fine".
+- [ ] `npm run test:unit` all green; `npm run build` builds
+- [ ] `#/`, `#/report`, `#/live`, `#/health`, `#/fm`, `#/matchpulse` load with no console error, at
+      phone width too, with no sideways scroll
+- [ ] the System health page says everything is working, the clock shows ~60 checks in the last hour
+- [ ] a change to alert wording: run `SHOW=1 node test/pipeline.test.js` and read the printed report

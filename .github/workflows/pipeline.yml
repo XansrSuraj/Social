@@ -1,15 +1,15 @@
-# The FM → channels pipeline's clock: every 5 minutes, ask the live site to run one tick
-# (api/pipeline.js?op=tick). Free on a public repository. GitHub may start a scheduled run a few
-# minutes late; nothing is lost when it does, because every tick catches up on all that is due —
-# and Vercel's own daily cron (vercel.json) is a second clock behind this one.
+# A BACKUP clock for the FM → channels pipeline (api/pipeline.js?op=tick). The main clock is cron-job.org,
+# every minute; Vercel's daily cron (vercel.json) is a third. This one runs every 30 minutes: the repo is
+# private, where Actions minutes are counted (2,000 a month free) — 48 short runs a day stay far inside that,
+# a run every 5 minutes would not. GitHub may start a scheduled run late; nothing is lost, every tick
+# catches up on all that is due.
 #
-# Scheduled at odd minutes (1, 6, 11, …) to stay off the top-of-the-hour rush when GitHub delays most.
-# GitHub turns scheduled workflows off after 60 days without a commit to the repo; Actions → Enable
-# turns this one back on.
+# GitHub turns scheduled workflows off after 60 days without a commit to the repo; Actions → Enable turns
+# this one back on.
 name: pipeline-tick
 on:
   schedule:
-    - cron: "1-59/5 * * * *"
+    - cron: "7,37 * * * *"
   workflow_dispatch: {}
 permissions: {}
 concurrency: { group: pipeline-tick, cancel-in-progress: false }

@@ -41,10 +41,10 @@ MatchPulse row 4).
 - **Shared report** — with cloud storage on, a run on one device is the same "today" every other
   device sees (a Supabase row via `api/report`); localStorage is the fallback, so an offline moment
   or an unconfigured deployment loses nothing
-- **Everything server-side, cost on screen** — Facebook, Instagram and TikTok are read free from
-  each platform's own public page, with Apify as the fallback (X always via Apify); every Apify run
-  reports its own billed cost and the report shows the credit left. Anything pushed in to
-  `/api/ingest` wins over reconstructing a feed
+- **Everything server-side, cost on screen** — X (through FxTwitter), Facebook, Instagram and TikTok
+  are read free from public pages, with Apify as the fallback; every Apify run reports its own billed
+  cost and the report shows the credit left. Anything pushed in to `/api/ingest` wins over
+  reconstructing a feed (on the website's daily check — the automatic pipeline always reads live)
 - **Every region on one screen** — Vietnam & English and Brazil are collected in one press and
   each judged on its own schedule of drops
 - **Responsive** from a phone to a wide desk: the matrix scrolls inside its card with the channel
@@ -61,7 +61,7 @@ talks to Supabase and Apify over plain REST and parses feeds directly. The front
 [Lucide](https://lucide.dev) icons and [Simple Icons](https://simpleicons.org) brand marks, all
 bundled — nothing loads from a CDN except the fonts.
 
-The look follows [aiko.inc](https://aiko.inc): white paper, near-black ink and one signature red
+The look follows [aiko.inc](https://aiko.inc): warm stone paper (no pure white), near-black ink and one signature red
 (`#a6171b` / `#e31f24`); Inter Tight for display type, Inter for reading, IBM Plex for labels and
 numbers; motion on aiko's curve `cubic-bezier(.22,1,.36,1)` — staggered fade-up reveals, a dark
 hero with a pulsing core and data chips that draw in on connector lines, a scrolling channel marquee.
@@ -69,13 +69,14 @@ The tokens are at the top of `src/styles.css`.
 
 | | |
 |---|---|
-| `index.html`, `src/main.jsx` | the app's entry; a two-route hash router (`#/` overview, `#/report`) |
+| `index.html`, `src/main.jsx` | the app's entry; a hash router — `#/` overview, `#/report`, `#/live`, `#/health`, `#/fm`, and `#/matchpulse`, `#/matchpulse/report` |
 | `src/engine/engine.js` | everything that is not markup — collecting, `reconcile()`, the report store — as `createEngine()`; the tests load it straight from this file |
 | `src/app/` | the React glue: the engine provider, nav/footer, the report view-model, copy-as-text |
-| `src/pages/` | `Home.jsx` (the overview) and `Report.jsx`, with one file per tab under `report/` |
-| `src/styles.css`, `src/report.css` | the design system and the report's styles |
+| `src/pages/` | `Home.jsx` (the overview) and `Report.jsx` (one file per tab under `report/`), `Live.jsx` (the pipeline), `Health.jsx` (system health), `Fm.jsx` |
+| `src/styles.css`, `src/report.css`, `src/ops.css` | the design system, the report's styles, the Health and FM pages' styles |
+| `pipeline/`, `api/pipeline.js` | the automatic FM → channels check, every minute — see [PIPELINE.md](PIPELINE.md) |
+| `api/fm-deliveries.js`, `api/fm-deliveries-meta.js`, `fm-deliveries-client.js` | the read-only FM Deliveries proxy (keys stay server-side) |
 | `src/pages/Fm.jsx` | the FM Deliveries viewer (`#/fm`); `public/fm-deliveries.html` only forwards old links there, filters included |
-| `legacy-index.html` | the pre-React page, kept for reference only — not served |
 | `api/collect.js` | `POST` read recent posts per channel — every platform, all server-side, with each Apify run's cost |
 | `api/apify-usage.js` | `GET` Apify credit used / left this month and recent run costs (read-only) |
 | `api/thumb.js` | `GET` a post's thumbnail passed through this site — Instagram's CDN forbids other sites from drawing its images; only the platforms' own CDNs are served |
@@ -100,8 +101,9 @@ git push -u origin main
 
 ### 2 · Import into Vercel
 
-[vercel.com](https://vercel.com) → **Add New → Project** → import the repo →
-Framework preset **Other**, build command and output directory **empty** → **Deploy**.
+[vercel.com](https://vercel.com) → **Add New → Project** → import the repo → **Deploy**. `vercel.json` sets
+the rest (Vite, `npm run build`, output `dist`, the functions' time limits and the daily cron). This
+project deploys by `git push aiko clean-main:main` (the repo is private).
 
 It is live at this point and already usable — but data is still per-browser until step 3.
 
@@ -225,7 +227,7 @@ Four things get flagged:
 | Facebook | **free**: the page's own Reels tab (`/reels/`) — Apify Reels scraper as fallback | nothing (`APIFY_TOKEN` for the fallback) |
 | Instagram | **free**: the profile's embed widget (`/embed/`) — Apify as fallback | nothing (`APIFY_TOKEN` for the fallback) |
 | TikTok | **free**: TikTok's creator embed widget (`/embed/@user`) — Apify as fallback | nothing (`APIFY_TOKEN` for the fallback) |
-| X (Twitter) | Apify `xquik/x-tweet-scraper`, then twitterapi.io, then the free profile page | `APIFY_TOKEN` |
+| X (Twitter) | **free**: FxTwitter (`api.fxtwitter.com`) — then Apify `xquik/x-tweet-scraper`, twitterapi.io, the x.com page | nothing (`APIFY_TOKEN` for the fallback) |
 | Telegram bot | a Telegram user session reading the bot's DMs | `TG_API_ID` / `TG_API_HASH` / `TG_SESSION` |
 
 ### Free first (since 2026-10-03), Apify as the fallback
@@ -237,11 +239,12 @@ no login, no Apify). Tested from a datacenter and a home connection: 5 of 5 roun
 posts to the minute. A free read is only believed when it looks right (posts found, real times,
 newest within 4 days); otherwise that channel falls through to Apify, so a platform changing its page
 costs a few cents for that channel, never a blank report. `FREE_READERS=off` switches them off.
-X has no such page and stays on Apify (~$0.001 a check). (Instagram `sportsfc.fans` was 18+ until ~9 Oct
-2026 and fell back to Apify and the extension; it is public again.) The full experiment is in the `free-scraper-lab` branch of
+X is read free through FxTwitter (a public mirror of X's own data) since 3 Oct, with Apify as the
+fallback (~$0.001 a read). (Instagram `sportsfc.fans` was 18+ until ~9 Oct 2026 and fell back to Apify
+and the extension; it is public again.) The full experiment is in the `free-scraper-lab` branch of
 the backup repo.
 
-### Apify (fallback, and X)
+### Apify (the fallback)
 
 All four refuse requests from a server's IP (Instagram answers a datacenter IP with HTTP 429 in about
 25 ms, X serves an empty page, TikTok a profile with no videos, Facebook a login wall). Free routes —
@@ -393,7 +396,7 @@ stop depending on the extension.
 - The shared report (`/api/report`) is non-sensitive operational data; its write is shape-checked
   and size-capped, refuses a stale write with HTTP 409, and can additionally be gated by
   `ADMIN_PASSWORD` if you set one.
-- `noindex, nofollow` is set, so search engines skip it.
+- `noindex, nofollow` is set and `robots.txt` disallows everything, so search engines skip it.
 - No credential, cookie or token is ever extracted or stored — every read the extension makes uses
   the session already in the browser, on the user's own IP.
 
@@ -403,10 +406,10 @@ Supabase pauses a free project after ~7 days with no activity; open the Supabase
 resume it. A directory in daily use never hits this. If it becomes annoying,
 [Upstash Redis](https://upstash.com) has no pause and the same REST-only integration style.
 
-Apify's free plan gives $5 of credit per monthly cycle. At about $0.10 per full check that is one
-check a day with room to spare, but not two. When the credit runs out, the Apify channels report
-*unknown* (and fall back to the extension, if installed) until the cycle resets — never a false
-"nothing posted". The report's Sources panel shows the credit left.
+Apify's free plan gives $5 of credit per monthly cycle. With the free readers first, a normal check
+costs about $0.003 — Apify is only paid for when a free read fails. When the credit runs out, a channel
+whose free read also fails reports *unknown* (and falls back to the extension, if installed) until the
+cycle resets — never a false "nothing posted". The report's Sources panel shows the credit left.
 
 ## Local development
 

@@ -54,7 +54,7 @@ worse than admitting "we don't know."** Each channel, for each drop, lands on de
 > **Update 2026-10-03 — free first.** Facebook ×2, Instagram `sportsfc.vn` and TikTok are now read
 > **free**, from each platform's own public page (Facebook's Reels tab; Instagram's and TikTok's
 > embed widgets) — no Apify, no browser, no login. Apify is only the fallback when a free read fails
-> or looks wrong, and still reads X (~$0.001). A normal daily check now
+> or looks wrong; X is read free through FxTwitter too (Apify fallback ~$0.001). A normal daily check now
 > costs about **$0.003** instead of $0.096. The tables below describe the Apify setup, which is what
 > runs whenever a free read falls through.
 

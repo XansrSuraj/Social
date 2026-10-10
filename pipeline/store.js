@@ -45,13 +45,14 @@ async function writeRow(id, data, base) {
   }
   if (!base) {
     /* first write: insert, refusing if someone created it meanwhile */
-    const w = await fetch(`${SB_URL}/rest/v1/${TABLE}`, { method: "POST", headers: sbHeaders({ Prefer: "return=representation" }),
+    const w = await fetch(`${SB_URL}/rest/v1/${TABLE}?select=id`, { method: "POST", headers: sbHeaders({ Prefer: "return=representation" }),
       body: JSON.stringify([{ id, data, updated_at: now }]), signal: AbortSignal.timeout(15000) });
     if (w.status === 409) throw new Conflict("created meanwhile");
     if (!w.ok) throw new Error(`store insert failed (${w.status}): ${(await w.text()).slice(0, 200)}`);
     return now;
   }
-  const w = await fetch(`${SB_URL}/rest/v1/${TABLE}?id=eq.${id}&updated_at=eq.${encodeURIComponent(base)}`, {
+  /* select=id: the answer is the matched row's id only (an empty list = it changed meanwhile), not the whole row */
+  const w = await fetch(`${SB_URL}/rest/v1/${TABLE}?id=eq.${id}&updated_at=eq.${encodeURIComponent(base)}&select=id`, {
     method: "PATCH", headers: sbHeaders({ Prefer: "return=representation" }),
     body: JSON.stringify({ data, updated_at: now }), signal: AbortSignal.timeout(15000) });
   if (!w.ok) throw new Error(`store write failed (${w.status}): ${(await w.text()).slice(0, 200)}`);

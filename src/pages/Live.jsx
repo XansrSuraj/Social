@@ -3,7 +3,7 @@ import { Activity, ArrowUpRight, BellRing, Loader2, Play, Radio, RefreshCw } fro
 import { BrandIcon, useApp } from "../app/core.jsx";
 
 /* The FM → channels pipeline, live: every card FM sent, and what became of it on each channel.
-   Reads /api/pipeline (the ledger the 5-minute tick keeps); nothing here judges anything itself. */
+   Reads /api/pipeline (the ledger the every-minute tick keeps); nothing here judges anything itself. */
 
 const STATUS = {
   verified:       { g: "✓", cls: "ok",   t: "on the channel" },
@@ -18,6 +18,8 @@ const STATUS = {
   not_visible:    { g: "⚠", cls: "lang", t: "not on the public profile — maybe 18+ restricted by Instagram (we can't see those) or not posted; check in the app" },
   fm_pending:     { g: "…", cls: "none", t: "FM hasn't sent it yet" },
   fm_failed:      { g: "✗", cls: "miss", t: "FM failed to send it" },
+  fm_stuck:       { g: "⏳", cls: "miss", t: "still queued in FM long after its time" },
+  fm_other:       { g: "·", cls: "na",   t: "an FM state this page doesn't know yet" },
   fm_failing:     { g: "…", cls: "none", t: "FM failed — waiting 5 min in case the content team sends it again" },
   superseded:     { g: "↻", cls: "na",   t: "a failed first attempt — the content team sent it again" },
   fm_unconfirmed: { g: "?", cls: "lang", t: "FM can't confirm" },
@@ -43,7 +45,8 @@ export default function Live() {
     try { const r = await fetch("api/pipeline", { cache: "no-store" }); const j = await r.json(); if (!j.ok) throw new Error(j.error || "failed"); setS(j); setErr(""); }
     catch (e) { setErr(String(e.message || e)); }
   }, []);
-  useEffect(() => { load(); const t = setInterval(() => { if (!document.hidden) load(); }, 20000); return () => clearInterval(t); }, [load]);
+  /* every minute — the pipeline itself checks once a minute, so sooner shows nothing new */
+  useEffect(() => { load(); const t = setInterval(() => { if (!document.hidden) load(); }, 60000); return () => clearInterval(t); }, [load]);
 
   const act = async (op, label) => {
     setBusy(op);
@@ -74,7 +77,7 @@ export default function Live() {
   const drops = Object.values(sets).sort((a, b) => Math.min(...b.map(e => e.when)) - Math.min(...a.map(e => e.when)));
   const checked = list.filter(e => e.mode === "verify" && e.fmState === "sent" && e.status !== "unverifiable");
   const okN = checked.filter(e => e.status === "verified" || e.status === "late").length;
-  const problems = list.filter(e => ["missing", "not_visible", "fm_failed", "reader_failed", "fm_unconfirmed"].includes(e.status)).length;
+  const problems = list.filter(e => ["missing", "not_visible", "fm_failed", "fm_stuck", "reader_failed", "fm_unconfirmed"].includes(e.status)).length;
   const readers = ((s.health && s.health.groups.find(g => g.id === "readers")) || { items: [] }).items;
   const tickFresh = s.lastTickAt && Date.now() - s.lastTickAt < 12 * 60e3;
 
@@ -86,7 +89,7 @@ export default function Live() {
             <div>
               <span className="eyebrow">SportsFC · Live pipeline</span>
               <h1 className="display l">FM → <b>every channel</b></h1>
-              <div className="rp-when">Every card FM sends is looked for on each channel within 20 minutes — automatically, every minute. Every result and problem goes to Teams, your phone (ntfy) and WhatsApp.</div>
+              <div className="rp-when">Every card FM sends is looked for on each channel within 20 minutes — automatically, every minute. Every result and problem goes to Teams and your phone (ntfy) — and WhatsApp, if it is set up.</div>
             </div>
             <div className="rp-actions">
               <button className="btn btn-line btn-sm" disabled={!!busy} onClick={() => act("tick", "Check")}>{busy === "tick" ? <Loader2 className="spin" /> : <Play />}Check now</button>
@@ -126,7 +129,7 @@ export default function Live() {
               : <b>No FM deliveries on {day}.</b>}</div>}
             {drops.map(ds => {
               const first = Math.min(...ds.map(e => e.when));
-              const bad = ds.filter(e => ["missing", "not_visible", "fm_failed", "reader_failed", "fm_unconfirmed"].includes(e.status));
+              const bad = ds.filter(e => ["missing", "not_visible", "fm_failed", "fm_stuck", "reader_failed", "fm_unconfirmed"].includes(e.status));
               const langs = [...new Set(ds.map(e => e.language))];
               return (
                 <div key={ds[0].dropKey || ds[0].setId} className={`card live-drop${bad.length ? " gap" : ""}`}>

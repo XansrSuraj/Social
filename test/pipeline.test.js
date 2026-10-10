@@ -502,9 +502,56 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
     const dc = JSON.stringify(cards.find(c => /Daily summary/.test(JSON.stringify(c))) || {});
     ok(/Daily summary — Sun, 4 Oct 2026/.test(dc) && /\*\*Language\*\*/.test(dc) && /"title":"Confirmed on the channel","value":"37 of 38 \(97%\)"/.test(dc) && dc.length < 28000,
        "in Teams: a card of its own — totals, a table per language, what needs attention", dc.length + " bytes");
+    /* a drop still being checked at 23:00 is not lost: it is in the next summary, once, with a note */
+    {
+      const late = D.filter(d => d.template.label === "Attack vs Defense" && d.language === "english")
+        .map(d => ({ ...d, cardId: d.cardId + "-late", setId: "late", queuedAt: "2026-10-04T17:20:00Z", sentAt: "2026-10-04T17:20:00Z", scheduledAt: null }));
+      const sl = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), wl = mkWa();
+      const fmL = t => async () => [...D, ...late].filter(d => Date.parse(d.queuedAt) <= t);
+      for (const t of ["15:30:00", "15:31:00", "17:31:00", "17:45:00", "18:00:00"]) { const n = at("2026-10-04T" + t + "Z"); await tick({ fm: fmL(n), collect: mkCollect(n), store: sl, wa: wl, now: n, force: true }); }
+      const first = wl.out.filter(t => /DAILY SUMMARY/.test(t));
+      for (const t of ["2026-10-05T17:31:00Z"]) { const n = at(t); await tick({ fm: fmL(n), collect: mkCollect(n), store: sl, wa: wl, now: n, force: true }); }
+      const next = wl.out.filter(t => /DAILY SUMMARY — Mon, 5 Oct/.test(t))[0] || "";
+      ok(first.length === 1 && /still being checked — counted in tomorrow's summary/.test(first[0]),
+         "a drop still being checked at 23:00 is noted as such in that night's summary");
+      ok(/includes \d+ deliveries from late last night/.test(next) && !/DAILY SUMMARY — Sun/.test(wl.out.slice(wl.out.indexOf(first[0]) + 1).join("\n")),
+         "…and counted in the next night's summary, once", (next.match(/\*Today:\*[^\n]*/) || [""])[0]);
+    }
     const { dayData, dayText } = require("../pipeline/report.js");
     const clean = dayText(dayData(Object.values(sd.ledger.deliveries).filter(e => !(e.channel === "x" && e.card === "Triple Match Roundup")), "2026-10-04"));
     ok(/✅ \*All 37 posts confirmed on their channels\*/.test(clean) && /\*Needs attention:\* nothing/.test(clean), "a clean day says so plainly");
+  }
+
+  console.log("\n── nothing holds a drop back, and the shared rows are touched only when needed");
+  {
+    /* a card stuck in FM's queue an hour past its time: the drop is reported with it, not held for ever */
+    const stuck = D.map(d => d.channel === "youtube" && d.language === "english" && d.template.label === "Attack vs Defense" ? { ...d, state: "queued", sentAt: null } : d);
+    const ss = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), ws = mkWa();
+    for (const t of ["13:30:00", "13:31:00", "14:05:00"]) { const n = at("2026-10-04T" + t + "Z"); await tick({ fm: async () => stuck.filter(d => Date.parse(d.queuedAt) <= n), collect: mkCollect(n), store: ss, wa: ws, now: n, force: true }); }
+    const r = ws.out.filter(t => /DROP REPORT — 18:30/.test(t));
+    ok(r.length === 1 && /• YouTube — ✗ Stuck in FM/.test(r[0]) && /❌ YouTube EN — still queued in FM/.test(r[0]),
+       "a card stuck in FM an hour past its time: the drop is reported with it, not held back", r.length + " report(s)");
+
+    /* an FM state this pipeline doesn't know: shown as it is, never holds the drop */
+    const odd = D.map(d => d.channel === "telegram" && d.language === "english" && d.template.label === "Attack vs Defense" ? { ...d, state: "cancelled" } : d);
+    const so = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), wo = mkWa();
+    for (const t of ["13:30:00", "13:31:00"]) { const n = at("2026-10-04T" + t + "Z"); await tick({ fm: async () => odd.filter(d => Date.parse(d.queuedAt) <= n), collect: mkCollect(n), store: so, wa: wo, now: n, force: true }); }
+    ok(wo.out.some(t => /DROP REPORT — 18:30/.test(t) && /• Telegram — · FM state not known here/.test(t)), "an FM state added later never holds a drop back");
+
+    /* the shared report row is rewritten only when a read brings a post it hasn't had */
+    let merges = 0;
+    const sm = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), wm = mkWa();
+    const merge0 = sm.mergeIntoReport; sm.mergeIntoReport = async (...a) => { merges++; return merge0(...a); };
+    let n = at("2026-10-04T15:30:00Z");
+    await tick({ fm: fmAt(n), collect: mkCollect(n), store: sm, wa: wm, now: n, force: true });
+    const afterFirst = merges;
+    for (let i = 1; i <= 8; i++) await tick({ fm: fmAt(n + i * 60e3), collect: mkCollect(n), store: sm, wa: wm, now: n + i * 60e3, force: true });
+    ok(afterFirst === 1 && merges === 1, "nothing new on the channels → the report row is not rewritten (health probes read every minute)", `${afterFirst} then ${merges}`);
+
+    /* the website's log keeps a short copy of a long report; the message itself is whole */
+    const longest = Math.max(...sm.ledger.alerts.map(a => a.text.length)), sentLongest = Math.max(...wm.out.map(t => t.length));
+    ok(longest <= 610 && sentLongest > 1000 && sm.ledger.alerts.length <= 150, "the log keeps a short copy (≤ 600 chars, 150 entries); the message goes out whole",
+       `${longest} / ${sentLongest}`);
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);

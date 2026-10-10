@@ -3,8 +3,9 @@
 Every card the content team sends from the CMS goes CMS → FM Deliveries → Football Module →
 personalisation → distribution → Ayrshare → each channel. FM Deliveries knows **what should have gone
 out, where and when**. This pipeline checks, automatically and for free, that each of those deliveries
-**actually appeared on the channel**, and sends a WhatsApp message when something did not. Nobody has to
-open the website and press Run; the website is where you look when an alert says something broke.
+**actually appeared on the channel**, and tells the team in Microsoft Teams and on the phone (ntfy) when
+something did not — WhatsApp too, if it is set up. Nobody has to open the website and press Run; the
+website is where you look when an alert says something broke.
 
 Live page: **`#/live`** on the site. Code: `pipeline/` + `api/pipeline.js`. Tests: `test/pipeline.test.js`
 (replays the real 4 Oct 2026 FM day).
@@ -39,16 +40,18 @@ Live page: **`#/live`** on the site. Code: `pipeline/` + `api/pipeline.js`. Test
    | ! reader failed | the channel could not be read for 10 min past the window — **our** problem, not the content team's | in the drop report only |
    | ≈ assumed | Viber — nothing can read it, FM's "sent" is taken as delivered (agreed exception) | — |
    | – not watched | a platform FM added later that isn't configured here | — |
-   | FM failed / stuck / can't confirm | FM itself failed, or a card still queued 15 min after its time | 🛑 held 5 min (see below) · ⏳ ❔ immediately |
+   | FM failed / stuck / can't confirm | FM itself failed, or a card still queued 15 min after its time (an hour after it, the drop is reported with it as "stuck in FM" rather than held back) | 🛑 held 5 min (see below) · ⏳ ❔ immediately |
    | ↻ superseded | a failed/skipped attempt the content team **sent again** (same card, same language, ≥ 20 s later) | — (a note in that send's drop report) |
    | · not checked | sent before the pipeline was watching | — |
 
-5. **Report** — everything read is merged into the daily-check report (conditionally — a browser's own
-   save is never overwritten), so `#/report` stays current with nobody pressing Run.
+5. **Report** — a read that brings a post the daily-check report hasn't had is merged into it
+   (conditionally — a browser's own save is never overwritten), so `#/report` stays current with nobody
+   pressing Run. A read with nothing new leaves the shared row alone.
 6. **Alerts** (Teams, phone, WhatsApp) — problems as soon as they are known; one full report per drop
    once all its channels are settled; the **daily summary** after 23:00 IST — how many posts reached
    their channels (per language), and a short list of what needs attention, each with its time and why.
-   Every alert is sent once.
+   Every delivery is counted in exactly one summary: one still being checked at 23:00 (or sent after it)
+   is in the next night's, with a note. Every alert is sent once.
 
 ### Two rules that keep alerts true (since 10 Oct 2026)
 
@@ -73,16 +76,18 @@ never on every tick — so the pipeline costs nothing on a normal day.
 
 ## The clock
 
-- **GitHub Actions** (`.github/workflows/pipeline.yml`) calls `/api/pipeline?op=tick` every 5 minutes —
-  free on this public repo. GitHub can start a scheduled run late; nothing is lost, every tick catches
-  up on all that is due. GitHub disables scheduled workflows after 60 days with no commit — Actions →
-  *pipeline-tick* → Enable turns it back on.
-- **Vercel's cron** (`vercel.json`) runs a tick once a day at 23:40 IST as a second clock (the Hobby
-  plan allows only daily crons).
-- **Faster:** a free [cron-job.org](https://cron-job.org) job calling
-  `https://aiko-social-distribution-check.vercel.app/api/pipeline?op=tick&fast=1` every minute makes alerts
-  near-instant. `fast=1` answers at once and finishes in the background — cron-job.org cuts a request at
-  30 s and switches a job off after 25 failures in a row. Ticks closer than 40 s apart, or overlapping, do nothing — so several clocks are safe.
+- **cron-job.org — the main clock.** A free [cron-job.org](https://cron-job.org) job calls
+  `https://aiko-social-distribution-check.vercel.app/api/pipeline?op=tick&fast=1` **every minute**.
+  `fast=1` answers at once and finishes in the background — cron-job.org cuts a request at 30 s and
+  switches a job off after 25 failures in a row.
+- **GitHub Actions — a backup** (`.github/workflows/pipeline.yml`), every 30 minutes. The repo is private,
+  where Actions minutes are counted (2,000 a month free): 48 short runs a day stay far inside that.
+  GitHub disables scheduled workflows after 60 days with no commit — Actions → *pipeline-tick* → Enable.
+- **Vercel's cron** (`vercel.json`) — one tick a day at 23:40 IST, a third clock (the Hobby plan allows
+  only daily crons).
+
+Ticks closer than 40 s apart, or overlapping, do nothing — so several clocks are safe; and a late tick
+catches up on everything that is due.
 
 ## WhatsApp setup (once, by the phone's owner — never paste the key in chat)
 
@@ -117,7 +122,7 @@ a co-owner in Workflows so it keeps working if that person leaves.
 One page shows whether every part works right now: the clock (checks in the last hour), the last
 check's run, the report sync, the FM feed (answer time, newest delivery), **every channel reader** —
 its method, last read, posts seen, newest post, and its last 30 reads as bars — and every alert
-channel. It refreshes every 15 s; the Live page carries a one-line summary of it.
+channel. It refreshes every minute, like the pipeline; the Live page carries a one-line summary of it.
 
 - **A check crashes** → 🚨 "Pipeline check failed" on every channel at once (at most every 30 min while
   it keeps retrying each minute).
@@ -126,7 +131,7 @@ channel. It refreshes every 15 s; the Live page carries a one-line summary of it
 - **FM unreachable 15+ min** → 📡.
 - **A scraper failing** (reader down / back, a post that couldn't be checked) is **not a notification**
   (since 8 Oct): the free readers hiccup for a minute or two and recover on their own — FxTwitter
-  answered 404 for X twice that day. It is shown on the **Live page → System status** instead: what is
+  answered 404 for X twice that day. It is shown on the **System health page** (`#/health`) instead: what is
   down, since when and why, plus the recent incidents. A channel that can't be read at the 20-min mark
   is retried every minute for 10 more minutes before its drop is reported, so a short hiccup changes
   nothing; FxTwitter's 404 is also retried at once.
@@ -162,21 +167,26 @@ MatchPulse has no FM feed yet; when it does, it gets its own entry here.
 A post counts as the delivery's post when it is on the channel from 5 min before to 20 min after FM
 sent it and shares **≥ 75%** of the caption's words; after 20 min (a late arrival) it must share
 **≥ 90%** — one template used for two matches can share ~80% of its words (3 Oct: "The Full Verdict"
-for Spain–Czechia and for Croatia–England). All of a channel's due deliveries are matched against all
-of its posts at once, best pairs first.
+for Spain–Czechia and for Croatia–England). All of a channel's open deliveries (sent, not yet matched)
+are matched against all of its posts at once, best pairs first — so a post goes to the card that made
+it, even a caption-less one matched on time alone.
 
 ## Endpoints
 
-- `GET /api/pipeline` — status (public, read-only; no keys, numbers or emails in it)
-- `GET /api/pipeline?op=tick` — run a tick now
+- `GET /api/pipeline` — status for the Live and System health pages (public, read-only; no keys,
+  numbers or emails in it)
+- `GET /api/pipeline?op=tick` — run a tick now (`&fast=1`: answer at once, finish in the background)
 - `GET /api/pipeline?op=test-alert` — one test alert on every configured channel (at most one per 10 min)
-- Optional `PIPELINE_KEY` env var: when set, `op=tick` / `op=test-alert` need `?key=…` (add the same
-  value as the GitHub secret `PIPELINE_KEY` so the clock keeps working).
+- `GET /api/pipeline?op=report&at=16:30[&day=2026-10-09]` — send that drop's full report again (at
+  most once a minute)
+- Optional `PIPELINE_KEY` env var: when set, `op=tick` / `op=test-alert` / `op=report` need `?key=…` —
+  add it to the cron-job.org URL and as the GitHub secret `PIPELINE_KEY`, or the clocks stop.
 
 ## Honest limits
 
 - **X** is read through FxTwitter (free, community-run). It sometimes answers 404 for a minute or two;
-  that is retried, and if it lasts, the last-chance paid read covers it. Its state is on the Live page.
+  that is retried, and if it lasts, the last-chance paid read covers it. Its state is on the System
+  health page.
 - **CallMeBot** is a free personal service with no published limits; failed messages are retried for
   six ticks.
 - **Telegram bot** reads need the user session (`TG_SESSION`); if Telegram logs it out, the bot channel

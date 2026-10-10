@@ -25,7 +25,7 @@
  * end to end without a network (test/pipeline.test.js).
  */
 const { routeOf, labelOf, FM_CHANNELS } = require("./channels.js");
-const { captionProblem, assign } = require("./rules.js");
+const { captionProblem, assign, xPostedLength } = require("./rules.js");
 const realTeams = require("./teams.js");
 const { dropData, dropText, dayData, dayText } = require("./report.js");
 
@@ -55,8 +55,11 @@ const KEEP_DAYS = 3;
 const MIN_TICK_GAP_MS = 40000;
 const PIPELINE_URL = "https://aiko-social-distribution-check.vercel.app/#/live";
 
-const FINAL = new Set(["verified", "late", "assumed", "unwatched", "unverifiable", "fm_failed", "fm_unconfirmed"]);
-const SETTLED = new Set([...FINAL, "missing", "not_visible", "reader_failed", "unchecked"]);
+const FINAL = new Set(["verified", "late", "assumed", "unwatched", "unverifiable", "fm_failed", "fm_unconfirmed", "fm_other"]);
+/* fm_stuck: still queued in FM an hour after its time — the drop is reported with it rather than held for
+   ever; if FM sends it after all, it is checked like any other */
+const SETTLED = new Set([...FINAL, "missing", "not_visible", "reader_failed", "unchecked", "fm_stuck"]);
+const STUCK_REPORT_MIN = 60;
 /* Not found on the channel. On Instagram that is "not_visible", not "missing": Instagram puts an 18+ wall on
    single posts by itself (9 Oct 22:30, Instagram PT — a betting-style reel), and no logged-out reader, Apify
    included, can see such a post at all — so "missing" there could be wrong. It is still flagged, to be checked
@@ -164,7 +167,8 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     /* old news is never news: whatever the ledger says, nothing from an earlier day is notified or logged */
     if (when != null && !current(when)) return;
     const a = { at: now, kind, text, ...(INTERNAL.has(kind) ? { internal: true } : {}) };
-    led.alerts.unshift(a);                       // the log keeps the text; the full report rides on the alert only
+    /* the log (on the website) keeps a short copy — the full report goes out in the message */
+    led.alerts.unshift({ ...a, text: text.length > 600 ? text.slice(0, 600).replace(/\n[^\n]*$/, "") + "\n…" : text });
     if (!INTERNAL.has(kind) && !quiet(when == null ? now : when)) news.push({ ...a, ...(extra || {}) });
   };
   const errors = [];
@@ -208,10 +212,11 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     const e = led.deliveries[d.cardId] || { cardId: d.cardId, firstSeen: now, checks: 0, status: "new" };
     const prevMode = e.mode;
     const resend = (d.state === "failed" || d.state === "skipped") ? resentAfter(d) : null;
+    const settledOld = SETTLED.has(e.status) && e.when && now - e.when > 6 * 3600e3;
     Object.assign(e, {
       setId: d.setId, channel: d.channel, language: d.language, label: labelOf(d.channel, d.language),
       card: (d.template && d.template.label) || labelOfSet[d.setId] || (e.card && e.card !== "card" ? e.card : "") || pretty(d.collection) || "card",
-      caption: String(d.caption || "").slice(0, 700),
+      caption: String(d.caption || "").slice(0, settledOld ? 200 : 700),
       scheduledAt: d.scheduledAt || null, queuedAt: d.queuedAt || null, sentAt: d.sentAt || null,
       fmState: d.state, fmError: d.error ? String(d.error).slice(0, 200) : null, failureStage: d.failureStage || null,
       mode: route.mode, soft: !!route.soft, why: route.why || null, chId: route.read ? route.read.id : null,
@@ -226,6 +231,7 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     e.when = when;
     if (!e.capChecked && d.caption) {
       e.capChecked = true;
+      if (d.channel === "x") e.xLen = xPostedLength(d.caption);        // kept: the caption itself is shortened later
       const problem = captionProblem(d.channel, d.caption);
       if (problem) {
         e.capProblem = problem;
@@ -256,15 +262,18 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
       e.status = "fm_unconfirmed";
       raise(`fmunk:${e.cardId}`, "fm_unconfirmed", `❔ *FM can't confirm* — ${e.label} · ${ist(e.when)} "${e.card}" — FM does not know whether it went out`, e.when);
     } else if (e.fmState === "queued" || e.fmState === "sending") {
-      e.status = "fm_pending";
       const due = T(e.scheduledAt || e.queuedAt);
+      e.status = due && now - due >= STUCK_REPORT_MIN * 60e3 ? "fm_stuck" : "fm_pending";
       if (due && now - due >= STUCK_MIN * 60e3)
         raise(`stuck:${e.cardId}`, "fm_stuck", `⏳ *Stuck in FM* — ${e.label} · scheduled ${ist(due)} "${e.card}" is still ${e.fmState} after ${Math.round((now - due) / 60e3)} min`, due);
     } else if (e.fmState === "sent") {
       if (e.mode === "assume") e.status = "assumed";
       else if (e.mode === "unwatched") e.status = "unwatched";
       else if (e.mode === "unverifiable") e.status = "unverifiable";
-      else if (["new", "fm_pending", "fm_failing", "fm_failed", "superseded"].includes(e.status)) e.status = "waiting";
+      else if (["new", "fm_pending", "fm_stuck", "fm_failing", "fm_failed", "fm_other", "superseded"].includes(e.status)) e.status = "waiting";
+    } else {
+      /* a state FM added later: shown as it is, and never holds a drop back */
+      e.status = "fm_other";
     }
   }
 
@@ -415,11 +424,17 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
       list.sort((a, b) => a.when - b.when).map(e => ist(e.when)).join(", ") + `) — the channel couldn't be read: ${list[0].readNote || "unknown"}`, last);
   }
 
-  /* ── 6. keep the daily-check report current ── */
-  const okReads = Object.values(byCh).filter(r => r.ok);
+  /* ── 6. keep the daily-check report current ──
+     Only a read that brings a post the report hasn't had is merged: a merge reads and rewrites the whole
+     shared report row (~0.5 MB), and the health probes read 3 channels every minute. */
+  const seen = id => new Set((led.readers[id] || {}).seenIds || []);
+  const okReads = Object.values(byCh).filter(r => r.ok && (r.posts || []).some(p => p && p.externalId && !seen(r.channelId).has(p.externalId)));
   if (okReads.length) {
-    try { const m = await store.mergeIntoReport(okReads, now); led.lastReportMerge = { at: now, added: m.added, channels: okReads.length }; }
-    catch (e) { errors.push("report merge: " + String(e.message || e)); }
+    try {
+      const m = await store.mergeIntoReport(okReads, now);
+      led.lastReportMerge = { at: now, added: m.added, channels: okReads.length };
+      for (const r of okReads) if (led.readers[r.channelId]) led.readers[r.channelId].seenIds = (r.posts || []).map(p => p.externalId).filter(Boolean).slice(0, 40);
+    } catch (e) { errors.push("report merge: " + String(e.message || e)); }
   }
 
   /* ── 7. drop reports: once every delivery of a drop is settled — once per drop, ever, and only a current one ── */
@@ -446,10 +461,17 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
   /* ── 8. the day's summary (after 23:00 IST, once a day): what reached the channels, what needs attention ── */
   const day = istDay(now);
   if (new Date(now + 5.5 * 3600e3).getUTCHours() >= 23 && led.lastDigestDay !== day) {
+    /* one time, from the summary that only looked at its own day: what it already covered stays covered */
+    if (!led.summaryV) { for (const e of Object.values(led.deliveries)) if (led.lastDigestDay && istDay(e.when) <= led.lastDigestDay) e.summarized = led.lastDigestDay; led.summaryV = 1; }
     led.lastDigestDay = day;
-    const todays = Object.values(led.deliveries).filter(e => istDay(e.when) === day);
+    /* everything not in a summary yet: today's, and anything from last night that was still being checked
+       (or went out after 23:00) when the last summary was sent — each delivery is in exactly one summary */
+    const pool = Object.values(led.deliveries).filter(e => !e.summarized && e.when <= now && now - e.when < 2 * 86400e3);
+    const todays = pool.filter(e => SETTLED.has(e.status) || e.status === "superseded");
+    const pending = pool.filter(e => e.status !== "superseded" && !todays.includes(e)).length;   // in tomorrow's summary
+    for (const e of todays) e.summarized = day;
     if (todays.some(e => e.status !== "superseded")) {
-      const s = dayData(todays, day);
+      const s = dayData(todays, day, { pending });
       raise(`digest:${day}`, "digest", dayText(s), null, { digest: s,
         title: (s.attention.length ? "⚠️ " : "✅ ") + `Daily summary ${day.slice(8)}/${day.slice(5, 7)} — ${s.ok}/${s.checked} reached` +
           (s.attention.length ? ` · ${s.attention.length} need${s.attention.length === 1 ? "s" : ""} attention` : "") });
@@ -509,7 +531,7 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
   for (const [k, e] of Object.entries(led.deliveries)) if (!e.dropKey && (e.when || e.firstSeen) < keepFrom) delete led.deliveries[k];
   /* alert keys outlive what they are about by a day, so nothing is ever "new" twice */
   for (const [k, at] of Object.entries(led.sent)) if (at < keepFrom - 86400e3) delete led.sent[k];
-  led.alerts = led.alerts.slice(0, 300);
+  led.alerts = led.alerts.slice(0, 150);
   led.outbox = led.outbox.slice(-20);
   led.lastTickAt = now;
   led.ticks = (led.ticks || 0) + 1;
