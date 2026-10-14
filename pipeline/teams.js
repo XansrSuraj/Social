@@ -14,7 +14,10 @@
  */
 const { dropCardItems, dayCardItems } = require("./report.js");
 const URL_ = () => String(process.env.TEAMS_WEBHOOK_URL || "").trim();
-const configured = () => /^https:\/\//.test(URL_());
+/* KILL SWITCH (14 Oct 2026, at the user's request): nothing goes to Teams — no new card, and nothing
+   already queued is sent. Set TEAMS_OFF to false to turn Teams alerts on again. */
+const TEAMS_OFF = true;
+const configured = () => !TEAMS_OFF && /^https:\/\//.test(URL_());
 
 const STYLE = { missing: "attention", fm_failed: "attention", fm_down: "attention", pipeline: "attention", not_visible: "warning", reader_down: "warning",
                 reader_failed: "warning", caption: "warning", fm_stuck: "warning", fm_unconfirmed: "warning", late: "emphasis",
@@ -52,12 +55,14 @@ function card(alerts, { title = "SportsFC · FM ↔ channels", link = "" } = {})
 }
 
 async function post(payload) {
+  if (TEAMS_OFF) return;
   const r = await fetch(URL_(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: AbortSignal.timeout(20000) });
   if (r.status >= 300) throw new Error(`Teams ${r.status}: ${(await r.text()).slice(0, 160)}`);
 }
 
 /* Send each queued card; a failed one stays queued (6 tries, then dropped) — same rule as WhatsApp. */
 async function flush(queue, { send = post } = {}) {
+  if (TEAMS_OFF) return { left: [], log: [] };            // switched off: the queue is dropped, nothing sent
   const left = [], log = [];
   for (const m of queue) {
     try { await send(m.payload); log.push({ at: Date.now(), ok: true, via: "teams", kind: m.kind }); }
