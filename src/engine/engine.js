@@ -1376,17 +1376,29 @@ async function collectServer(o){
   if(fast.length) groups.push(fast);
   for(const c of chans.filter(c => SLOW.has(c.platform))) groups.push([c]);
 
-  const one = async batch => {
+  /* Not signed in (the content team): ONE request for the whole brand. The server reads its own list of
+     this brand's channels (directory.js), finishes inside its time limit whatever is slow, and writes
+     the result into the shared report itself — this browser never writes the shared row (api/collect.js,
+     teamRun). The admin's press is the split one above, with the extension and Apify figures. */
+  const team = !adminToken();
+  const jobs = team ? [{ body:{ brand:ORG.id, run:true }, batch:chans }]
+                    : groups.map(batch => ({ body:{ channels:batch, hours:192 }, batch }));
+  const one = async job => {
     try{
       const r = await fetch("api/collect", { method:"POST", headers:{ "Content-Type":"application/json", ...authHdr() },
-        body:JSON.stringify({ channels:batch, hours:192 }) });
+        body:JSON.stringify(job.body) });
       const j = await r.json();
       if(!j.ok) throw new Error(j.error || "collect failed");
       return j;
-    }catch(e){ return { ok:false, results:[], error:String(e.message || e), _batch:batch }; }
+    }catch(e){ return { ok:false, results:[], error:String(e.message || e), _batch:job.batch }; }
   };
 
-  const parts = await Promise.all(groups.map(one));
+  const parts = await Promise.all(jobs.map(one));
+  if(team && parts[0] && parts[0].skipped){            // pressed again straight after a Run: show that one
+    await pullReport();
+    toast(parts[0].skipped, "info");
+    return false;
+  }
 
   let added = 0, ok = 0, browser = 0, unreached = 0, collectedAt = null;
   let spent = 0, runs = 0, cachedN = 0, unsettled = 0;
@@ -1418,7 +1430,7 @@ async function collectServer(o){
      lost) is what one daily check really costs, and is kept apart as the figure the panel divides
      the remaining credit by; a press that hit the cache would understate it. */
   const usd = Math.round(spent * 1e6) / 1e6;
-  if(runs || cachedN){
+  if(!team && (runs || cachedN)){
     /* Apify fills in a run's bill some time after the run stops, so a figure the server could not
        confirm is provisional (it has read low by more than half). It is never taken as the price of
        a check; refreshApifyUsage asks for the same runs again until their bills have settled. */
@@ -1427,6 +1439,16 @@ async function collectServer(o){
     if(full && !unsettled) checks.apifyCheckUsd = usd;
   }
   saveChecks();
+  if(team){
+    /* the server saved it for everyone; read the shared report back so this browser shows exactly that */
+    const notSaved = parts[0] && parts[0].saved === false;
+    if(!notSaved) await pullReport();
+    toast(`${ok} channel(s) read, ${added} new post(s)`
+          + (unreached ? " · the check couldn't be reached — try again in a minute" : "")
+          + (notSaved ? " · shown here, but couldn't be saved for everyone — try again in a minute" : " · saved for everyone"),
+          ok && !notSaved ? "check-check" : "triangle-alert");
+    return ok > 0;
+  }
   toast(`${ok} channel(s) read, ${added} new post(s)`
         + (runs ? ` · Apify $${usd.toFixed(4)} for ${runs} run(s)${unsettled ? " so far — Apify is still settling the bill" : ""}`
                 : cachedN ? " · Apify: cached, $0" : "")
@@ -1634,6 +1656,9 @@ function absorbRun(run){
    simply says which channels are still waiting. */
 async function runEverything(o){
   await collectServer(o);
+  /* the extension's reads stay in the browser that made them — only the admin's browser writes the
+     shared report, so for anyone else they would show here and vanish at the next sync */
+  if(!adminToken()) return;
 
   /* anything the popup left behind still counts */
   absorbBrowserRun();

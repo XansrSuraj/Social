@@ -57,7 +57,7 @@ export function EngineProvider({ children }) {
   /* one press reads every channel of every region of this brand; the page follows along */
   const run = useCallback(async (serverOnly) => {
     const id = brand.id;
-    if (running[id] || !adminToken()) return;           // reading the channels is the admin's (it can spend on Apify)
+    if (running[id]) return;                            // anyone may run a check: signed out it is the brand's own channels only, saved by the server (api/collect.js)
     setRunning(r => ({ ...r, [id]: true }));
     try { if (serverOnly) { await E.collectServer(E.ORG); E.absorbBrowserRun(); } else await E.runEverything(E.ORG); }
     finally { setRunning(r => ({ ...r, [id]: false })); bump(); }

@@ -54,7 +54,7 @@ export default function Report() {
 
       <section className="section tight" style={{ paddingTop: 28 }}>
         <div className="wrap">
-          {admin && <RunCard E={E} vm={vm} run={run} running={running} toast={toast} />}
+          <RunCard E={E} vm={vm} run={run} running={running} toast={toast} admin={admin} />
           <Verdict vm={vm} />
 
           <div className="tabs" role="tablist">
@@ -124,9 +124,13 @@ function Controls({ E, vm }) {
 }
 
 /* ── one press reads everything; the two source rows say what answered ── */
-function RunCard({ E, vm, run, running, toast }) {
+function RunCard({ E, vm, run, running, toast, admin }) {
   const { srvIds, brwIds, platNames, gotFrom, silent, apifyNote, pendingN } = vm;
-  const msg = E.extReady && E.extStale()
+  /* the content team (not signed in): one press, read and saved by the server for everyone (api/collect.js,
+     teamRun) — the extension, Merge and Server-only are the admin's */
+  const msg = !admin
+    ? <><b>Every channel, server-side, one press.</b> The result is saved for everyone — and the pipeline checks every channel every minute anyway.</>
+    : E.extReady && E.extStale()
     ? <>Extension is v{E.extVersion} but this build needs v{E.EXT_WANT} — reload it at chrome://extensions</>
     : E.apifyInfo && E.apifyInfo.configured === false && brwIds.length
       ? <>Apify isn't configured — {platNames(brwIds.filter(id => vm.chanOf(id).platform !== "x"))} read free{vm.chans.some(c => c.platform === "x") ? "; X needs Apify" : ""}</>
@@ -149,19 +153,19 @@ function RunCard({ E, vm, run, running, toast }) {
           {running ? <Loader2 className="spin" /> : <Play />}{running ? "Checking…" : "Run everything"}
         </button>
         <div className="run-msg">{msg}</div>
-        {pendingN > 0 && (
+        {admin && pendingN > 0 && (
           <button className="btn btn-ghost-dk btn-sm" onClick={() => { if (!E.absorbBrowserRun()) toast("That run had nothing new in it", "info"); }}>
             <Merge />Merge {pendingN} waiting</button>
         )}
-        <button className="btn btn-ghost-dk btn-sm" disabled={running} onClick={() => run(true)}
-          title="Read every channel server-side, without asking the extension for the ones that fail"><Server />Server only</button>
+        {admin && <button className="btn btn-ghost-dk btn-sm" disabled={running} onClick={() => run(true)}
+          title="Read every channel server-side, without asking the extension for the ones that fail"><Server />Server only</button>}
       </div>
       {silent.length > 0 && (
         <div className="why-list">{silent.map(x => <div key={x.id}><b>{x.name}</b> — {x.note}</div>)}</div>
       )}
       <div className="sources">
         {row("Server · free", srvIds)}
-        {row("Server · social", brwIds, apifyNote)}
+        {row("Server · social", brwIds, admin ? apifyNote : null)}
       </div>
     </div>
   );

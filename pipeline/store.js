@@ -7,7 +7,8 @@
  *             merges the posts it reads into it, so the report stays current with nobody pressing
  *             Run. That row is also written by browsers, so every write here is conditional on the
  *             row not having changed since it was read (compare-and-set on updated_at) and retried —
- *             a browser's save is never overwritten by a stale copy.
+ *             a browser's save is never overwritten by a stale copy. The content team's "Run everything"
+ *             (api/collect.js, teamRun) is merged in here too — row 3, or MatchPulse's row 4.
  *
  * Without Supabase (local development) both live in files beside the app.
  */
@@ -17,8 +18,9 @@ const path = require("path");
 const SB_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY || "";
 const TABLE = "orghub_state";
-const LEDGER_ROW = 5, REPORT_ROW = 3;
-const FILES = { [LEDGER_ROW]: path.join(__dirname, "..", ".pipeline.json"), [REPORT_ROW]: path.join(__dirname, "..", ".report-local.json") };
+const LEDGER_ROW = 5, REPORT_ROW = 3, MATCHPULSE_ROW = 4;
+const FILES = { [LEDGER_ROW]: path.join(__dirname, "..", ".pipeline.json"), [REPORT_ROW]: path.join(__dirname, "..", ".report-local.json"),
+                [MATCHPULSE_ROW]: path.join(__dirname, "..", ".report-local-matchpulse.json") };
 
 const configured = () => !!(SB_URL && SB_KEY);
 /* Every string made well-formed before it is sent: a text cut through the middle of an emoji leaves half a
@@ -103,14 +105,23 @@ async function readLedger() {
   return data || {};
 }
 
-/* ── the daily-check report: merge freshly read posts, never clobber a browser's save ── */
+/* ── the daily-check report: merge freshly read posts, never clobber a browser's save ──
+   Two callers: the pipeline (automatic reads — only what was read is merged, a failed read changes
+   nothing) and the content team's "Run everything" (api/collect.js, teamRun: { manual, lastRun } —
+   like a press in the browser, every channel's result is recorded, failures too, and the run time). */
 const POST_KEEP_DAYS = 14;
-function mergeInto(report, results, nowMs) {
+function mergeInto(report, results, nowMs, opts = {}) {
   const r = report || {};
   r.posts = r.posts || {}; r.meta = r.meta || {};
   let added = 0;
   for (const res of results) {
-    if (!res.ok) continue;                         // a failed automatic read never marks a channel failed
+    if (!res.ok) {
+      /* a failed automatic read never marks a channel failed; a press says what it found, as the browser does */
+      if (opts.manual) r.meta[res.channelId] = { ok: false, note: res.note || "", source: res.source || "", browserRequired: !!res.browserRequired,
+        unsupported: !!res.unsupported, dead: !!res.dead, at: nowMs, cost: res.cost && !res.cost.cached ? res.cost.usd : null,
+        cached: !!(res.cost && res.cost.cached), partialRead: !!res.partialRead };
+      continue;
+    }
     const have = r.posts[res.channelId] || [];
     const byId = new Map(have.map(p => [p.externalId, p]));
     for (const p of res.posts || []) {
@@ -124,21 +135,37 @@ function mergeInto(report, results, nowMs) {
     const keepFrom = nowMs - POST_KEEP_DAYS * 86400e3;
     r.posts[res.channelId] = [...byId.values()].filter(p => !(Date.parse(p.ts) < keepFrom))
       .sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts)).slice(0, 400);
-    r.meta[res.channelId] = { ok: true, note: res.note || "", source: res.source || "", browserRequired: false,
-      unsupported: false, dead: false, at: nowMs, cost: null, cached: false, partialRead: !!res.partialRead, auto: true };
+    r.meta[res.channelId] = opts.manual
+      ? { ok: true, note: res.note || "", source: res.source || "", browserRequired: false, unsupported: false, dead: false, at: nowMs,
+          cost: res.cost && !res.cost.cached ? res.cost.usd : null, cached: !!(res.cost && res.cost.cached), partialRead: !!res.partialRead }
+      : { ok: true, note: res.note || "", source: res.source || "", browserRequired: false,
+          unsupported: false, dead: false, at: nowMs, cost: null, cached: false, partialRead: !!res.partialRead, auto: true };
   }
-  r.autoAt = new Date(nowMs).toISOString();
+  if (opts.manual) r.lastRun = opts.lastRun || new Date(nowMs).toISOString();
+  else r.autoAt = new Date(nowMs).toISOString();
   return { report: r, added };
 }
-async function mergeIntoReport(results, nowMs) {
-  if (!results.some(r => r.ok)) return { added: 0 };
+/* opts.row: the brand's report row (SportsFC 3, MatchPulse 4 — directory.js); opts.manual: see mergeInto */
+async function mergeIntoReport(results, nowMs, opts = {}) {
+  const row = opts.row || REPORT_ROW;
+  if (!opts.manual && !results.some(r => r.ok)) return { added: 0 };
   for (let i = 0; i < 4; i++) {
-    const { data, updatedAt } = await readRow(REPORT_ROW);
-    const { report, added } = mergeInto(data, results, nowMs);
-    try { await writeRow(REPORT_ROW, report, updatedAt); return { added }; }
+    const { data, updatedAt } = await readRow(row);
+    const { report, added } = mergeInto(data, results, nowMs, opts);
+    try { await writeRow(row, report, updatedAt); return { added }; }
     catch (e) { if (!(e instanceof Conflict)) throw e; await new Promise(r => setTimeout(r, 400 + i * 600)); }
   }
   throw new Error("the report kept changing under the merge — will try again next tick");
 }
+/* When a report's last Run was — a few bytes (one JSON field, not the ~0.7 MB row), for the content
+   team's Run to check it isn't pressed again straight after one */
+async function lastRunOf(row) {
+  if (!configured()) { const { data } = await readRow(row); return data && data.lastRun || null; }
+  const r = await fetch(`${SB_URL}/rest/v1/${TABLE}?id=eq.${row}&select=lastRun:data->>lastRun`, { headers: sbHeaders(), signal: AbortSignal.timeout(15000) });
+  if (!r.ok) throw new Error(`store read failed (${r.status})`);
+  const rows = await r.json();
+  return rows && rows[0] && rows[0].lastRun || null;
+}
 
-module.exports = { lockLedger, saveLedger, readLedger, mergeIntoReport, mergeInto, Conflict, configured, readRow, writeRow, LEDGER_ROW, REPORT_ROW };
+module.exports = { lockLedger, saveLedger, readLedger, mergeIntoReport, mergeInto, lastRunOf, Conflict, configured, readRow, writeRow,
+                   LEDGER_ROW, REPORT_ROW, MATCHPULSE_ROW };

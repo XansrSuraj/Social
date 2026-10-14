@@ -12,7 +12,7 @@ Adding a channel is a one-line code change, not a UI.
 
 **Automatic, end to end.** Every card FM Deliveries sends is checked on its real channel every minute. Only problems (missing post, caption too long, FM failure) go to Teams — plus one summary of the day at 23:00 IST; a drop that went out fine is shown on the site, not sent. See [PIPELINE.md](PIPELINE.md), the **Live** page (`#/live`, for everyone) and the **Admin** dashboard (`#/admin`, signed in: the clock, FM, every reader, every alert channel, every error and every message sent, live).
 
-**Two views.** The content team opens the site without signing in: Overview, Report and Live — which post went out where, and why one didn't. The admin signs in (`ADMIN_PASSWORD`) for the rest: the Admin dashboard, FM Deliveries, running a check, deleting a report, Apify spend. The server enforces it — see [Security](#security-notes).
+**Two views.** The content team opens the site without signing in: Overview, Report and Live — which post went out where, and why one didn't — and can press **Run everything** for SportsFC or MatchPulse whenever they need a fresh check (the server reads that brand's own channels and saves the result for everyone). The admin signs in (`ADMIN_PASSWORD`) for the rest: the Admin dashboard, FM Deliveries, deleting a report, Apify spend, the extension's fallback. The server enforces it — see [Security](#security-notes).
 
 **Two brands, one site.** The switch in the nav moves between them; each has its own channels,
 overview, report and saved history, and never mixes with the other:
@@ -395,8 +395,15 @@ stop depending on the extension.
   The password itself is only ever sent to `/api/auth`.
 - **What needs the admin** — enforced on the server, not by hiding buttons: `/api/fm-deliveries*`
   (captions, asset URLs, editors' emails), `/api/apify-usage`, `/api/health` (and the free-route
-  probe), `/api/collect` (it can spend on Apify), `/api/pipeline?op=test-alert|report`, the writes to
-  `/api/report` and `/api/data`. `/api/pipeline` (status) answers everyone with the public view —
+  probe), `/api/collect` for any channels a caller names (it can spend on Apify),
+  `/api/pipeline?op=test-alert|report`, the writes to `/api/report` and `/api/data`.
+- **The content team's Run** — `POST /api/collect {brand, run: true}`, open to anyone: it reads only that
+  brand's own channels from `directory.js` (nothing the caller sends), so it can't be pointed at another
+  account or the Apify credit; the server writes the result into the brand's report itself (the
+  browser never writes it); one Run per brand per 3 minutes (a press inside that shows the one just
+  run), 12 an hour from one address, answered inside 100 s whatever is slow. `directory.js` must list
+  the same channels as `SPORTSFC` / `MATCHPULSE` in `src/engine/engine.js` — `test/teamrun.test.js`
+  fails if they differ. `/api/pipeline` (status) answers everyone with the public view —
   per post: channel, time, result and why in plain words — and the admin with everything (health,
   readers, alert and error logs). Admin endpoints send no CORS headers, so no other website can call
   them from a browser.

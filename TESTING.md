@@ -17,7 +17,7 @@ npm test             # both
 | `test/free.test.js`, `test/fbdate.test.js`, `test/ig-*.test.js`, `test/tt-ext.test.js`, `test/x*.test.js`, `test/youtube.test.js` | each reader's parser, on saved pages |
 | `test/apify*.test.js`, `test/retry.test.js`, `test/collectsplit.test.js` | the Apify fallback: cost caps, caching, retries |
 | `test/ingest.test.js`, `test/thumb.test.js`, `test/health.test.js` | the small endpoints |
-| `test/auth.test.js`, `test/store.test.js` | the admin sign-in: fails closed without `ADMIN_PASSWORD`, wrong / forged / expired tokens, the 8-miss lock-out, every admin endpoint refusing an anonymous caller (401, no CORS), the public pipeline view carrying nothing internal and a plain-words `why` for each problem. `test/_admin.js` signs the other suites' calls in. `test/pipeline.test.js` → "who hears what" pins the alert policy (only problems to Teams, the pipeline's own trouble never). |
+| `test/auth.test.js`, `test/store.test.js`, `test/teamrun.test.js` | the admin sign-in: fails closed without `ADMIN_PASSWORD`, wrong / forged / expired tokens, the 8-miss lock-out, every admin endpoint refusing an anonymous caller (401, no CORS), the public pipeline view carrying nothing internal and a plain-words `why` for each problem. `test/_admin.js` signs the other suites' calls in. `test/teamrun.test.js`: the content team's Run — only the brand's own channels, saved server-side into the right report row, 3-minute gap, 12 an hour per address, a deadline, and `directory.js` = the engine's channel lists. `test/pipeline.test.js` → "who hears what" pins the alert policy (only problems to Teams, the pipeline's own trouble never). |
 
 ## Running the site locally
 
@@ -55,7 +55,7 @@ On production, read-only:
 
 - [ ] `npm run test:unit` all green; `npm run build` builds
 - [ ] `#/`, `#/report`, `#/live`, `#/matchpulse` load with no console error, at phone width too, with
-      no sideways scroll — signed out: no Run / Delete / Check now, `#/admin` and `#/fm` show the sign-in
+      no sideways scroll — signed out: Run everything works on both brands (and says "saved for everyone"); no Delete / Check now; `#/admin` and `#/fm` show the sign-in
 - [ ] signed in: `#/admin` and `#/fm` load; the Admin page says everything is working, the clock shows
       ~60 checks in the last hour; Sign out returns to the public view
 - [ ] a change to alert wording: run `SHOW=1 node test/pipeline.test.js` and read the printed report

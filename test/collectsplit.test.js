@@ -32,9 +32,9 @@ const CHANS = [
   { id: "ig-vn", platform: "instagram" }, { id: "ig-fans", platform: "instagram" },
 ];
 
-function makeCollectServer(fetchStub, checks) {
+function makeCollectServer(fetchStub, checks, { token = "test-session", pulls = [], toasts = [] } = {}) {
   const location = { protocol: "https:" };
-  const toast = () => {};
+  const toast = (m, icon) => { toasts.push([m, icon]); };
   const dcChannels = () => CHANS.map(c => ({ ...c, url: "https://x/" + c.id, handle: c.id }));
   const mergePosts = (id, posts) => {
     const have = checks.posts[id] || [];
@@ -44,11 +44,14 @@ function makeCollectServer(fetchStub, checks) {
     return add.length;
   };
   const saveChecks = () => {};
-  /* the admin session's header (src/app/admin.js) — /api/collect is admin-only */
-  const authHdr = () => ({ Authorization: "Bearer test-session" });
-  const fn = new Function("location", "toast", "dcChannels", "checks", "mergePosts", "saveChecks", "fetch", "Date", "authHdr",
+  /* the admin session (src/app/admin.js): signed in unless token is "" — then it is the content team's Run */
+  const adminToken = () => token;
+  const authHdr = () => (token ? { Authorization: "Bearer " + token } : {});
+  const ORG = { id: "sportsfc" };
+  const pullReport = async () => { pulls.push(1); };
+  const fn = new Function("location", "toast", "dcChannels", "checks", "mergePosts", "saveChecks", "fetch", "Date", "authHdr", "adminToken", "ORG", "pullReport",
     src + "\n; return collectServer;");
-  return fn(location, toast, dcChannels, checks, mergePosts, saveChecks, fetchStub, Date, authHdr);
+  return fn(location, toast, dcChannels, checks, mergePosts, saveChecks, fetchStub, Date, authHdr, adminToken, ORG, pullReport);
 }
 
 (async () => {
@@ -114,7 +117,45 @@ function makeCollectServer(fetchStub, checks) {
       "a press with a lost request is not taken as the price of a full check", JSON.stringify(checks.apifyLast));
   }
 
-  /* 3) a provisional bill is settled later from the same runs — refreshApifyUsage, read straight
+  /* 3) the content team's Run (not signed in): one request naming only the brand — the server reads its own
+        list of channels and saves the result itself; this browser reads the shared report back */
+  console.log("\n── the content team's Run: the brand only, one request, saved by the server");
+  {
+    const checks = { posts: {}, meta: {}, ytIds: {}, lastRun: null };
+    const sent = [], pulls = [], toasts = [];
+    const fetchStub = async (url, opt) => {
+      sent.push({ url, headers: opt.headers, body: JSON.parse(opt.body) });
+      const results = CHANS.map(c => ({ channelId: c.id, platform: c.platform, ok: true, source: "test",
+        posts: [{ externalId: c.id + "-1", ts: "2026-08-24T00:00:00Z", text: "hi" }], cost: /^(fb|ig|x)-/.test(c.id) ? { usd: 0.01, cached: false } : null }));
+      return { json: async () => ({ ok: true, team: true, saved: true, collectedAt: "2026-08-24T00:00:00Z", apifyCostUsd: 0.05, apifyRuns: 5, results }) };
+    };
+    const got = await makeCollectServer(fetchStub, checks, { token: "", pulls, toasts })({});
+    ok(sent.length === 1, "one request for the whole brand", sent.length);
+    ok(sent[0] && JSON.stringify(sent[0].body) === JSON.stringify({ brand: "sportsfc", run: true }), "it names the brand and nothing else — no channel list, no URLs", sent[0] && JSON.stringify(sent[0].body));
+    ok(sent[0] && !("Authorization" in sent[0].headers), "no session is sent (there is none)");
+    ok(CHANS.every(c => (checks.posts[c.id] || []).length === 1) && got === true, "every channel's posts are shown at once");
+    ok(!checks.apifyLast && checks.apifyCheckUsd === undefined, "the admin's Apify price of a check is left alone");
+    ok(pulls.length === 1 && /saved for everyone/.test(toasts.at(-1)[0]), "the shared report is read back, and it says it was saved for everyone", toasts.at(-1)[0]);
+  }
+  {
+    const checks = { posts: {}, meta: {}, ytIds: {}, lastRun: null };
+    const pulls = [], toasts = [];
+    const fetchStub = async () => ({ json: async () => ({ ok: true, skipped: "A check of SportsFC finished 1 min ago — that's what you're seeing.", results: [] }) });
+    const got = await makeCollectServer(fetchStub, checks, { token: "", pulls, toasts })({});
+    ok(got === false && pulls.length === 1 && /finished 1 min ago/.test(toasts.at(-1)[0]) && !Object.keys(checks.posts).length,
+      "pressed again straight after a Run: the one just run is shown, nothing new is read", toasts.at(-1)[0]);
+  }
+  {
+    const checks = { posts: {}, meta: {}, ytIds: {}, lastRun: null };
+    const pulls = [], toasts = [];
+    const fetchStub = async () => ({ json: async () => ({ ok: true, team: true, saved: false, saveError: "store write failed (503)", collectedAt: "2026-08-24T00:00:00Z",
+      results: [{ channelId: "yt-vn", platform: "youtube", ok: true, posts: [{ externalId: "a", ts: "2026-08-24T00:00:00Z" }] }] }) });
+    await makeCollectServer(fetchStub, checks, { token: "", pulls, toasts })({});
+    ok(pulls.length === 0 && /couldn't be saved for everyone/.test(toasts.at(-1)[0]) && toasts.at(-1)[1] === "triangle-alert",
+      "the server couldn't save it: shown here, and said plainly — not read back over", toasts.at(-1)[0]);
+  }
+
+  /* 4) a provisional bill is settled later from the same runs — refreshApifyUsage, read straight
         out of src/engine/engine.js like collectServer above */
   console.log("\n── a press's provisional Apify bill is replaced once Apify settles it");
   {

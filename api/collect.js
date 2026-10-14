@@ -1755,16 +1755,61 @@ async function collectOne(ch, cutoff, pushedAll) {
 
 /* ═══════════════════ handler ═══════════════════ */
 
+/* The content team's "Run everything" — anyone, no sign-in: { brand, run: true }.
+   · reads that brand's own channels from directory.js and nothing the caller sends, so it can't be
+     pointed at another account or spend the Apify credit on one (a paid fallback is also cached
+     15 min, so pressing again costs nothing);
+   · the server writes the result into the brand's shared report itself — the browser never writes it;
+   · one request for the whole brand (one report write, not one per channel), finished by DEADLINE_MS
+     so the answer always comes back inside the function's 120 s: a channel still being read by then
+     is reported as such, never left to sink the rest;
+   · not again within 3 minutes of the last Run of that brand (the press shows the one just run), and
+     at most 12 an hour from one address. */
+const TEAM_GAP_MS = 3 * 60e3, TEAM_PER_HOUR = 12, DEADLINE_MS = 100000;
+const teamPresses = new Map();                     // address → press times (this instance)
+async function teamRun(req, res, brandId) {
+  const DIRECTORY = require("../directory.js"), store = require("../pipeline/store.js");
+  const brand = DIRECTORY[brandId];
+  const ip = String((req.headers && (req.headers["x-real-ip"] || req.headers["x-forwarded-for"])) || (req.socket && req.socket.remoteAddress) || "?").split(",")[0].trim();
+  const now = Date.now();
+  const mine = (teamPresses.get(ip) || []).filter(t => now - t < 3600e3);
+  if (mine.length >= TEAM_PER_HOUR) return res.status(429).json({ ok: false, error: "That's a lot of checks from here this hour — the pipeline checks every channel every minute anyway. Try again later." });
+  try {
+    const last = await store.lastRunOf(brand.row);
+    const since = last ? now - Date.parse(last) : Infinity;
+    if (since < TEAM_GAP_MS) return res.status(200).json({ ok: true, skipped: `A check of ${brand.name} finished ${Math.max(1, Math.round(since / 60e3))} min ago — that's what you're seeing. Run again in a few minutes.`, lastRun: last, results: [] });
+  } catch (e) { /* can't tell when the last one was — run anyway */ }
+  mine.push(now); teamPresses.set(ip, mine);
+  if (teamPresses.size > 5000) for (const [k, v] of teamPresses) if (!v.some(t => now - t < 3600e3)) teamPresses.delete(k);
+
+  const hours = 192;
+  const out = await collectChannels(brand.channels, { hours, deadlineMs: DEADLINE_MS });
+  const collectedAt = new Date().toISOString();
+  let saved = true, saveError = null;
+  try { await store.mergeIntoReport(out.results, Date.now(), { row: brand.row, manual: true, lastRun: collectedAt }); }
+  catch (e) { saved = false; saveError = String(e.message || e); }
+  return res.status(200).json({ ok: true, team: true, brand: brandId, collectedAt, hours, days: Math.round(hours / 24), saved, saveError, ...out });
+}
+
 module.exports = async (req, res) => {
-  /* same-origin only, admin only: a read can fall back to paid Apify runs */
+  /* same-origin only (no CORS). Any channels the caller names: the admin only — a read can fall back
+     to paid Apify runs. The brand's own Run: anyone (teamRun above). */
   res.setHeader("Cache-Control", "no-store, max-age=0");
 
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Use POST." });
-  if (!require("../admin-auth.js").isAdmin(req)) return require("../admin-auth.js").deny(res);
 
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = null; } }
+
+  const auth = require("../admin-auth.js");
+  if (!auth.isAdmin(req)) {
+    const brandId = body && body.run === true && typeof body.brand === "string" ? body.brand : "";
+    if (brandId && Object.prototype.hasOwnProperty.call(require("../directory.js"), brandId)) return teamRun(req, res, brandId);
+    return auth.deny(res);
+  }
+  if (body && body.run === true && typeof body.brand === "string" && Object.prototype.hasOwnProperty.call(require("../directory.js"), body.brand))
+    return teamRun(req, res, body.brand);
 
   const channels = (body && Array.isArray(body.channels) ? body.channels : [])
     .filter(c => c && c.id && c.platform)
@@ -1797,7 +1842,16 @@ async function collectChannels(channels, opts) {
        Supabase egress for nothing */
     if (!(opts && opts.fresh)) { try { pushedAll = await ingest.readAll(); } catch (e) { pushedAll = {}; } }
 
-    const results = await Promise.all(channels.map(c => collectOne(c, cutoff, pushedAll)));
+    /* deadlineMs (the content team's Run): a channel still being read by then is answered as such,
+       so one slow read can't hold the whole answer past the function's limit */
+    const timed = c => {
+      if (!(opts && opts.deadlineMs)) return collectOne(c, cutoff, pushedAll);
+      let t;
+      const late = new Promise(r => { t = setTimeout(() => r({ channelId: c.id, platform: c.platform, ok: false, posts: [], source: "timeout",
+        note: "still being read when the check had to finish — press Run again in a few minutes" }), opts.deadlineMs); });
+      return Promise.race([collectOne(c, cutoff, pushedAll), late]).finally(() => clearTimeout(t));
+    };
+    const results = await Promise.all(channels.map(timed));
 
     /* What this request actually spent on Apify, summed from each run's own record. Cached reads
        count as 0; a run whose record carried no figure is counted in apifyRuns but not in the sum. */

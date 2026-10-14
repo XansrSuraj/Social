@@ -53,9 +53,9 @@ export function Nav({ route }) {
             {admin && link("/fm", "FM Deliveries")}
             {!admin && <a href="#/admin" className={route === "/admin" ? "on" : ""} title="Admin sign-in"><Lock style={{ width: 14, height: 14, verticalAlign: -2 }} /> Admin</a>}
           </nav>
-          {admin ? <button className={`btn btn-sm nav-cta ${solid ? "btn-red" : "btn-white"}`} disabled={running} onClick={runIt}>
+          <button className={`btn btn-sm nav-cta ${solid ? "btn-red" : "btn-white"}`} disabled={running} onClick={runIt}>
             {running ? <Loader2 className="spin" /> : <Play />}{running ? "Checking…" : "Run daily check"}
-          </button> : null}
+          </button>
           {admin && <button className="icon-btn nav-out" title="Sign out" aria-label="Sign out of admin" onClick={logout}><LogOut /></button>}
           <button className="icon-btn nav-burger" aria-label={open ? "Close menu" : "Open menu"} onClick={() => setOpen(o => !o)}>
             {open ? <X /> : <Menu />}
@@ -69,9 +69,9 @@ export function Nav({ route }) {
         <a href={"#" + path("/report")}>Report</a>
         {brand.id === "sportsfc" && <a href="#/live">Live pipeline</a>}
         {admin ? <><a href="#/admin">Admin dashboard</a><a href="#/fm">FM Deliveries</a></> : <a href="#/admin">Admin sign-in</a>}
-        {admin && <button className="btn btn-red btn-lg" style={{ marginTop: 18 }} disabled={running} onClick={runIt}>
+        <button className="btn btn-red btn-lg" style={{ marginTop: 18 }} disabled={running} onClick={runIt}>
           {running ? <Loader2 className="spin" /> : <Play />}{running ? "Checking…" : `Run ${brand.name} check`}
-        </button>}
+        </button>
         {admin && <button className="btn btn-line btn-lg" style={{ marginTop: 10 }} onClick={logout}><LogOut />Sign out</button>}
       </div>
     </>

@@ -14,3 +14,4 @@ dist/
 # pipeline state when run without Supabase (local development)
 .pipeline.json
 .report-local.json
+.report-local-matchpulse.json
