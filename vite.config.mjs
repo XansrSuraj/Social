@@ -7,5 +7,8 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: { port: 5173, proxy: { "/api": "http://localhost:3000" } },
+  /* the shipped bundle: minified, no source maps, no comments — nothing in it is secret (keys and the
+     admin's data stay on the server, behind admin-auth.js), but there is no reason to hand out a map */
   build: { outDir: "dist", sourcemap: false, chunkSizeWarningLimit: 900 },
+  esbuild: { legalComments: "none", drop: ["debugger"] },
 });

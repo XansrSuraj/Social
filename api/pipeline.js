@@ -1,8 +1,10 @@
 /**
  * The FM → channels pipeline (see PIPELINE.md).
  *
- *   GET /api/pipeline                 status for the Live page: today's deliveries and what became of
- *                                     each, reader health, the alert log, when it last ran
+ *   GET /api/pipeline                 the public view (the Live page for the content team): each drop,
+ *                                     each channel — went out or not, and why not. Nothing internal.
+ *                                     Signed in as admin (admin-auth.js): everything — health, readers,
+ *                                     the alert and error logs, what was sent where.
  *   GET /api/pipeline?op=tick         run one tick (pipeline/tick.js). Called every minute by cron-job.org
  *                                     (&fast=1), every 30 min by .github/workflows/pipeline.yml (backup)
  *                                     and once a day by Vercel's cron.
@@ -19,7 +21,8 @@ const { collectChannels } = require("./collect.js");
 const store = require("../pipeline/store.js");
 const wa = require("../pipeline/whatsapp.js");
 const teams = require("../pipeline/teams.js");
-const { dropData, dropText } = require("../pipeline/report.js");
+const { dropData, dropText, reason, BAD } = require("../pipeline/report.js");
+const auth = require("../admin-auth.js");
 const { tick, PIPELINE_URL } = require("../pipeline/tick.js");
 const { FM_CHANNELS, labelOf } = require("../pipeline/channels.js");
 const { healthOf } = require("../pipeline/health.js");
@@ -47,15 +50,33 @@ const authorised = req => {
   return q === key || !!cron;
 };
 
+/* what the content team sees: per delivery, where it went and whether it got there — no reader internals,
+   no logs, no keys, no error traces */
+const PUBLIC_FIELDS = ["cardId", "dropKey", "setId", "channel", "language", "label", "card", "when", "status", "lag", "postUrl",
+  "deliveryMode", "queuedAt", "mode", "fmState", "failureStage", "capProblem"];
+function publicView(led) {
+  const deliveries = Object.values(led.deliveries || {}).sort((a, b) => (b.when || 0) - (a.when || 0)).map(e => {
+    const out = {};
+    for (const k of PUBLIC_FIELDS) if (e[k] !== undefined && e[k] !== null) out[k] = e[k];
+    out.captionHead = Array.from(String(e.caption || "").replace(/\s+/g, " ")).slice(0, 140).join("");
+    /* why it needs attention, in words for the content team — our own trouble said as ours */
+    if (BAD.includes(e.status)) out.why = e.status === "reader_failed" ? "couldn't be checked automatically — on our side, not the content team's" : reason(e);
+    if (e.status === "superseded" && e.fmError) out.fmError = e.fmError;
+    return out;
+  });
+  return { ok: true, admin: false, now: new Date().toISOString(), lastTickAt: led.lastTickAt || null, deliveries };
+}
+
 module.exports = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  /* same-origin only: no CORS headers */
   res.setHeader("Cache-Control", "no-store, max-age=0");
-  if (req.method === "OPTIONS") return res.status(204).end();
   const op = (req.query && req.query.op) || "status";
+  const admin = auth.isAdmin(req);
 
   try {
     if (op === "tick") {
-      if (!authorised(req)) return res.status(401).json({ ok: false, error: "PIPELINE_KEY required" });
+      /* the clocks (cron-job.org, GitHub, Vercel's cron) — with PIPELINE_KEY set, they need it — or the admin */
+      if (!authorised(req) && !admin) return res.status(401).json({ ok: false, error: "PIPELINE_KEY required" });
       const run = tick({ fm: fmDeliveries, collect: collectChannels, store, wa, owner: "tick:" + Date.now() });
       /* ?fast=1 — answer at once and finish in the background (Vercel's waitUntil). For a caller with a
          short timeout: cron-job.org's free plan cuts a request at 30 s and switches a job off after 25
@@ -68,7 +89,7 @@ module.exports = async (req, res) => {
     }
 
     if (op === "test-alert") {
-      if (!authorised(req)) return res.status(401).json({ ok: false, error: "PIPELINE_KEY required" });
+      if (!admin) return auth.deny(res);
       if (!wa.configured() && !wa.pushConfigured() && !teams.configured())
         return res.status(200).json({ ok: false, error: "No alert channel is set up — set TEAMS_WEBHOOK_URL, NTFY_TOPIC and/or WHATSAPP_PHONE + CALLMEBOT_APIKEY on Vercel, then redeploy." });
       const lock = await store.lockLedger("test-alert");
@@ -87,12 +108,12 @@ module.exports = async (req, res) => {
       }
       if (wa.pushConfigured()) {
         try { await wa.push(testText, { click: PIPELINE_URL }); log.push({ at: Date.now(), ok: true, via: "push", kind: "test" }); }
-        catch (e) { left.push(1); log.push({ at: Date.now(), ok: false, via: "push", error: String(e.message || e) }); }
+        catch (e) { left.push(1); log.push({ at: Date.now(), ok: false, via: "push", kind: "test", error: String(e.message || e) }); }
       }
       if (teams.configured()) {
-        try { await teams.post(teams.card([{ kind: "test", text: "✅ *Teams alerts are working* — this channel will get every drop's report, every problem, and the daily summary at 23:00 IST." }], { link: PIPELINE_URL }));
+        try { await teams.post(teams.card([{ kind: "test", text: "✅ *Teams alerts are working* — this channel will get every problem with a post (and that drop's report) as it happens, and the day's summary at 23:00 IST." }], { link: PIPELINE_URL }));
               log.push({ at: Date.now(), ok: true, via: "teams", kind: "test" }); }
-        catch (e) { left.push(1); log.push({ at: Date.now(), ok: false, via: "teams", error: String(e.message || e) }); }
+        catch (e) { left.push(1); log.push({ at: Date.now(), ok: false, via: "teams", kind: "test", error: String(e.message || e) }); }
       }
       led.waLog = [...log, ...(led.waLog || [])].slice(0, 60);
       await store.saveLedger(led, lock.updatedAt, true);
@@ -102,7 +123,7 @@ module.exports = async (req, res) => {
     /* op=report&at=16:30[&day=2026-10-05] — the full drop report for a past drop, sent again to every
        alert channel (at most once a minute) */
     if (op === "report") {
-      if (!authorised(req)) return res.status(401).json({ ok: false, error: "PIPELINE_KEY required" });
+      if (!admin) return auth.deny(res);
       const m = String((req.query && req.query.at) || "").match(/^(\d{1,2}):(\d{2})$/);
       if (!m) return res.status(400).json({ ok: false, error: "give ?at=HH:MM (IST)" });
       const day = (req.query && req.query.day) || new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 10);
@@ -125,11 +146,11 @@ module.exports = async (req, res) => {
       const title = (d.problems.length ? "⚠️ " : "✅ ") + `Drop report ${new Date(d.when + 5.5 * 3600e3).toISOString().slice(11, 16)} ${d.card}`;
       if (wa.pushConfigured()) {
         try { await wa.push(text, { problem: d.problems.length > 0, click: PIPELINE_URL, title }); log.push({ at: Date.now(), ok: true, via: "push", kind: "report" }); }
-        catch (e) { log.push({ at: Date.now(), ok: false, via: "push", error: String(e.message || e) }); }
+        catch (e) { log.push({ at: Date.now(), ok: false, via: "push", kind: "report", error: String(e.message || e) }); }
       }
       if (teams.configured()) {
         try { await teams.post(teams.card([{ kind: "slot", text, report: d }], { link: PIPELINE_URL })); log.push({ at: Date.now(), ok: true, via: "teams", kind: "report" }); }
-        catch (e) { log.push({ at: Date.now(), ok: false, via: "teams", error: String(e.message || e) }); }
+        catch (e) { log.push({ at: Date.now(), ok: false, via: "teams", kind: "report", error: String(e.message || e) }); }
       }
       if (wa.configured()) { const r = await wa.flush([{ kind: "report", text }]); log.push(...r.log.map(x => ({ ...x, via: "whatsapp" }))); }
       led.waLog = [...log, ...(led.waLog || [])].slice(0, 60);
@@ -137,12 +158,15 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: log.length > 0 && log.every(x => x.ok), drop: { at: d.when, card: d.card, ok: d.ok, checked: d.checked, problems: d.problems.length }, log });
     }
 
-    /* status — public and read-only; nothing secret is in the ledger (no keys, no numbers) */
+    /* status: the public view for everyone; everything for the admin */
     const led = await store.readLedger();
+    if (!admin) return res.status(200).json(publicView(led));
     const deliveries = Object.values(led.deliveries || {}).sort((a, b) => (b.when || 0) - (a.when || 0))
-      .map(({ caption, ...e }) => ({ ...e, captionHead: String(caption || "").replace(/\s+/g, " ").slice(0, 140) }));
+      .map(({ caption, ...e }) => ({ ...e, captionHead: Array.from(String(caption || "").replace(/\s+/g, " ")).slice(0, 140).join(""),
+        ...(BAD.includes(e.status) ? { why: reason({ ...e, caption }) } : {}) }));
     return res.status(200).json({
-      ok: true, now: new Date().toISOString(),
+      ok: true, admin: true, now: new Date().toISOString(),
+      errorLog: led.errorLog || [], tickLog: led.tickLog || [],
       /* the Health page: one verdict per part — clock, FM, every reader, every alert channel */
       health: healthOf(led, Date.now(), { teams: teams.configured(), push: wa.pushConfigured(), whatsapp: wa.configured() }),
       lastTick: led.lastTick || null, lastTickAt: led.lastTickAt || null, ticks: led.ticks || 0, startedAt: led.startedAt || null,

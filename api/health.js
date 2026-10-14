@@ -6,12 +6,13 @@
  * GET /api/health?probe=1 (also /api/probe-free) — the free-route probe, which shares this function
  * to stay inside the Hobby plan's function limit; see probe-free.js.
  */
+const auth = require("../admin-auth.js");
 module.exports = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Cache-Control", "no-store, max-age=0");
-  if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "GET") return res.status(405).json({ ok: false, error: "Use GET." });
+  /* admin only (admin-auth.js) — same-origin, no CORS */
+  if (!auth.isAdmin(req)) return auth.deny(res);
+
 
   /* the free-route probe (probe-free.js) shares this function — see its header for why */
   if (req.query && req.query.probe) return require("../probe-free.js")(req, res);

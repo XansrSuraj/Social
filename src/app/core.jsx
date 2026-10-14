@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { createEngine } from "../engine/engine.js";
+import { adminToken, authState, forget, signIn } from "./admin.js";
 import { siYoutube, siTelegram, siX, siFacebook, siInstagram, siTiktok } from "simple-icons";
 import { AtSign, Bell, Check, CheckCheck, CircleAlert, Copy, Download, Info, Loader2, Trash2, TriangleAlert } from "lucide-react";
 
@@ -20,6 +21,12 @@ export function EngineProvider({ children }) {
   const [ver, bump] = useReducer(n => n + 1, 0);
   const [toasts, setToasts] = useState([]);
   const [running, setRunning] = useState({});           // brand id -> a check is in progress
+  /* the admin session (src/app/admin.js): admin pages, running a check, writing the shared report */
+  const [admin, setAdmin] = useState(() => !!adminToken());
+  const [adminReady, setAdminReady] = useState(null);
+  useEffect(() => { authState().then(s => { setAdmin(s.admin); setAdminReady(s.ready); }); }, []);
+  const login = useCallback(async pw => { await signIn(pw); setAdmin(true); setAdminReady(true); }, []);
+  const logout = useCallback(() => { forget(); setAdmin(false); }, []);
   const engines = useRef({});
   const route = useRoute();
   const brand = brandOf(route);
@@ -50,7 +57,7 @@ export function EngineProvider({ children }) {
   /* one press reads every channel of every region of this brand; the page follows along */
   const run = useCallback(async (serverOnly) => {
     const id = brand.id;
-    if (running[id]) return;
+    if (running[id] || !adminToken()) return;           // reading the channels is the admin's (it can spend on Apify)
     setRunning(r => ({ ...r, [id]: true }));
     try { if (serverOnly) { await E.collectServer(E.ORG); E.absorbBrowserRun(); } else await E.runEverything(E.ORG); }
     finally { setRunning(r => ({ ...r, [id]: false })); bump(); }
@@ -58,7 +65,7 @@ export function EngineProvider({ children }) {
 
   /* ver changes on every engine redraw, so every page reading the engine repaints with it */
   const value = useMemo(() => ({ E, ver, toast, running: !!running[brand.id], run, refresh: bump, route, brand,
-    path: p => brand.base + p }), [E, ver, toast, running, run, route, brand]);
+    path: p => brand.base + p, admin, adminReady, login, logout }), [E, ver, toast, running, run, route, brand, admin, adminReady, login, logout]);
   return (
     <Ctx.Provider value={value}>
       {children}

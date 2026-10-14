@@ -11,14 +11,7 @@
   body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif;padding:16px}
   a{color:var(--red)}
 </style>
-<script>
-  /* The FM Deliveries viewer is now a page of the site (#/fm), in the same design as the rest.
-     An old link — with its filters (?env=prod&since=…&language=…) — lands on the same view there. */
-  (function () {
-    var q = location.search.replace(/^\?/, "");
-    location.replace("/#/fm" + (q ? "?" + q : ""));
-  })();
-</script>
+<script src="/fm-deliveries.js"></script>
 </head>
 <body>
   <p>FM Deliveries has moved — <a href="/#/fm">open it here</a>.</p>

@@ -15,6 +15,7 @@
  * GET only. There is no other method handler because this dashboard never writes anything.
  */
 const { upstreamGet } = require("../fm-deliveries-client.js");
+const auth = require("../admin-auth.js");
 
 const PASSTHROUGH = [
   "since", "until", "timeField", "channel", "language", "state", "outcome",
@@ -26,11 +27,11 @@ const fmLanguage = v => String(v).split(",").map(x => x.trim()).filter(Boolean)
   .map(x => LANGUAGE_KEY[x.toLowerCase()] || x).join(",");
 
 module.exports = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Cache-Control", "no-store, max-age=0");
-  if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "GET") return res.status(405).json({ ok: false, error: "Use GET — this dashboard is read-only." });
+  /* admin only (admin-auth.js) — same-origin, no CORS */
+  if (!auth.isAdmin(req)) return auth.deny(res);
+
 
   const query = {};
   for (const k of PASSTHROUGH) {

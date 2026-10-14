@@ -81,7 +81,7 @@ const page = (...articles) => `<!doctype html><html><body>${articles.join("")}</
 function runWith(body, status, hours, channel) {
   const calls = [];
   global.fetch = async url => { calls.push(String(url)); return { status: status == null ? 200 : status, text: async () => body }; };
-  const handler = load();
+  const handler = require("./_admin.js")(load());
   return new Promise(resolve => {
     handler({ method: "POST", body: {
       channels: [channel || { id: "x1", platform: "x", url: "https://x.com/" + HANDLE }],
@@ -224,7 +224,7 @@ const VN2 = "🐐 Tuổi tác chỉ là một con số với Cristiano Ronaldo. 
       return { status: 200, text: async () => "<html>empty shell, no microdata</html>" };
     };
     process.env.X_SCRAPER = "https://scraper.test/?url=";
-    const handler = load();
+    const handler = require("./_admin.js")(load());
     const res = await new Promise(r => handler(
       { method: "POST", body: { channels: [{ id: "x1", platform: "x", url: "https://x.com/" + HANDLE }], hours: 24 } },
       { setHeader() {}, status() { return this; }, json: p => r(p.results[0]) }));
@@ -269,7 +269,7 @@ const VN2 = "🐐 Tuổi tác chỉ là một con số với Cristiano Ronaldo. 
     { const all = await store.readAll(); delete all.__cache; await store.writeAll(all); }
 
     process.env.TWITTERAPI_KEY = "test-key-123";
-    const handler = load();
+    const handler = require("./_admin.js")(load());
     const call = () => new Promise(r => handler(
       { method: "POST", body: { channels: [{ id: "x1", platform: "x", url: "https://x.com/" + H }], hours: 24 } },
       { setHeader() {}, status() { return this; }, json: p => r(p.results[0]) }));

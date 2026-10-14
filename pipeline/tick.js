@@ -148,11 +148,13 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     if ((!led.lastCrashAlertAt || now - led.lastCrashAlertAt > 30 * 60e3) && now - crashAlertAt > 30 * 60e3) {
       led.lastCrashAlertAt = now; crashAlertAt = now;
       const text = `🚨 *Pipeline check failed* — ${String(e.message || e).slice(0, 200)}. It retries every minute; nothing is lost while it does.`;
+      /* the pipeline's own trouble goes to the admin (phone push, WhatsApp), never to the team's Teams channel */
       try { if (wa.pushConfigured && wa.pushConfigured()) await wa.push(text, { problem: true, click: PIPELINE_URL, title: "🚨 Pipeline check failed" }); } catch (e2) {}
-      try { if (teams.configured()) await teams.post(teams.card([{ kind: "pipeline", text }], { link: PIPELINE_URL })); } catch (e2) {}
       led.outbox = [...(led.outbox || []), { at: now, kind: "pipeline", text: `*SportsFC · FM ↔ channels*\n\n${text}\n\n${PIPELINE_URL}` }];
     }
-    try { await store.saveLedger({ ...led, lastCrash: { at: now, error: String(e.stack || e).slice(0, 500) } }, lock.updatedAt, true); } catch (e2) {}
+    const crash = { at: now, error: String(e.stack || e).slice(0, 500) };
+    led.errorLog = [{ at: now, source: "crash", text: crash.error }, ...(led.errorLog || [])].slice(0, 100);
+    try { await store.saveLedger({ ...led, lastCrash: crash }, lock.updatedAt, true); } catch (e2) {}
     throw e;
   }
 
@@ -484,29 +486,42 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     }
   }
 
-  /* ── 9. notify: problems together in one message; every drop report as a message of its own ──
-     (a report is a few KB — several in one would pass ntfy's 4 KB and Teams' 28 KB) */
-  if (news.length) {
+  /* ── 9. notify — only what needs someone (14 Oct 2026, the user's rule) ──
+     · a problem with a post (missing, not sent, caption too long, check by hand, stuck in FM, arrived late)
+       and a drop report that has a problem: the team (Teams) and the admin (phone)
+     · the day's summary at 23:00: everyone, one message
+     · the pipeline's own trouble (it crashed, its clock stopped, FM unreachable): the admin only — phone and
+       the Admin page — so the team is not disturbed by our bugs, and no bug is hidden
+     · a drop that went out everywhere: nobody — it is on the website
+     PIPELINE_NOTIFY=all sends every drop report again (the old behaviour). A drop report and the summary
+     are each a message of their own (ntfy takes 4 KB, Teams 28 KB). */
+  const notifyAll = String(process.env.PIPELINE_NOTIFY || "").toLowerCase() === "all";
+  const SYSTEM = new Set(["pipeline", "fm_down"]);
+  const outgoing = news.filter(x => notifyAll || !(x.report && !x.report.problems.length));
+  if (outgoing.length) {
     const order = ["pipeline", "fm_down", "fm_failed", "missing", "not_visible", "caption", "fm_stuck", "fm_unconfirmed", "reader_down", "reader_failed", "late", "reader_up", "slot", "digest"];
-    news.sort((x, y) => order.indexOf(x.kind) - order.indexOf(y.kind));
-    /* a drop report and the day's summary are each a message of their own */
-    const plain = news.filter(x => !x.report && !x.digest), reports = news.filter(x => x.report || x.digest);
-    const messages = [];
-    if (plain.length) messages.push({ kind: plain[0].kind, alerts: plain,
+    outgoing.sort((x, y) => order.indexOf(x.kind) - order.indexOf(y.kind));
+    const plainAll = outgoing.filter(x => !x.report && !x.digest), reports = outgoing.filter(x => x.report || x.digest);
+    const plainMsg = plain => ({ kind: plain[0].kind, alerts: plain,
       text: `*SportsFC · FM ↔ channels*\n\n${plain.map(x => x.text).join("\n\n")}\n\n${PIPELINE_URL}`,
       title: (plain[0].title || plain[0].text.split("\n")[0].replace(/\*/g, "")).slice(0, 110) + (plain.length > 1 ? `  (+${plain.length - 1} more)` : ""),
       problem: plain.some(x => !["reader_up"].includes(x.kind)) });
-    for (const r of reports) messages.push({ kind: r.kind, alerts: [r], text: `${r.text}\n\n${PIPELINE_URL}`, title: r.title || "Drop report",
-      problem: r.report ? r.report.problems.length > 0 : r.digest.attention.length > 0 });
-    for (const m of messages) {
+    const reportMsgs = reports.map(r => ({ kind: r.kind, alerts: [r], text: `${r.text}\n\n${PIPELINE_URL}`, title: r.title || "Drop report",
+      problem: r.report ? r.report.problems.length > 0 : r.digest.attention.length > 0 }));
+    /* the admin's phone: everything outgoing */
+    const toAdmin = [...(plainAll.length ? [plainMsg(plainAll)] : []), ...reportMsgs];
+    for (const m of toAdmin) {
       led.outbox.push({ at: now, kind: m.kind, text: m.text });
-      if (teams.configured()) led.teamsOutbox = [...(led.teamsOutbox || []), { at: now, kind: m.kind, payload: teams.card(m.alerts, { link: PIPELINE_URL }) }];
       /* the phone push (ntfy) goes out at once; its title is the result itself, so the lock screen says it */
       if (wa.pushConfigured && wa.pushConfigured()) {
         try { await wa.push(m.text, { problem: m.problem, click: PIPELINE_URL, title: m.title }); led.waLog.unshift({ at: now, ok: true, via: "push", kind: m.kind }); }
-        catch (e) { led.waLog.unshift({ at: now, ok: false, via: "push", error: String(e.message || e).slice(0, 200) }); }
+        catch (e) { led.waLog.unshift({ at: now, ok: false, via: "push", kind: m.kind, error: String(e.message || e).slice(0, 200) }); }
       }
     }
+    /* the team's Teams channel: the same, without the pipeline's own trouble */
+    const plainTeam = plainAll.filter(x => !SYSTEM.has(x.kind));
+    const toTeam = [...(plainTeam.length ? [plainMsg(plainTeam)] : []), ...reportMsgs];
+    if (teams.configured()) for (const m of toTeam) led.teamsOutbox = [...(led.teamsOutbox || []), { at: now, kind: m.kind, payload: teams.card(m.alerts, { link: PIPELINE_URL }) }];
   }
   /* Microsoft Teams: one Adaptive Card per message, queued and retried */
   led.teamsOutbox = (led.teamsOutbox || []).filter(m => now - m.at < 3 * 3600e3);
@@ -544,6 +559,8 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
   led.lastTick = { at: now, ms: Date.now() - t0, fm: fmRows ? fmRows.length : null, read: Object.keys(reads), probes: probes.map(p => p.id),
                    checked: due.length, alerts: news.length, errors };
   led.tickLog = [{ at: now, ms: led.lastTick.ms, errors: errors.length }, ...(led.tickLog || [])].slice(0, 60);
+  /* every error, kept (100 newest) for the Admin page — what broke, when, where */
+  if (errors.length) led.errorLog = [...errors.map(text => ({ at: now, source: String(text).split(":")[0], text: String(text).slice(0, 300) })), ...(led.errorLog || [])].slice(0, 100);
   await store.saveLedger(led, lock.updatedAt, true);
   return { ok: true, ...led.lastTick };
   }

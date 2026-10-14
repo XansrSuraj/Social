@@ -1,16 +1,17 @@
 /**
  * GET  /api/data  -> read the whole state (public, read-only)
- * PUT  /api/data  -> replace the whole state (requires x-admin-key header)
+ * PUT  /api/data  -> replace the whole state (the admin only: "Authorization: Bearer <session>",
+ *                     admin-auth.js — the password itself is never sent here, so it can't be guessed
+ *                     through this endpoint; /api/auth rate-limits sign-ins)
  *
  * Storage: one row in Supabase (id = 1, data jsonb). No npm packages — plain REST.
  * If the env vars are missing the API reports mode:"local" and the frontend
  * transparently falls back to browser storage, so the site is never broken.
  */
-const crypto = require("crypto");
-
 const SB_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY || "";
 const ADMIN  = process.env.ADMIN_PASSWORD || "";
+const auth = require("../admin-auth.js");
 const TABLE  = "orghub_state";
 const ROW_ID = 1;
 
@@ -24,21 +25,10 @@ function sbHeaders(extra) {
   }, extra || {});
 }
 
-function safeEqual(a, b) {
-  const x = Buffer.from(String(a));
-  const y = Buffer.from(String(b));
-  if (x.length !== y.length) {
-    // still burn a comparison so length isn't leaked by timing
-    crypto.timingSafeEqual(x, x);
-    return false;
-  }
-  return crypto.timingSafeEqual(x, y);
-}
-
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-key");
-  res.setHeader("Access-Control-Allow-Methods", "GET, PUT, OPTIONS");
+  /* other sites (the browser extension's popup) may read; only this site's admin can write */
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Cache-Control", "no-store, max-age=0");
 
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -78,9 +68,7 @@ module.exports = async (req, res) => {
       if (!ADMIN) {
         return res.status(503).json({ ok: false, error: "ADMIN_PASSWORD is not set on this deployment." });
       }
-      if (!safeEqual(req.headers["x-admin-key"] || "", ADMIN)) {
-        return res.status(401).json({ ok: false, error: "Wrong admin password." });
-      }
+      if (!auth.isAdmin(req)) return auth.deny(res);
 
       let body = req.body;
       if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = null; } }

@@ -44,9 +44,11 @@ function makeCollectServer(fetchStub, checks) {
     return add.length;
   };
   const saveChecks = () => {};
-  const fn = new Function("location", "toast", "dcChannels", "checks", "mergePosts", "saveChecks", "fetch", "Date",
+  /* the admin session's header (src/app/admin.js) — /api/collect is admin-only */
+  const authHdr = () => ({ Authorization: "Bearer test-session" });
+  const fn = new Function("location", "toast", "dcChannels", "checks", "mergePosts", "saveChecks", "fetch", "Date", "authHdr",
     src + "\n; return collectServer;");
-  return fn(location, toast, dcChannels, checks, mergePosts, saveChecks, fetchStub, Date);
+  return fn(location, toast, dcChannels, checks, mergePosts, saveChecks, fetchStub, Date, authHdr);
 }
 
 (async () => {
@@ -56,6 +58,7 @@ function makeCollectServer(fetchStub, checks) {
   function stubFetch(failIds) {
     const requests = [];
     const fetchStub = async (url, opt) => {
+      if (!opt.headers || opt.headers.Authorization !== "Bearer test-session") throw new Error("no admin session sent to /api/collect");
       const body = JSON.parse(opt.body);
       const ids = body.channels.map(c => c.id);
       requests.push(ids);
@@ -118,15 +121,26 @@ function makeCollectServer(fetchStub, checks) {
     const A = html.indexOf("let apifyInfo = null;");
     const B = html.indexOf("let extVersion = null;", A);
     if (A < 0 || B < 0) { console.error("could not find refreshApifyUsage in src/engine/engine.js"); process.exit(1); }
-    const make = (checks, answers, timers) => {
+    /* Apify spend is the admin's (api/apify-usage.js is admin-only): signed in unless told otherwise */
+    const make = (checks, answers, timers, token = "test-session") => {
       const asked = [];
-      const fetchStub = async url => { asked.push(url); const a = answers.shift();
+      const fetchStub = async (url, opt) => { asked.push(url);
+                                       if (!opt || !opt.headers || opt.headers.Authorization !== "Bearer " + token) throw new Error("no admin session sent");
+                                       const a = answers.shift();
                                        return { json: async () => a }; };
-      const fn = new Function("location", "checks", "fetch", "saveChecks", "dcRedraw", "setTimeout", "clearTimeout",
+      const adminToken = () => token;
+      const authHdr = () => (token ? { Authorization: "Bearer " + token } : {});
+      const fn = new Function("location", "checks", "fetch", "saveChecks", "dcRedraw", "setTimeout", "clearTimeout", "adminToken", "authHdr",
         html.slice(A, B) + "\n; return refreshApifyUsage;");
       return { run: fn({ protocol: "https:" }, checks, fetchStub, () => {}, null,
-                       (f, ms) => { timers.push(ms); return 1; }, () => {}), asked };
+                       (f, ms) => { timers.push(ms); return 1; }, () => {}, adminToken, authHdr), asked };
     };
+    {
+      const t = [], c = { apifyLast: { usd: 0.045, runs: 2, cached: 0, settled: false, full: true, ids: ["runA"], at: "t0" } };
+      const { run, asked } = make(c, [], t, "");
+      await run();
+      ok(asked.length === 0 && c.apifyLast.usd === 0.045, "not signed in as admin: Apify spend is never asked for", String(asked.length));
+    }
     const press = () => ({ usd: 0.045, runs: 2, cached: 0, settled: false, full: true, ids: ["runA", "runB"], at: "t1" });
 
     const timers = [];

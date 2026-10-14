@@ -1756,13 +1756,12 @@ async function collectOne(ch, cutoff, pushedAll) {
 /* ═══════════════════ handler ═══════════════════ */
 
 module.exports = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  /* same-origin only, admin only: a read can fall back to paid Apify runs */
   res.setHeader("Cache-Control", "no-store, max-age=0");
 
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Use POST." });
+  if (!require("../admin-auth.js").isAdmin(req)) return require("../admin-auth.js").deny(res);
 
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = null; } }

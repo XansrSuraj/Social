@@ -255,4 +255,4 @@ function dayCardItems(s) {
   return items;
 }
 
-module.exports = { dropData, dropText, dropCardItems, dayData, dayText, dayCardItems };
+module.exports = { dropData, dropText, dropCardItems, dayData, dayText, dayCardItems, reason, BAD };

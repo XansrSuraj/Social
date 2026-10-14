@@ -89,7 +89,7 @@ function collect(channels, itemsByActor, opts) {
   const o = opts || {};
   const calls = fakeApify(itemsByActor, o);
   if (o.token !== null) process.env.APIFY_TOKEN = "apify-test-key";
-  const handler = load();
+  const handler = require("./_admin.js")(load());
   return new Promise(resolve => handler(
     { method: "POST", body: { channels, hours: o.hours || 48 } },
     { setHeader() {}, status() { return this; }, json: p => resolve({ payload: p, res: p.results[0], calls }) }

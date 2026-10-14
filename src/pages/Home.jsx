@@ -13,7 +13,7 @@ const listOf = a => a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " an
 const DELIVERED = ["ok", "okc", "okh", "asm"];
 
 export default function Home() {
-  const { E, run, running, path } = useApp();
+  const { E, run, running, path, admin } = useApp();
   const vm = buildReport(E);
   const { rep, checks } = vm;
 
@@ -61,9 +61,9 @@ export default function Home() {
               <Reveal delay={.2}><p className="lead">Every post on every channel, read the moment you ask — matched drop by drop across{" "}
                 {listOf(E.REGIONS.map(r => r[1]))}, with what went out, when, and in which language.</p></Reveal>
               <Reveal delay={.3} className="hero-cta">
-                <button className="btn btn-white btn-lg" disabled={running} onClick={() => { go(path("/report")); run(); }}>
+                {admin && <button className="btn btn-white btn-lg" disabled={running} onClick={() => { go(path("/report")); run(); }}>
                   {running ? <Loader2 className="spin" /> : <Play />}{running ? "Checking…" : "Run daily check"}
-                </button>
+                </button>}
                 <a href={"#" + path("/report")} className="btn btn-ghost-dk btn-lg">Open the report <ArrowRight /></a>
               </Reveal>
             </div>
@@ -182,9 +182,9 @@ export default function Home() {
             ))}
           </div>
           <Reveal delay={.2} style={{ marginTop: 44 }}>
-            <button className="btn btn-red btn-lg" disabled={running} onClick={() => { go(path("/report")); run(); }}>
+            {admin ? <button className="btn btn-red btn-lg" disabled={running} onClick={() => { go(path("/report")); run(); }}>
               {running ? <Loader2 className="spin" /> : <Play />}{running ? "Checking…" : "Run today's check"}
-            </button>
+            </button> : <a href={"#" + path("/report")} className="btn btn-red btn-lg">Open today's report</a>}
           </Reveal>
         </div>
       </section>

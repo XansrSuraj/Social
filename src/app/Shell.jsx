@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Menu, X, Play, Loader2 } from "lucide-react";
+import { Menu, X, Play, Loader2, Lock, LogOut } from "lucide-react";
 import { useApp, go, BRANDS } from "./core.jsx";
 
 export const Mark = () => (
@@ -24,7 +24,7 @@ function BrandSwitch({ route, onDark }) {
 }
 
 export function Nav({ route }) {
-  const { run, running, brand, path } = useApp();
+  const { run, running, brand, path, admin, logout } = useApp();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   /* over the dark hero the bar is see-through with light text; past it, or on any other page, it turns solid */
@@ -49,12 +49,14 @@ export function Nav({ route }) {
             {link(home, "Overview")}
             {link(path("/report"), "Report")}
             {brand.id === "sportsfc" && link("/live", "Live")}
-            {brand.id === "sportsfc" && link("/health", "Health")}
-            {link("/fm", "FM Deliveries")}
+            {admin && link("/admin", "Admin")}
+            {admin && link("/fm", "FM Deliveries")}
+            {!admin && <a href="#/admin" className={route === "/admin" ? "on" : ""} title="Admin sign-in"><Lock style={{ width: 14, height: 14, verticalAlign: -2 }} /> Admin</a>}
           </nav>
-          <button className={`btn btn-sm nav-cta ${solid ? "btn-red" : "btn-white"}`} disabled={running} onClick={runIt}>
+          {admin ? <button className={`btn btn-sm nav-cta ${solid ? "btn-red" : "btn-white"}`} disabled={running} onClick={runIt}>
             {running ? <Loader2 className="spin" /> : <Play />}{running ? "Checking…" : "Run daily check"}
-          </button>
+          </button> : null}
+          {admin && <button className="icon-btn nav-out" title="Sign out" aria-label="Sign out of admin" onClick={logout}><LogOut /></button>}
           <button className="icon-btn nav-burger" aria-label={open ? "Close menu" : "Open menu"} onClick={() => setOpen(o => !o)}>
             {open ? <X /> : <Menu />}
           </button>
@@ -66,11 +68,11 @@ export function Nav({ route }) {
         <a href={"#" + home} style={{ marginTop: 14 }}>Overview</a>
         <a href={"#" + path("/report")}>Report</a>
         {brand.id === "sportsfc" && <a href="#/live">Live pipeline</a>}
-        {brand.id === "sportsfc" && <a href="#/health">System health</a>}
-        <a href="#/fm">FM Deliveries</a>
-        <button className="btn btn-red btn-lg" style={{ marginTop: 18 }} disabled={running} onClick={runIt}>
+        {admin ? <><a href="#/admin">Admin dashboard</a><a href="#/fm">FM Deliveries</a></> : <a href="#/admin">Admin sign-in</a>}
+        {admin && <button className="btn btn-red btn-lg" style={{ marginTop: 18 }} disabled={running} onClick={runIt}>
           {running ? <Loader2 className="spin" /> : <Play />}{running ? "Checking…" : `Run ${brand.name} check`}
-        </button>
+        </button>}
+        {admin && <button className="btn btn-line btn-lg" style={{ marginTop: 10 }} onClick={logout}><LogOut />Sign out</button>}
       </div>
     </>
   );
@@ -84,7 +86,7 @@ export function Footer() {
         <span>{brand.name} · Daily check — did today's content reach every channel?</span>
         <span>
           {BRANDS.map(b => <a key={b.id} href={"#" + (b.base || "/")}>{b.name}</a>).reduce((a, x) => [...a, " · ", x], []).slice(1)}
-          {" · "}<a href={"#" + path("/report")}>Report</a> · <a href="#/health">Health</a> · <a href="#/fm">FM Deliveries</a>
+          {" · "}<a href={"#" + path("/report")}>Report</a> · <a href="#/live">Live</a> · <a href="#/admin">Admin</a>
         </span>
       </div>
     </footer>

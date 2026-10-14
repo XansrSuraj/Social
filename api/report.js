@@ -17,22 +17,17 @@
  * Security posture (deliberate, documented)
  * -----------------------------------------
  * The report is non-sensitive operational data — post counts, timestamps, and which channel a drop
- * landed on. There is no login in this tool by design, so the write is not gated by a client secret
- * (a secret shipped to the browser would not be secret). Instead:
+ * landed on. Only the signed-in admin writes it ("Authorization: Bearer <session>", admin-auth.js —
+ * the session comes from /api/auth; nothing secret ships in the page). Besides:
  *   · the payload is shape-checked and size-capped here, so a malformed or oversized body cannot
  *     poison the row or blow past Postgres limits;
  *   · a stale write is refused with 409 (optimistic concurrency), same as api/data.js;
- *   · the deployment itself should sit behind Vercel Deployment Protection (password / SSO) — that
- *     protects the dashboard AND every /api route at the platform layer, which is the right place to
- *     keep an internal tool private. See README.
- * If ADMIN_PASSWORD is set, the write additionally requires the x-admin-key header — a belt-and-
- * braces option for anyone who wants app-level gating on top of platform protection.
+ *   · without ADMIN_PASSWORD set, nobody can write (fails closed, 503).
+ * Reading stays open: the content team sees the day's report without signing in.
  */
-const crypto = require("crypto");
-
 const SB_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY || "";
-const ADMIN  = process.env.ADMIN_PASSWORD || "";
+const auth = require("../admin-auth.js");
 const TABLE  = "orghub_state";
 
 /* a report is small — counts, a few captions, some confirms. Cap the stored blob well under any
@@ -49,12 +44,6 @@ function sbHeaders(extra) {
   }, extra || {});
 }
 
-function safeEqual(a, b) {
-  const x = Buffer.from(String(a)), y = Buffer.from(String(b));
-  if (x.length !== y.length) { crypto.timingSafeEqual(x, x); return false; }
-  return crypto.timingSafeEqual(x, y);
-}
-
 /* one row per brand: SportsFC keeps row 3, MatchPulse has row 4. Only known brands are accepted —
    an unknown name can never pick an arbitrary row of the shared table. */
 const BRAND_ROWS = { sportsfc: 3, matchpulse: 4 };
@@ -62,8 +51,7 @@ const BRAND_ROWS = { sportsfc: 3, matchpulse: 4 };
 module.exports = async (req, res) => {
   const ROW_ID = BRAND_ROWS[(req.query && req.query.brand) || "sportsfc"];
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-key");
-  res.setHeader("Access-Control-Allow-Methods", "GET, PUT, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET");
   res.setHeader("Cache-Control", "no-store, max-age=0");
 
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -109,10 +97,9 @@ module.exports = async (req, res) => {
 
     /* ---------------- write ---------------- */
     if (req.method === "PUT") {
-      /* optional app-level gate, only when the deployment opts in with ADMIN_PASSWORD */
-      if (ADMIN && !safeEqual(req.headers["x-admin-key"] || "", ADMIN)) {
-        return res.status(401).json({ ok: false, error: "Wrong admin password." });
-      }
+      /* the admin only (a signed-in session) — and nobody at all until ADMIN_PASSWORD is set: an open write
+         let anyone replace or empty the shared report (found in the 14 Oct 2026 review) */
+      if (!auth.isAdmin(req)) return auth.deny(res);
 
       let body = req.body;
       if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = null; } }

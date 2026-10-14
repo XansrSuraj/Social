@@ -33,7 +33,7 @@ function runWith(statuses, channel) {
     calls++;
     return { status: s, text: async () => PAGE(new Date().toISOString()) };
   };
-  const handler = load();
+  const handler = require("./_admin.js")(load());
   return new Promise(resolve => {
     handler({ method: "POST", body: { channels: [channel], hours: 24 } }, {
       setHeader() {}, status() { return this; },
@@ -76,7 +76,7 @@ const check = (good, label, extra) => {
 
   /* a connection that never answers has to say so in words the reader can act on */
   global.fetch = async () => { const e = new Error("aborted"); e.name = "AbortError"; throw e; };
-  const handler = load();
+  const handler = require("./_admin.js")(load());
   const dead = await new Promise(r => handler({ method: "POST", body: { channels: [TG], hours: 24 } },
     { setHeader() {}, status() { return this; }, json: p => r(p.results[0]) }));
   global.fetch = realFetch;

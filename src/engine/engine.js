@@ -19,7 +19,10 @@ const toast = (msg, ic) => { if (env.toast) env.toast(msg, ic); };
 const render = () => { if (env.onChange) env.onChange(); };
 let dcRedraw = render;                        // "a channel arrived mid-run — repaint"
 const cloud = { mode:"local", configured:false, updatedAt:null };
-const adminKey = () => { try{ return sessionStorage.getItem("orghub.key") || ""; }catch(e){ return ""; } };
+/* the admin session (src/app/admin.js keeps it): sent with the admin-only calls — reading the channels,
+   writing the shared report, Apify spend. Without it this browser only reads. */
+const adminToken = () => { try{ const s = JSON.parse(localStorage.getItem("orghub.admin") || "null"); return s && s.token && s.expiresAt > Date.now() ? s.token : ""; }catch(e){ return ""; } };
+const authHdr = () => { const t = adminToken(); return t ? { Authorization:"Bearer " + t } : {}; };
 
 const DEF_PLATFORMS = [
   { id:"youtube",   name:"YouTube",     color:"#ff0033", icon:"si:youtube" },
@@ -187,12 +190,13 @@ const saveLocalChecksOnly = () => { try{ localStorage.setItem(CKEY, JSON.stringi
    again on top of the new row. */
 function pushReport(attempt = 0){
   if(cloud.mode !== "cloud") return;
+  if(!adminToken()){ reportDirty = false; return; }   // a visitor's view settings stay in their browser; only the admin writes the shared row
   clearTimeout(reportPushT);
   reportPushT = setTimeout(async () => {
     try{
       const r = await fetch(REPORT_URL, {
         method:"PUT",
-        headers:{ "Content-Type":"application/json", "x-admin-key":adminKey() },
+        headers:{ "Content-Type":"application/json", ...authHdr() },
         body:JSON.stringify({ data:withoutView(checks), baseUpdatedAt:reportUpdatedAt })
       });
       const j = await r.json().catch(() => ({}));
@@ -1374,7 +1378,7 @@ async function collectServer(o){
 
   const one = async batch => {
     try{
-      const r = await fetch("api/collect", { method:"POST", headers:{ "Content-Type":"application/json" },
+      const r = await fetch("api/collect", { method:"POST", headers:{ "Content-Type":"application/json", ...authHdr() },
         body:JSON.stringify({ channels:batch, hours:192 }) });
       const j = await r.json();
       if(!j.ok) throw new Error(j.error || "collect failed");
@@ -1467,7 +1471,8 @@ async function refreshApifyUsage(attempt){
   const last = checks.apifyLast;
   const pending = last && last.settled === false && Array.isArray(last.ids) && last.ids.length ? last : null;
   try{
-    const r = await fetch("api/apify-usage" + (pending ? "?runs=" + encodeURIComponent(pending.ids.join(",")) : ""));
+    if(!adminToken()) return;                          // Apify spend is the admin's to see
+    const r = await fetch("api/apify-usage" + (pending ? "?runs=" + encodeURIComponent(pending.ids.join(",")) : ""), { headers:authHdr() });
     apifyInfo = await r.json();
   }catch(e){ apifyInfo = { ok:false, error:String(e.message || e) }; }
 

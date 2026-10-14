@@ -14,9 +14,9 @@
  */
 const { dropCardItems, dayCardItems } = require("./report.js");
 const URL_ = () => String(process.env.TEAMS_WEBHOOK_URL || "").trim();
-/* KILL SWITCH (14 Oct 2026, at the user's request): nothing goes to Teams — no new card, and nothing
-   already queued is sent. Set TEAMS_OFF to false to turn Teams alerts on again. */
-const TEAMS_OFF = true;
+/* KILL SWITCH: true sends nothing to Teams — no new card, and nothing already queued (used on 14 Oct 2026).
+   Back on the same day with the "issues only" rule in pipeline/tick.js (step 9). */
+const TEAMS_OFF = false;
 const configured = () => !TEAMS_OFF && /^https:\/\//.test(URL_());
 
 const STYLE = { missing: "attention", fm_failed: "attention", fm_down: "attention", pipeline: "attention", not_visible: "warning", reader_down: "warning",

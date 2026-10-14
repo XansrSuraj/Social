@@ -42,7 +42,7 @@ function call(query) {
   };
   process.env.APIFY_TOKEN = "tok";
   delete require.cache[require.resolve(MOD)];
-  const handler = require(MOD);
+  const handler = require("./_admin.js")(require(MOD));
   return new Promise(resolve => handler({ method: "GET", query, url: "/api/apify-usage" },
     { setHeader() {}, status() { return this; }, json: j => resolve({ j, asked }) }))
     .finally(() => { global.fetch = realFetch; delete process.env.APIFY_TOKEN; });

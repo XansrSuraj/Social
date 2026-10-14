@@ -7,13 +7,14 @@
  * values"). Same server-side-key setup as api/fm-deliveries.js — see fm-deliveries-client.js.
  */
 const { upstreamGet } = require("../fm-deliveries-client.js");
+const auth = require("../admin-auth.js");
 
 module.exports = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Cache-Control", "no-store, max-age=0");
-  if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "GET") return res.status(405).json({ ok: false, error: "Use GET — this dashboard is read-only." });
+  /* admin only (admin-auth.js) — same-origin, no CORS */
+  if (!auth.isAdmin(req)) return auth.deny(res);
+
 
   const { status, body } = await upstreamGet(req.query && req.query.env, "/api/fm-deliveries-feed/meta", {});
   return res.status(status).json(body);

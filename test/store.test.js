@@ -39,6 +39,7 @@ global.fetch = async (url, opts = {}) => {
 };
 process.env.SUPABASE_URL = "https://sb.test";
 process.env.SUPABASE_SERVICE_KEY = "k";
+process.env.ADMIN_PASSWORD = "test-admin-password-123";
 
 (async () => {
   const store = require("../pipeline/store.js");
@@ -88,10 +89,10 @@ process.env.SUPABASE_SERVICE_KEY = "k";
 
   console.log("\n── the shared report (api/report.js)");
   const report = require("../api/report.js");
-  const call = (method, query = {}, body) => new Promise(resolve => {
+  const call = (method, query = {}, body, headers = {}) => new Promise(resolve => {
     const res = { headers: {}, statusCode: 200, setHeader(k, v) { this.headers[k] = v; }, status(c) { this.statusCode = c; return this; },
       json(b) { resolve({ status: this.statusCode, body: b }); return this; }, end() { resolve({ status: this.statusCode }); } };
-    report({ method, query, headers: {}, body }, res);
+    report({ method, query, headers, body }, res);
   });
   rows[3] = { id: 3, data: { posts: { a: Array.from({ length: 300 }, (_, i) => ({ externalId: "p" + i, text: "y".repeat(300) })) } }, updated_at: stamp() };
   const full = await call("GET");
@@ -104,7 +105,10 @@ process.env.SUPABASE_SERVICE_KEY = "k";
   const changed = await call("GET", { since: full.body.updatedAt });
   ok(!changed.body.unchanged && changed.body.data && changed.body.data.more === 1, "once it changed, the new report comes back");
   const n1 = log.length;
-  const put = await call("PUT", {}, { data: { posts: {}, x: 1 }, baseUpdatedAt: changed.body.updatedAt });
+  const anon = await call("PUT", {}, { data: { posts: {}, wiped: 1 } });
+  ok(anon.status === 401 && !rows[3].data.wiped, "a save without the admin signed in is refused — nobody can replace or empty the report", anon.status);
+  const { token } = require("../admin-auth.js").issue();
+  const put = await call("PUT", {}, { data: { posts: {}, x: 1 }, baseUpdatedAt: changed.body.updatedAt }, { authorization: "Bearer " + token });
   const back = log.slice(n1).filter(l => l.method === "POST");
   ok(put.status === 200 && put.body.saved && back.length === 1 && back[0].bytes < 80 && back[0].select === "updated_at", "a save gets back only the stored time, not the report",
      back.map(l => l.bytes + " bytes").join(","));

@@ -10,7 +10,9 @@ Brazilian Portuguese), so the site is exactly this: an overview of the channels 
 report a run produces.
 Adding a channel is a one-line code change, not a UI.
 
-**Automatic, end to end.** Every card FM Deliveries sends is checked on its real channel every minute, and problems (missing post, caption too long, FM failure) go to Teams and the phone — see [PIPELINE.md](PIPELINE.md), the **Live** page (`#/live`) and **System health** (`#/health`: the clock, FM, every reader and every alert channel, live).
+**Automatic, end to end.** Every card FM Deliveries sends is checked on its real channel every minute. Only problems (missing post, caption too long, FM failure) go to Teams — plus one summary of the day at 23:00 IST; a drop that went out fine is shown on the site, not sent. See [PIPELINE.md](PIPELINE.md), the **Live** page (`#/live`, for everyone) and the **Admin** dashboard (`#/admin`, signed in: the clock, FM, every reader, every alert channel, every error and every message sent, live).
+
+**Two views.** The content team opens the site without signing in: Overview, Report and Live — which post went out where, and why one didn't. The admin signs in (`ADMIN_PASSWORD`) for the rest: the Admin dashboard, FM Deliveries, running a check, deleting a report, Apify spend. The server enforces it — see [Security](#security-notes).
 
 **Two brands, one site.** The switch in the nav moves between them; each has its own channels,
 overview, report and saved history, and never mixes with the other:
@@ -69,7 +71,7 @@ The tokens are at the top of `src/styles.css`.
 
 | | |
 |---|---|
-| `index.html`, `src/main.jsx` | the app's entry; a hash router — `#/` overview, `#/report`, `#/live`, `#/health`, `#/fm`, and `#/matchpulse`, `#/matchpulse/report` |
+| `index.html`, `src/main.jsx` | the app's entry; a hash router — `#/` overview, `#/report`, `#/live`, and `#/matchpulse`, `#/matchpulse/report` for everyone; `#/admin` (also `#/health`) and `#/fm` behind the admin sign-in (`src/pages/Login.jsx`, `src/app/admin.js`) |
 | `src/engine/engine.js` | everything that is not markup — collecting, `reconcile()`, the report store — as `createEngine()`; the tests load it straight from this file |
 | `src/app/` | the React glue: the engine provider, nav/footer, the report view-model, copy-as-text |
 | `src/pages/` | `Home.jsx` (the overview) and `Report.jsx` (one file per tab under `report/`), `Live.jsx` (the pipeline), `Health.jsx` (system health), `Fm.jsx` |
@@ -139,17 +141,18 @@ It is live at this point and already usable — but data is still per-browser un
    | `APIFY_MAX_POSTS` | optional | newest posts each Apify run asks for, per channel (default `6`, about two days). The one knob that sets the price of a check. |
    | `TWITTERAPI_KEY` | optional | a [twitterapi.io](https://twitterapi.io) key — X's second route, tried only if the Apify read fails. |
    | `X_SCRAPER` | optional | a scraping-proxy URL prefix (residential IP) for X's last, free route, e.g. `https://api.scraperapi.com/?api_key=KEY&url=`. |
-   | `ADMIN_PASSWORD` | optional | only if you want app-level gating on the report write on top of platform protection |
+   | `ADMIN_PASSWORD` | **yes** | the admin's password — 16+ characters, random (a password manager's). Without it nobody is admin: the Admin dashboard, FM Deliveries, running a check and every admin API refuse everyone (fail closed). Changing it signs every admin out. Never paste it in a chat or a file in the repo. |
+   | `PIPELINE_KEY` | optional | a long random string. When set, `/api/pipeline?op=tick` needs `&key=…` (the cron-job.org URL, and the GitHub secret `PIPELINE_KEY`); Vercel's own cron and the signed-in admin need nothing. |
 
 5. **Deployments → ⋯ → Redeploy**
 
 The header badge flips from **Local only** to **Cloud**. Without the Supabase vars the dashboard
 still runs — the report just stays in whichever browser ran it.
 
-> **Keep the deployment private.** There is no login in this tool by design. Put
-> [Vercel Deployment Protection](https://vercel.com/docs/deployment-protection) (password or SSO)
-> on the project — it protects the dashboard *and* every `/api` route at the platform layer, which
-> is the right place to keep an internal tool private.
+> **Set `ADMIN_PASSWORD`.** The public pages (Overview, Report, Live) stay open for the content
+> team; everything else needs the admin sign-in. For a fully private site on top of that, add
+> [Vercel Deployment Protection](https://vercel.com/docs/deployment-protection) (password or SSO) —
+> but the Live page's link in Teams messages then needs a Vercel login too.
 
 ### Custom domain
 
@@ -381,21 +384,35 @@ stop depending on the extension.
 
 ## Security notes
 
-- The Supabase `service_role` key, `INGEST_KEY` and `ADMIN_PASSWORD` are **server-side only** —
-  never sent to the browser, never committed. Keep them in Vercel env vars.
-- Same for the three `FM_DELIVERIES_API_KEY_*` values — the browser only ever calls this site's own
-  `/api/fm-deliveries*` proxy, which attaches the real key server-side. The feed's own guide notes
-  captions, asset URLs and the publishing user's email are in its responses, so treat the dashboard
-  like the rest of this internal tool: fine behind Deployment Protection, not for public exposure.
-- There is no login in the dashboard by design. Keep the deployment private with **Vercel
-  Deployment Protection** (Settings → Deployment Protection) — it covers the dashboard and every
-  `/api` route at the platform layer, which is where an internal tool should be gated.
+- **Every key is server-side only** — the Supabase `service_role` key, `APIFY_TOKEN`, the three
+  `FM_DELIVERIES_API_KEY_*`, `TEAMS_WEBHOOK_URL`, `NTFY_TOPIC`, `INGEST_KEY`, `ADMIN_PASSWORD`,
+  `PIPELINE_KEY`. None is in the page or the bundle; keep them in Vercel env vars (and the
+  gitignored `.env` locally). The browser only calls this site's own `/api/*`.
+- **Admin sign-in** (`admin-auth.js`, `api/auth.js`). `POST /api/auth {password}` → a session token
+  (`admin.<expiry>.<HMAC-SHA256>`, 12 h), sent as `Authorization: Bearer …`. The HMAC key is derived
+  from `ADMIN_PASSWORD`, so changing the password ends every session. Wrong passwords: 700 ms delay,
+  and 8 misses from one address lock it out for 15 min. No password set → nobody is admin (503).
+  The password itself is only ever sent to `/api/auth`.
+- **What needs the admin** — enforced on the server, not by hiding buttons: `/api/fm-deliveries*`
+  (captions, asset URLs, editors' emails), `/api/apify-usage`, `/api/health` (and the free-route
+  probe), `/api/collect` (it can spend on Apify), `/api/pipeline?op=test-alert|report`, the writes to
+  `/api/report` and `/api/data`. `/api/pipeline` (status) answers everyone with the public view —
+  per post: channel, time, result and why in plain words — and the admin with everything (health,
+  readers, alert and error logs). Admin endpoints send no CORS headers, so no other website can call
+  them from a browser.
+- **Headers** (`vercel.json`): a Content-Security-Policy that runs scripts from this site only and
+  connects only to this site, `frame-ancestors 'none'` and `X-Frame-Options: DENY` (no framing /
+  clickjacking), HSTS, `nosniff`, a strict referrer policy, `Permissions-Policy` off for camera,
+  microphone, location and payment, `noindex`.
+- **The bundle** is minified with no source maps and no comments. No web page can hide its own
+  JavaScript from the browser that runs it — that is how the web works, for every site — so nothing
+  that matters is in it: the keys, the logic that judges a delivery, and the admin data all stay on
+  the server.
 - `/api/ingest` requires `INGEST_KEY` (header `x-ingest-key`, `?key=`, or a body
   field). Without a key set it answers only to localhost — checked on the socket, not a header, so
   it cannot be spoofed. Anything deployed must set the key.
-- The shared report (`/api/report`) is non-sensitive operational data; its write is shape-checked
-  and size-capped, refuses a stale write with HTTP 409, and can additionally be gated by
-  `ADMIN_PASSWORD` if you set one.
+- The shared report (`/api/report`) is readable by everyone (the content team's Report page); only
+  the admin writes it, and the write is shape-checked, size-capped and refuses a stale write (409).
 - `noindex, nofollow` is set and `robots.txt` disallows everything, so search engines skip it.
 - No credential, cookie or token is ever extracted or stored — every read the extension makes uses
   the session already in the browser, on the user's own IP.

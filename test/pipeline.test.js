@@ -19,6 +19,9 @@ let pass = 0, fail = 0;
 const ok = (good, label, extra) => { good ? pass++ : fail++; console.log(`  ${good ? "pass" : "FAIL"}  ${label}${extra !== undefined ? "  — " + extra : ""}`); };
 const FX = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "fm-2026-10-04.json"), "utf8"));
 const D = FX.deliveries;
+/* Most checks below read every drop report's text, so they run with every report sent (the old rule);
+   the rule production runs — problems and the day's summary only — is checked on its own near the end. */
+process.env.PIPELINE_NOTIFY = "all";
 /* Instagram EN (sportsfc.fans) was 18+ on 4 Oct, so the fixture has no read of it; it is public since ~9 Oct
    and checked like every other channel — its posts stand in here, each 90 s after FM sent it */
 FX.posts["ig-fans"] = D.filter(d => d.channel === "instagram" && d.language === "english")
@@ -552,6 +555,32 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
     const longest = Math.max(...sm.ledger.alerts.map(a => a.text.length)), sentLongest = Math.max(...wm.out.map(t => t.length));
     ok(longest <= 610 && sentLongest > 1000 && sm.ledger.alerts.length <= 150, "the log keeps a short copy (≤ 600 chars, 150 entries); the message goes out whole",
        `${longest} / ${sentLongest}`);
+  }
+
+  console.log("\n── who hears what — problems only, and the day's summary (production since 14 Oct)");
+  {
+    delete process.env.PIPELINE_NOTIFY;
+    const cards = [], pushes = [];
+    const teamsP = { configured: () => true, card: require("../pipeline/teams.js").card, post: async p => { cards.push(p); },
+                     flush: async q => { cards.push(...q.map(m => m.payload)); return { left: [], log: [] }; } };
+    const waP = { ...mkWa(), pushConfigured: () => true, push: async (t, o) => { pushes.push({ t, title: o.title }); } };
+    const sp = mkStore({ startedAt: at("2026-10-04T03:00:00Z"), lastTickAt: at("2026-10-04T15:05:00Z") });   // the clock stopped for 25 min
+    for (const t of ["15:30:00", "15:31:00", "17:31:00"]) { const n = at("2026-10-04T" + t + "Z"); await tick({ fm: fmAt(n), collect: mkCollect(n), store: sp, wa: waP, teams: teamsP, now: n, force: true }); }
+    const tj = cards.map(c => JSON.stringify(c));
+    ok(!tj.some(j => /All delivered/.test(j)) && !pushes.some(p => /All delivered/.test(p.t)), "a drop that went out everywhere is sent nowhere — it is on the website");
+    ok(sp.ledger.alerts.some(a => a.kind === "slot" && /All delivered/.test(a.text)), "…and is in the website's log like every drop");
+    ok(tj.some(j => /\*\*Missing\*\* — X VN · 10:30/.test(j)) && tj.some(j => /Drop report — 10:30/.test(j)), "a problem goes to Teams: the alert, and that drop's report");
+    ok(tj.filter(j => /Daily summary — Sun, 4 Oct 2026/.test(j)).length === 1, "the day's summary goes once, at 23:00");
+    ok(!tj.some(j => /Pipeline was paused/.test(j)) && pushes.some(p => /Pipeline was paused/.test(p.t)), "the pipeline's own trouble goes to the admin's phone, never to Teams");
+    const before = cards.length;
+    const crashStore = mkStore({ startedAt: at("2026-10-04T03:00:00Z") });
+    try { await tick({ fm: async () => ({ deliveries: "nonsense" }), collect: mkCollect(at("2026-10-04T17:40:00Z")), store: crashStore, wa: waP, teams: teamsP, now: at("2026-10-04T17:40:00Z"), force: true }); } catch (e) {}
+    ok(cards.length === before && pushes.some(p => /Pipeline check failed/.test(p.t)), "a crash: the admin's phone, not Teams");
+    ok((crashStore.ledger.errorLog || []).some(x => x.source === "crash"), "…and it is kept in the error log for the Admin page");
+    const se = mkStore({ startedAt: at("2026-10-04T03:00:00Z") });
+    await tick({ fm: fmAt(at("2026-10-04T13:30:00Z")), collect: async () => { throw new Error("network down"); }, store: se, wa: mkWa(), teams: { ...teamsP, configured: () => false }, now: at("2026-10-04T13:30:00Z"), force: true });
+    ok((se.ledger.errorLog || []).some(x => /network down/.test(x.text)), "every error of a check is kept for the Admin page", JSON.stringify(se.ledger.errorLog || []).slice(0, 120));
+    process.env.PIPELINE_NOTIFY = "all";
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);

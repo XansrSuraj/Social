@@ -12,7 +12,7 @@ import Channels from "./report/Channels.jsx";
 const TABS = [["sum", "Summary"], ["drops", "What went out"], ["content", "Content"], ["log", "Post log"], ["chan", "Per channel"]];
 
 export default function Report() {
-  const { E, toast, run, running } = useApp();
+  const { E, toast, run, running, admin } = useApp();
   const [ask, confirmNode] = useConfirm();
   const [tab, setTab] = useState("sum");
   useEffect(() => { E.refreshApifyUsage(); }, [E]);
@@ -44,7 +44,7 @@ export default function Report() {
             <div className="rp-actions">
               <button className="btn btn-line btn-sm" onClick={() => copyText(reportText(E, vm), toast)}><Copy />Copy</button>
               <button className="btn btn-line btn-sm" onClick={() => E.downloadReportCard(rep, o, wo)}><Download />Download</button>
-              <button className="btn btn-danger btn-sm" onClick={del}><Trash2 />Delete</button>
+              {admin && <button className="btn btn-danger btn-sm" onClick={del}><Trash2 />Delete</button>}
             </div>
           </div>
         </div>
@@ -54,7 +54,7 @@ export default function Report() {
 
       <section className="section tight" style={{ paddingTop: 28 }}>
         <div className="wrap">
-          <RunCard E={E} vm={vm} run={run} running={running} toast={toast} />
+          {admin && <RunCard E={E} vm={vm} run={run} running={running} toast={toast} />}
           <Verdict vm={vm} />
 
           <div className="tabs" role="tablist">

@@ -6,7 +6,7 @@
  */
 function getHealth(query) {
   delete require.cache[require.resolve("../api/health.js")];
-  const handler = require("../api/health.js");
+  const handler = require("./_admin.js")(require("../api/health.js"));
   return new Promise(resolve => {
     handler({ method: "GET", headers: {}, query: query || {} },
       { setHeader() {}, status(c) { this._c = c; return this; },

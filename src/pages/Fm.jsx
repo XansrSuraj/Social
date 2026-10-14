@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Copy, History, Inbox, Info, Layers, Link2, Loader2, Pause, Play, RadioTower,
   RefreshCw, RotateCcw, Terminal, Video } from "lucide-react";
 import { BrandIcon, useApp } from "../app/core.jsx";
+import { authFetch } from "../app/admin.js";
 
 /* FM Deliveries — a read-only viewer over the CMS's FM Deliveries feed, through this site's own proxy
    (api/fm-deliveries.js keeps the x-api-key server-side). Every filter the feed accepts, the four outcome
@@ -62,7 +63,7 @@ function toHash({ env, f, group, limit, page }) {
 async function apiGet(path, params) {
   const url = new URL(path, location.origin);
   for (const [k, v] of Object.entries(params || {})) if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, v);
-  let r; try { r = await fetch(url.toString(), { cache: "no-store" }); } catch (e) { return { ok: false, status: 0, error: "Network error: " + (e.message || e) }; }
+  let r; try { r = await authFetch(url.toString()); } catch (e) { return { ok: false, status: 0, error: "Network error: " + (e.message || e) }; }
   const text = await r.text(); let body = null; try { body = text ? JSON.parse(text) : null; } catch (e) {}
   if (!r.ok) return { ok: false, status: r.status, error: (body && (body.error || body.message || body.detail)) || text || `HTTP ${r.status}`, body };
   return { ok: true, status: r.status, body };
@@ -130,7 +131,7 @@ function FmRow({ row, isOpen, att, onFlip, onAttempts, onCopy }) {
 }
 
 export default function Fm() {
-  const { toast } = useApp();
+  const { toast, logout } = useApp();
   const init = useMemo(fromHash, []);
   const [env, setEnv] = useState(init.env);
   const [f, setF] = useState(init.f);
@@ -164,6 +165,7 @@ export default function Fm() {
     const res = await apiGet("/api/fm-deliveries", query());
     if (my !== seq.current) return;
     setLoading(false);
+    if (res.status === 401) { logout(); return; }        // the admin session ran out — back to the sign-in
     if (!res.ok) { setError({ status: res.status, message: res.error }); setD({ rows: [], pageOutcomes: null, totalPages: 1, total: 0, hasNext: false }); return; }
     const b = res.body || {};
     let rows = Array.isArray(b.deliveries) ? b.deliveries : [];
@@ -176,7 +178,7 @@ export default function Fm() {
     const counts = await Promise.all(outs.map(o => apiGet("/api/fm-deliveries", query({ limit: 1, page: 1, state: undefined, outcome: o }))));
     if (my !== seq.current) return;
     setKpi(Object.fromEntries(outs.map((o, i) => [o, counts[i].ok && counts[i].body && typeof counts[i].body.totalDeliveries === "number" ? counts[i].body.totalDeliveries : null])));
-  }, [query, f.narration]);
+  }, [query, f.narration, logout]);
 
   useEffect(() => { toHash({ env, f, group, limit, page }); load(); }, [env, f, group, limit, page]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {

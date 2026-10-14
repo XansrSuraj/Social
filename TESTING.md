@@ -3,7 +3,7 @@
 ## The suites
 
 ```bash
-npm run test:unit    # every stubbed suite — no network, ~860 checks
+npm run test:unit    # every stubbed suite — no network, ~940 checks
 npm run test:live    # api/collect against the real channels (needs the network)
 npm test             # both
 ```
@@ -17,6 +17,7 @@ npm test             # both
 | `test/free.test.js`, `test/fbdate.test.js`, `test/ig-*.test.js`, `test/tt-ext.test.js`, `test/x*.test.js`, `test/youtube.test.js` | each reader's parser, on saved pages |
 | `test/apify*.test.js`, `test/retry.test.js`, `test/collectsplit.test.js` | the Apify fallback: cost caps, caching, retries |
 | `test/ingest.test.js`, `test/thumb.test.js`, `test/health.test.js` | the small endpoints |
+| `test/auth.test.js`, `test/store.test.js` | the admin sign-in: fails closed without `ADMIN_PASSWORD`, wrong / forged / expired tokens, the 8-miss lock-out, every admin endpoint refusing an anonymous caller (401, no CORS), the public pipeline view carrying nothing internal and a plain-words `why` for each problem. `test/_admin.js` signs the other suites' calls in. `test/pipeline.test.js` → "who hears what" pins the alert policy (only problems to Teams, the pipeline's own trouble never). |
 
 ## Running the site locally
 
@@ -46,15 +47,15 @@ A local tick reads the real FM feed and the real channels, and writes only local
 
 On production, read-only:
 
-- `GET /api/pipeline` — the ledger as the Live and System health pages see it (`health` is the
-  System health verdict).
-- `#/health` — every part: clock, FM, all 14 readers, alert channels.
+- `GET /api/pipeline` — the public view anyone gets (what the content team's Live page shows).
+- `#/admin` (signed in) — every part: clock, FM, all 14 readers, alert channels, errors, what was sent.
 - Never call `?op=tick`, `?op=test-alert` or `?op=report` on production just to look — they run or send.
 
 ## Before a release
 
 - [ ] `npm run test:unit` all green; `npm run build` builds
-- [ ] `#/`, `#/report`, `#/live`, `#/health`, `#/fm`, `#/matchpulse` load with no console error, at
-      phone width too, with no sideways scroll
-- [ ] the System health page says everything is working, the clock shows ~60 checks in the last hour
+- [ ] `#/`, `#/report`, `#/live`, `#/matchpulse` load with no console error, at phone width too, with
+      no sideways scroll — signed out: no Run / Delete / Check now, `#/admin` and `#/fm` show the sign-in
+- [ ] signed in: `#/admin` and `#/fm` load; the Admin page says everything is working, the clock shows
+      ~60 checks in the last hour; Sign out returns to the public view
 - [ ] a change to alert wording: run `SHOW=1 node test/pipeline.test.js` and read the printed report

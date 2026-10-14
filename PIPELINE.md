@@ -47,11 +47,21 @@ Live page: **`#/live`** on the site. Code: `pipeline/` + `api/pipeline.js`. Test
 5. **Report** — a read that brings a post the daily-check report hasn't had is merged into it
    (conditionally — a browser's own save is never overwritten), so `#/report` stays current with nobody
    pressing Run. A read with nothing new leaves the shared row alone.
-6. **Alerts** (Teams, phone, WhatsApp) — problems as soon as they are known; one full report per drop
-   once all its channels are settled; the **daily summary** after 23:00 IST — how many posts reached
-   their channels (per language), and a short list of what needs attention, each with its time and why.
+6. **Alerts — only problems** (since 15 Oct 2026). Who hears what (`pipeline/tick.js`, step 9):
+
+   | | Teams (the content team's channel) | Phone push (ntfy) — the admin | The website |
+   |---|---|---|---|
+   | a post missing, not sent by FM/CMS, stuck, late, caption problem — as soon as it is known | ✓ | ✓ | ✓ |
+   | the drop's full report, **when it has a problem** | ✓ | ✓ | ✓ |
+   | a drop that went out fine everywhere | — | — | ✓ (Live, Report) |
+   | the **daily summary**, once, after 23:00 IST — posts that reached their channels per language, and what needs attention with its time and why | ✓ | ✓ | ✓ |
+   | the pipeline's own trouble — a crash, the clock paused, FM's feed down | — | ✓ | ✓ (Admin) |
+   | a reader (scraper) failing and recovering | — | — | ✓ (Admin) |
+
    Every delivery is counted in exactly one summary: one still being checked at 23:00 (or sent after it)
-   is in the next night's, with a note. Every alert is sent once.
+   is in the next night's, with a note. Every alert is sent once. `PIPELINE_NOTIFY=all` (env var) brings
+   back the old behaviour — every drop report, good or bad, everywhere. `TEAMS_OFF` in
+   `pipeline/teams.js` is a kill switch for Teams alone (off since 15 Oct: Teams is on).
 
 ### Two rules that keep alerts true (since 10 Oct 2026)
 
@@ -119,35 +129,49 @@ CallMeBot says: if the key does not arrive within 2 minutes, try again after 24 
 
 ## Microsoft Teams (the team's channel)
 
-Every alert also goes into a Teams channel as one Adaptive Card per check — a red section for a problem,
-a green one for a drop that was fully delivered, every channel's ✓/✗ per language, and a link to the
-Live page. Teams' own "Incoming Webhook" connector was retired in May 2026; this uses its official
+Problems go into a Teams channel as one Adaptive Card per check — a red section for a problem, the
+drop's every channel ✓/✗ per language, and a link to the Live page — and the day's summary at 23:00.
+A drop that went out fine is not posted (it is on the site), and nor is the pipeline's own trouble
+(that goes to the admin's phone and the Admin page). Teams' own "Incoming Webhook" connector was retired in May 2026; this uses its official
 replacement, the **Workflows** app.
 
 1. In Teams, open the channel → **⋯** → **Workflows** → template **"Send webhook alerts to a channel"**
    → choose the team and channel → **Save** → copy the **webhook URL** it shows. (The URL lets anyone
    post into the channel — keep it out of chat and out of the code.)
 2. Vercel → Environment Variables: `TEAMS_WEBHOOK_URL` = that URL. Redeploy.
-3. Live page → **Test alert** — a green "Teams alerts are working" card appears in the channel.
+3. Admin page → **Test alert** — a green "Teams alerts are working" card appears in the channel.
 
 The card shows as posted by the Workflows (flow) bot; the workflow belongs to whoever created it, so add
 a co-owner in Workflows so it keeps working if that person leaves.
 
-## The pipeline's own health — the System health page (`#/health`)
+## The pipeline's own health — the Admin dashboard (`#/admin`, signed in)
 
-One page shows whether every part works right now: the clock (checks in the last hour), the last
-check's run, the report sync, the FM feed (answer time, newest delivery), **every channel reader** —
-its method, last read, posts seen, newest post, and its last 30 reads as bars — and every alert
-channel. It refreshes every minute, like the pipeline; the Live page carries a one-line summary of it.
+One page shows whether every part works right now, and where it broke if not:
 
-- **A check crashes** → 🚨 "Pipeline check failed" on every channel at once (at most every 30 min while
-  it keeps retrying each minute).
+- **the pipeline, end to end** — Clock → FM feed → Check → Readers → Report sync → Alerts, each green,
+  amber or red; the first red step is where it broke, and a click jumps to its detail;
+- **Errors** — every error a check met (100 newest: which reader, Teams, WhatsApp, a crash with its
+  first stack line), and the last crash;
+- **What was sent** — every message to Teams, the phone and WhatsApp: when, what, delivered or the
+  reason it failed; and how many are waiting to go out;
+- **the last 60 checks** as bars — slow ones taller, ones with errors red, ones that came 3+ min late amber;
+- the clock, the last check's run, the report sync, the FM feed (answer time, newest delivery), **every
+  channel reader** — its method, last read, posts seen, newest post, its last 30 reads — and every
+  alert channel; **who hears what**; the recent incidents.
+
+It refreshes every minute, like the pipeline; the Live page carries a one-line summary of it for the admin.
+The content team's Live page shows each post's result and, for a problem, why in plain words — "couldn't
+be checked automatically — on our side" for a reader failure, never the reader's own error.
+
+- **A check crashes** → 🚨 "Pipeline check failed" to the admin's phone (at most every 30 min while it
+  keeps retrying each minute), and on the Admin page. Never to Teams.
 - **The clock stops** (cron-job.org down, GitHub late) → the first check after it says "🕒 Pipeline was
-  paused for N min" and catches up on everything sent in that time.
-- **FM unreachable 15+ min** → 📡.
+  paused for N min" (phone and Admin page) and catches up on everything sent in that time — the posts
+  it finds missing go to Teams as usual.
+- **FM unreachable 15+ min** → 📡 (phone and Admin page).
 - **A scraper failing** (reader down / back, a post that couldn't be checked) is **not a notification**
   (since 8 Oct): the free readers hiccup for a minute or two and recover on their own — FxTwitter
-  answered 404 for X twice that day. It is shown on the **System health page** (`#/health`) instead: what is
+  answered 404 for X twice that day. It is shown on the **Admin page** (`#/admin`) instead: what is
   down, since when and why, plus the recent incidents. A channel that can't be read at the 20-min mark
   is retried every minute for 10 more minutes before its drop is reported, so a short hiccup changes
   nothing; FxTwitter's 404 is also retried at once.
@@ -155,13 +179,14 @@ channel. It refreshes every minute, like the pipeline; the Live page carries a o
 
 ## Phone push (ntfy) — instant, free, no signup
 
-Every alert also goes out as a phone notification through [ntfy](https://ntfy.sh), independent of
-WhatsApp, so alerts arrive even while CallMeBot is slow or down.
+Every alert Teams gets — plus the pipeline's own trouble — also goes out as a phone notification
+through [ntfy](https://ntfy.sh), independent of WhatsApp, so alerts arrive even while CallMeBot is
+slow or down.
 
 1. Install **ntfy** (Play Store / App Store) → **+** → subscribe to your topic (a long random name —
    anyone who knows it can read the alerts, so do not use a guessable one).
 2. Vercel → Environment Variables: `NTFY_TOPIC` = that same name. Redeploy.
-3. Live page → **Test alert**. Problems arrive as high-priority notifications; tapping one opens the Live page.
+3. Admin page → **Test alert**. Problems arrive as high-priority notifications; tapping one opens the Live page.
 
 ## Channels FM sends to that are not checked
 
@@ -189,14 +214,16 @@ it, even a caption-less one matched on time alone.
 
 ## Endpoints
 
-- `GET /api/pipeline` — status for the Live and System health pages (public, read-only; no keys,
-  numbers or emails in it)
+- `GET /api/pipeline` — status. Everyone gets the public view (per delivery: channel, time, result,
+  lag, post link, and `why` in plain words for a problem — no reader notes, logs or keys); the
+  signed-in admin (`Authorization: Bearer …`, see README → Security) gets everything: health,
+  readers, alerts, the error and check logs, what was sent.
 - `GET /api/pipeline?op=tick` — run a tick now (`&fast=1`: answer at once, finish in the background)
-- `GET /api/pipeline?op=test-alert` — one test alert on every configured channel (at most one per 10 min)
-- `GET /api/pipeline?op=report&at=16:30[&day=2026-10-09]` — send that drop's full report again (at
-  most once a minute)
-- Optional `PIPELINE_KEY` env var: when set, `op=tick` / `op=test-alert` / `op=report` need `?key=…` —
-  add it to the cron-job.org URL and as the GitHub secret `PIPELINE_KEY`, or the clocks stop.
+- `GET /api/pipeline?op=test-alert` — admin only: one test alert on every configured channel (at most one per 10 min)
+- `GET /api/pipeline?op=report&at=16:30[&day=2026-10-09]` — admin only: send that drop's full report
+  again (at most once a minute)
+- Optional `PIPELINE_KEY` env var: when set, `op=tick` needs `?key=…` (or the admin's session, or
+  Vercel's cron) — add it to the cron-job.org URL and as the GitHub secret `PIPELINE_KEY`, or the clocks stop.
 
 ## Honest limits
 

@@ -76,12 +76,13 @@ async function sample(res, runId, n) {
                                 items: (Array.isArray(items) ? items : []).map(it => shrink(it, 0)) });
 }
 
+const auth = require("../admin-auth.js");
 module.exports = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Cache-Control", "no-store, max-age=0");
-  if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "GET") return res.status(405).json({ ok: false, error: "Use GET." });
+  /* admin only (admin-auth.js) — same-origin, no CORS */
+  if (!auth.isAdmin(req)) return auth.deny(res);
+
 
   if (!process.env.APIFY_TOKEN) return res.status(200).json({ ok: true, configured: false });
 

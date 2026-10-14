@@ -14,7 +14,7 @@
  * depends on the env and the network, not on the parsers this test exists to watch.
  */
 const path = require("path");
-const collect = require(path.join(__dirname, "..", "api", "collect.js"));
+const collect = require("./_admin.js")(require(path.join(__dirname, "..", "api", "collect.js")));
 const ingest = require(path.join(__dirname, "..", "ingest-store.js"));
 
 /* the real SportsFC directory — replace if you are testing a different set */

@@ -70,7 +70,7 @@ function collect(channels, pages, env) {
   const saved = {};
   for (const [k, v] of Object.entries(env || {})) { saved[k] = process.env[k]; if (v === null) delete process.env[k]; else process.env[k] = v; }
   delete require.cache[require.resolve(MOD)];
-  const handler = require(MOD);
+  const handler = require("./_admin.js")(require(MOD));
   return new Promise(resolve => handler({ method: "POST", body: { channels, hours: 48 } },
     { setHeader() {}, status() { return this; }, json: p => resolve({ payload: p, calls }) }))
     .finally(() => { global.fetch = realFetch; for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } });

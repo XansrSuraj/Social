@@ -120,7 +120,7 @@ function run(world, channel, hours) {
     return ok(chanPage(ids, world.shorts || []));
   };
 
-  const handler = load();
+  const handler = require("./_admin.js")(load());
   return new Promise(r => {
     handler({ method: "POST", body: { channels: [channel], hours: hours || 24 } }, {
       setHeader() {}, status() { return this; },

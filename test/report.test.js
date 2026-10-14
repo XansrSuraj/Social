@@ -20,7 +20,7 @@ const realFetch = global.fetch;
 function load() { delete require.cache[require.resolve(MOD)]; return require(MOD); }
 
 function call(method, body, headers, query) {
-  const handler = load();
+  const handler = require("./_admin.js")(load());
   return new Promise(resolve => {
     handler({ method, body, headers: headers || {}, query: query || {} },
       { setHeader() {}, status(c) { this._c = c; return this; },
@@ -107,13 +107,16 @@ const check = (good, label, extra) => {
   check(r.status === 400, "an unknown brand cannot pick some other row of the table", String(r.status));
   global.fetch = prevFetch;
 
-  console.log("\n── an admin password, if set, gates the write");
-  process.env.ADMIN_PASSWORD = "secret";
-  r = await call("PUT", { data: { lastRun: "z" } }, { "x-admin-key": "wrong" });
-  check(r.status === 401, "a wrong admin key is refused when ADMIN_PASSWORD is set", String(r.status));
-  r = await call("PUT", { data: { lastRun: "z" } }, { "x-admin-key": "secret" });
-  check(r.status === 200, "the right admin key writes", String(r.status));
-  delete process.env.ADMIN_PASSWORD;
+  console.log("\n── the write is the admin's only (since 14 Oct 2026 — it was open to anyone)");
+  const raw = (method, body, headers) => new Promise(resolve => load()({ method, body, headers: headers || {}, query: {} },
+    { setHeader() {}, status(c) { this._c = c; return this; }, end() { resolve({ status: this._c || 200 }); }, json(p) { resolve({ status: this._c || 200, body: p }); } }));
+  const before = store.data.lastRun;
+  r = await raw("PUT", { data: { lastRun: "anyone" } });
+  check(r.status === 401 && store.data.lastRun === before, "a write from someone not signed in is refused, and the row is untouched", String(r.status));
+  r = await raw("PUT", { data: { lastRun: "anyone" } }, { "x-admin-key": process.env.ADMIN_PASSWORD });
+  check(r.status === 401, "…even with the password itself in a header — only a signed-in session writes", String(r.status));
+  r = await raw("PUT", { data: { lastRun: "admin" } }, { authorization: "Bearer " + require("../admin-auth.js").issue().token });
+  check(r.status === 200 && store.data.lastRun === "admin", "a signed-in admin writes", String(r.status));
 
   global.fetch = realFetch;
   delete process.env.SUPABASE_URL;
