@@ -43,10 +43,20 @@ function healthOf(led, now, outputs = {}) {
         : errs.length ? `last check finished with ${errs.length} error${errs.length === 1 ? "" : "s"}: ${errs.join(" · ").slice(0, 200)}`
         : led.lastTick ? `last check took ${(led.lastTick.ms / 1000).toFixed(1)} s · ${led.lastTick.checked} post${led.lastTick.checked === 1 ? "" : "s"} checked · ${(led.lastTick.read || []).length} channel${(led.lastTick.read || []).length === 1 ? "" : "s"} read`
         : "no check has finished yet" },
-    { id: "report", name: "Daily-check report sync",
-      state: !led.lastReportMerge ? "warn" : now - led.lastReportMerge.at < 2 * PROBE_MIN * 60e3 ? "ok" : "warn",
-      detail: led.lastReportMerge ? `posts merged into the report ${ago(now, led.lastReportMerge.at)} (${led.lastReportMerge.channels} channel${led.lastReportMerge.channels === 1 ? "" : "s"})` : "nothing merged yet",
-      lastOkAt: led.lastReportMerge ? led.lastReportMerge.at : null },
+    /* judged on what is stuck, not on the last merge's age: a merge happens only when a read brings a new
+       post (pipeline/tick.js step 6), so a quiet night with nothing new is "up to date", not "check" */
+    (() => {
+      const rs = led.reportSync || {}, m = led.lastReportMerge;
+      const failing = rs.failingSince ? now - rs.failingSince : null;
+      const waiting = rs.pendingSince ? now - rs.pendingSince : null;
+      return { id: "report", name: "Daily-check report sync",
+        state: failing != null ? (failing >= 30 * 60e3 ? "bad" : "warn") : waiting != null && waiting >= 2 * PROBE_MIN * 60e3 ? "warn" : "ok",
+        detail: failing != null ? `new posts can't be saved into the report (failing since ${ago(now, rs.failingSince)}) — ${rs.lastError || "no reason given"}`
+          : waiting != null && waiting >= 2 * PROBE_MIN * 60e3 ? `new posts read ${ago(now, rs.pendingSince)} are still waiting to be merged into the report`
+          : m ? `up to date — new posts last merged ${ago(now, m.at)} (${m.channels} channel${m.channels === 1 ? "" : "s"}); nothing new waiting`
+          : "up to date — nothing new to merge yet",
+        lastOkAt: m ? m.at : null };
+    })(),
   ] });
 
   /* ── FM Deliveries ── */

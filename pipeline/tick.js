@@ -436,13 +436,21 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
      shared report row (~0.5 MB), and the health probes read 3 channels every minute. */
   const seen = id => new Set((led.readers[id] || {}).seenIds || []);
   const okReads = Object.values(byCh).filter(r => r.ok && (r.posts || []).some(p => p && p.externalId && !seen(r.channelId).has(p.externalId)));
-  /* …and at most every 15 min: a post read now is still on its channel at the next read, and is merged then */
+  /* …and at most every 15 min: a post read now is still on its channel at the next read, and is merged then.
+     led.reportSync is what the Health / Admin page judges: new posts waiting since when, a merge failing
+     since when — not the age of the last merge (a quiet night has nothing to merge, and that is fine). */
+  const rs = led.reportSync = led.reportSync || {};
+  if (okReads.length && !rs.pendingSince) rs.pendingSince = now;
   if (okReads.length && now - ((led.lastReportMerge || {}).at || 0) >= 15 * 60e3) {
     try {
       const m = await store.mergeIntoReport(okReads, now);
       led.lastReportMerge = { at: now, added: m.added, channels: okReads.length };
       for (const r of okReads) if (led.readers[r.channelId]) led.readers[r.channelId].seenIds = (r.posts || []).map(p => p.externalId).filter(Boolean).slice(0, 40);
-    } catch (e) { errors.push("report merge: " + String(e.message || e)); }
+      led.reportSync = { pendingSince: null, failingSince: null, lastError: null };
+    } catch (e) {
+      rs.failingSince = rs.failingSince || now; rs.lastError = String(e.message || e).slice(0, 200);
+      errors.push("report merge: " + String(e.message || e));
+    }
   }
 
   /* ── 7. drop reports: once every delivery of a drop is settled — once per drop, ever, and only a current one ── */

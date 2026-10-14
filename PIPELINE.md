@@ -155,7 +155,7 @@ One page shows whether every part works right now, and where it broke if not:
 - **What was sent** — every message to Teams, the phone and WhatsApp: when, what, delivered or the
   reason it failed; and how many are waiting to go out;
 - **the last 60 checks** as bars — slow ones taller, ones with errors red, ones that came 3+ min late amber;
-- the clock, the last check's run, the report sync, the FM feed (answer time, newest delivery), **every
+- the clock, the last check's run, the report sync ("up to date" unless new posts wait over an hour or the merge fails — a quiet night with nothing to merge is fine), the FM feed (answer time, newest delivery), **every
   channel reader** — its method, last read, posts seen, newest post, its last 30 reads — and every
   alert channel; **who hears what**; the recent incidents.
 

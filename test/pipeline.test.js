@@ -484,6 +484,18 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
        "…the clock, FM and the alert channels too, with one overall verdict", H.overall + " — " + H.summary);
     const late = healthOf({ ...sh.ledger, lastTickAt: t - 30 * 60e3 }, t, {});
     ok(late.overall === "down" && late.groups[0].items[0].state === "bad", "a stopped clock is 'down'");
+
+    /* report sync (15 Oct 2026): a merge happens only when a read brings a new post, so a quiet night two
+       hours past the last merge is "up to date" — it showed "1 to check" before */
+    const rsOf = led => healthOf({ ...sh.ledger, ...led }, t, {}).groups[0].items.find(i => i.id === "report");
+    const quiet = rsOf({ lastReportMerge: { at: t - 2 * 3600e3, channels: 3 }, reportSync: { pendingSince: null, failingSince: null } });
+    ok(quiet.state === "ok" && /up to date/.test(quiet.detail), "nothing new for 2 h: report sync is up to date, not 'check'", quiet.detail);
+    const stuck = rsOf({ lastReportMerge: { at: t - 2 * 3600e3, channels: 3 }, reportSync: { pendingSince: t - 70 * 60e3 } });
+    ok(stuck.state === "warn" && /still waiting/.test(stuck.detail), "new posts read over an hour ago and still not merged: 'check'", stuck.detail);
+    const failing = rsOf({ reportSync: { pendingSince: t - 40 * 60e3, failingSince: t - 40 * 60e3, lastError: "store write failed (503)" } });
+    ok(failing.state === "bad" && /can't be saved.*503/.test(failing.detail), "the merge failing for 30+ min: 'not working', with why", failing.detail);
+    const blip = rsOf({ reportSync: { pendingSince: t - 2 * 60e3, failingSince: t - 2 * 60e3, lastError: "timeout" } });
+    ok(blip.state === "warn", "…a single failure just now: 'check'");
   }
 
   console.log("\n── the day's summary (23:00 IST)");
