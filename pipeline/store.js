@@ -21,6 +21,10 @@ const LEDGER_ROW = 5, REPORT_ROW = 3;
 const FILES = { [LEDGER_ROW]: path.join(__dirname, "..", ".pipeline.json"), [REPORT_ROW]: path.join(__dirname, "..", ".report-local.json") };
 
 const configured = () => !!(SB_URL && SB_KEY);
+/* Every string made well-formed before it is sent: a text cut through the middle of an emoji leaves half a
+   surrogate pair, and Supabase refuses the whole row as "Empty or invalid json" (14 Oct 2026, 23:00 — the
+   ledger could not be saved, so the day's summary and the crash alert went out every minute). */
+const wellFormed = v => JSON.stringify(v, (k, x) => (typeof x === "string" && x.toWellFormed ? x.toWellFormed() : x));
 const sbHeaders = extra => Object.assign({ apikey: SB_KEY, Authorization: "Bearer " + SB_KEY, "Content-Type": "application/json" }, extra || {});
 class Conflict extends Error {}
 
@@ -46,7 +50,7 @@ async function writeRow(id, data, base) {
   if (!base) {
     /* first write: insert, refusing if someone created it meanwhile */
     const w = await fetch(`${SB_URL}/rest/v1/${TABLE}?select=id`, { method: "POST", headers: sbHeaders({ Prefer: "return=representation" }),
-      body: JSON.stringify([{ id, data, updated_at: now }]), signal: AbortSignal.timeout(15000) });
+      body: wellFormed([{ id, data, updated_at: now }]), signal: AbortSignal.timeout(15000) });
     if (w.status === 409) throw new Conflict("created meanwhile");
     if (!w.ok) throw new Error(`store insert failed (${w.status}): ${(await w.text()).slice(0, 200)}`);
     return now;
@@ -54,7 +58,7 @@ async function writeRow(id, data, base) {
   /* select=id: the answer is the matched row's id only (an empty list = it changed meanwhile), not the whole row */
   const w = await fetch(`${SB_URL}/rest/v1/${TABLE}?id=eq.${id}&updated_at=eq.${encodeURIComponent(base)}&select=id`, {
     method: "PATCH", headers: sbHeaders({ Prefer: "return=representation" }),
-    body: JSON.stringify({ data, updated_at: now }), signal: AbortSignal.timeout(15000) });
+    body: wellFormed({ data, updated_at: now }), signal: AbortSignal.timeout(15000) });
   if (!w.ok) throw new Error(`store write failed (${w.status}): ${(await w.text()).slice(0, 200)}`);
   const rows = await w.json();
   if (!Array.isArray(rows) || !rows.length) throw new Conflict("changed meanwhile");

@@ -69,6 +69,11 @@ const SENDABLE = new Set(["queued", "sending", "sent"]);
 const ist = ms => new Date(ms + 5.5 * 3600e3).toISOString().slice(11, 16);
 const istDay = ms => new Date(ms + 5.5 * 3600e3).toISOString().slice(0, 10);
 const T = (iso) => Date.parse(iso);
+/* cut a text to n characters without ever splitting an emoji (half of one is invalid JSON to Supabase) */
+const cut = (s, n) => Array.from(String(s || "")).slice(0, n).join("");
+/* the crash alert's 30-min throttle also lives here: when the ledger itself can't be saved, the ledger
+   can't remember that the alert went out */
+let crashAlertAt = 0;
 /* "multi-match-reels" → "Multi-match reels" — a card's name when FM gives no template */
 const pretty = s => String(s || "").replace(/[-_]+/g, " ").replace(/^\w/, c => c.toUpperCase()).replace(/\bmatch reels\b/i, "match reels");
 
@@ -140,8 +145,8 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
   } catch (e) {
     /* the pipeline itself broke: say so on every channel at once (at most every 30 min — it retries
        every minute), and never leave the ledger locked behind a crash */
-    if (!led.lastCrashAlertAt || now - led.lastCrashAlertAt > 30 * 60e3) {
-      led.lastCrashAlertAt = now;
+    if ((!led.lastCrashAlertAt || now - led.lastCrashAlertAt > 30 * 60e3) && now - crashAlertAt > 30 * 60e3) {
+      led.lastCrashAlertAt = now; crashAlertAt = now;
       const text = `🚨 *Pipeline check failed* — ${String(e.message || e).slice(0, 200)}. It retries every minute; nothing is lost while it does.`;
       try { if (wa.pushConfigured && wa.pushConfigured()) await wa.push(text, { problem: true, click: PIPELINE_URL, title: "🚨 Pipeline check failed" }); } catch (e2) {}
       try { if (teams.configured()) await teams.post(teams.card([{ kind: "pipeline", text }], { link: PIPELINE_URL })); } catch (e2) {}
@@ -168,7 +173,7 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     if (when != null && !current(when)) return;
     const a = { at: now, kind, text, ...(INTERNAL.has(kind) ? { internal: true } : {}) };
     /* the log (on the website) keeps a short copy — the full report goes out in the message */
-    led.alerts.unshift({ ...a, text: text.length > 600 ? text.slice(0, 600).replace(/\n[^\n]*$/, "") + "\n…" : text });
+    led.alerts.unshift({ ...a, text: text.length > 600 ? cut(text, 600).replace(/\n[^\n]*$/, "") + "\n…" : text });
     if (!INTERNAL.has(kind) && !quiet(when == null ? now : when)) news.push({ ...a, ...(extra || {}) });
   };
   const errors = [];
@@ -216,7 +221,7 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
     Object.assign(e, {
       setId: d.setId, channel: d.channel, language: d.language, label: labelOf(d.channel, d.language),
       card: (d.template && d.template.label) || labelOfSet[d.setId] || (e.card && e.card !== "card" ? e.card : "") || pretty(d.collection) || "card",
-      caption: String(d.caption || "").slice(0, settledOld ? 200 : 700),
+      caption: cut(d.caption, settledOld ? 200 : 700),
       scheduledAt: d.scheduledAt || null, queuedAt: d.queuedAt || null, sentAt: d.sentAt || null,
       fmState: d.state, fmError: d.error ? String(d.error).slice(0, 200) : null, failureStage: d.failureStage || null,
       mode: route.mode, soft: !!route.soft, why: route.why || null, chId: route.read ? route.read.id : null,

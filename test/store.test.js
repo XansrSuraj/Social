@@ -21,6 +21,8 @@ global.fetch = async (url, opts = {}) => {
   const pick = row => (select ? Object.fromEntries(select.split(",").map(k => [k, row[k]])) : row);
   const json = (body, status = 200) => { const text = JSON.stringify(body); log.push({ method, id, select, bytes: text.length }); return new Response(text, { status, headers: { "content-type": "application/json" } }); };
   if (method === "GET") return json(rows[id] ? [pick(rows[id])] : []);
+  /* like PostgREST: half an emoji (a lone surrogate) is "Empty or invalid json" */
+  if (opts.body && /\\ud[89ab][0-9a-f]{2}(?!\\ud[c-f])/i.test(opts.body)) return json({ code: "PGRST102", message: "Empty or invalid json" }, 400);
   if (method === "PATCH") {
     const base = (u.searchParams.get("updated_at") || "").replace("eq.", "");
     const body = JSON.parse(opts.body);
@@ -70,6 +72,12 @@ process.env.SUPABASE_SERVICE_KEY = "k";
   lock = await store.lockLedger("t14");
   ok(lock && lock.ledger.lock.owner === "t14", "once it is done, the next tick goes ahead");
   await store.saveLedger(lock.ledger, lock.updatedAt, true);
+
+  /* 14 Oct 23:00: a caption cut through an emoji made the ledger unsaveable */
+  lock = await store.lockLedger("t15");
+  lock.ledger.broken = "🔥🔥".slice(0, 3);
+  let saved = true; try { await store.saveLedger(lock.ledger, lock.updatedAt, true); } catch (e) { saved = false; }
+  ok(saved && rows[5].data.lock === null, "a text with half an emoji in it still saves (made well-formed first)");
 
   console.log("\n── the status endpoint (Live and Health pages)");
   const g0 = log.filter(l => l.method === "GET").length;
