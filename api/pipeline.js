@@ -80,7 +80,7 @@ module.exports = async (req, res) => {
     if (op === "tick") {
       /* the clocks (cron-job.org, GitHub, Vercel's cron) — with PIPELINE_KEY set, they need it — or the admin */
       if (!authorised(req) && !admin) return res.status(401).json({ ok: false, error: "PIPELINE_KEY required" });
-      const run = tick({ fm: fmDeliveries, collect: collectChannels, store, wa, owner: "tick:" + Date.now() });
+      const run = tick({ fm: fmDeliveries, collect: collectChannels, store, wa, owner: "tick:" + Date.now(), matchpulse: true });
       /* ?fast=1 — answer at once and finish in the background (Vercel's waitUntil). For a caller with a
          short timeout: cron-job.org's free plan cuts a request at 30 s and switches a job off after 25
          failures in a row, and a tick that reads many channels can take longer than that. */

@@ -118,6 +118,26 @@ process.env.ADMIN_PASSWORD = "test-admin-password-123";
     ok((await st.readLedger()).deliveries.c0.caption !== "changed", "…each gets its own copy");
   }
 
+  console.log("\n── the pipeline's report merges are written from its own copy (15 Oct 2026)");
+  {
+    delete require.cache[require.resolve("../pipeline/store.js")];
+    const ps = require("../pipeline/store.js");
+    rows[3] = { id: 3, data: { posts: { a: Array.from({ length: 200 }, (_, i) => ({ externalId: "p" + i, ts: new Date().toISOString(), text: "y".repeat(300) })) }, meta: {} }, updated_at: stamp() };
+    const reads3 = () => log.filter(l => l.method === "GET" && l.id === 3).length;
+    const post = id => [{ channelId: "a", ok: true, posts: [{ externalId: id, ts: new Date().toISOString(), text: "new" }] }];
+    let r0 = reads3();
+    await ps.mergeIntoReport(post("n1"), Date.now());
+    ok(reads3() === r0 + 1, "the first merge reads the row once");
+    r0 = reads3();
+    await ps.mergeIntoReport(post("n2"), Date.now()); await ps.mergeIntoReport(post("n3"), Date.now());
+    ok(reads3() === r0 && ["n1", "n2", "n3"].every(id => rows[3].data.posts.a.some(p => p.externalId === id)), "the next merges read nothing — and every post landed");
+    rows[3] = { ...rows[3], data: { ...rows[3].data, lastRun: "someone pressed Run" }, updated_at: stamp() };   // written elsewhere
+    r0 = reads3();
+    await ps.mergeIntoReport(post("n4"), Date.now());
+    ok(reads3() === r0 + 1 && rows[3].data.lastRun === "someone pressed Run" && rows[3].data.posts.a.some(p => p.externalId === "n4"),
+       "a row changed elsewhere is read again, and what the other writer wrote is kept");
+  }
+
   console.log("\n── the shared report (api/report.js)");
   const report = require("../api/report.js");
   const call = (method, query = {}, body, headers = {}) => new Promise(resolve => {

@@ -561,7 +561,54 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
     await tick({ fm: fmAt(n), collect: mkCollect(n), store: sm, wa: wm, now: n, force: true });
     const afterFirst = merges;
     for (let i = 1; i <= 8; i++) await tick({ fm: fmAt(n + i * 60e3), collect: mkCollect(n), store: sm, wa: wm, now: n + i * 60e3, force: true });
-    ok(afterFirst === 1 && merges === 1, "nothing new on the channels → the report row is not rewritten (health probes read every minute)", `${afterFirst} then ${merges}`);
+    const settles = new Set(Object.values(sm.ledger.drops).map(d => d.summarySent).filter(t => t > n && t <= n + 8 * 60e3)).size;
+    ok(afterFirst === 1 && merges === 1 + settles, "nothing new on the channels → rewritten only when a drop settles (its ✓/✗ at once), never by every probe",
+       `${afterFirst} then ${merges}, ${settles} drop(s) settled`);
+    const m0 = merges;
+    for (let i = 1; i <= 6; i++) await tick({ fm: fmAt(n + 8 * 60e3), collect: mkCollect(n), store: sm, wa: wm, now: n + 3 * 3600e3 + i * 60e3, force: true });
+    ok(merges === m0, "a quiet stretch — probes reading, nothing new, nothing settling: the row is never rewritten", `${merges - m0} merge(s)`);
+
+    /* 15 Oct 2026: posts read inside the merge gap wait in the ledger and reach the report within it —
+       not at their channel's next read, half an hour later */
+    const pm = mkStore({ startedAt: at("2026-10-04T03:00:00Z") });
+    let t = at("2026-10-04T15:30:00Z");
+    await tick({ fm: fmAt(t), collect: mkCollect(t), store: pm, wa: mkWa(), now: t, force: true });
+    pm.ledger.lastReportMerge = { at: t + 60e3, channels: 1 };            // as if a merge had just happened
+    for (const h of Object.values(pm.ledger.readers)) h.seenIds = [];       // every read post is new to the report
+    pm.report.posts = {};
+    for (const d of Object.values(pm.ledger.drops)) d.summarySent = d.summarySent || t;   // no drop settles in this tick (that merges at once)
+    await tick({ fm: fmAt(t + 2 * 60e3), collect: mkCollect(t), store: pm, wa: mkWa(), now: t + 2 * 60e3, force: true });
+    const waiting = Object.keys(pm.ledger.reportPending || {});
+    ok(waiting.length > 0 && !waiting.some(id => (pm.report.posts[id] || []).length), "inside the gap, new posts wait in the ledger (not lost, not yet written)", waiting.join(","));
+    const quietCollect = async channels => ({ results: channels.map(c => ({ channelId: c.id, ok: false, note: "not read this tick" })) });
+    await tick({ fm: fmAt(t + 7 * 60e3), collect: quietCollect, store: pm, wa: mkWa(), now: t + 7 * 60e3, force: true });
+    ok(waiting.every(id => (pm.report.posts[id] || []).length > 0) && !Object.keys(pm.ledger.reportPending || {}).length,
+       "5 min later they are in the report — though no channel was read that tick", waiting.map(id => id + ":" + (pm.report.posts[id] || []).length).join(" "));
+    ok(waiting.every(id => pm.report.meta[id] && pm.report.meta[id].at === t + 2 * 60e3), "…marked as read when they were read, not when merged");
+
+    /* MatchPulse has no FM feed: its channels are read every 30 min and its own report row (4) kept current */
+    const mps = mkStore({ startedAt: at("2026-10-04T03:00:00Z") }), mpRows = [], mpReads = [];
+    const mm0 = mps.mergeIntoReport; mps.mergeIntoReport = async (res, now, opts = {}) => { mpRows.push(opts.row || 3); return mm0(res, now, opts); };
+    const mpCollect = async (channels, opts) => {
+      if (channels.some(c => /^mp-/.test(c.id))) mpReads.push(channels.map(c => c.id));
+      return { results: channels.map(c => ({ channelId: c.id, ok: true, source: "test",
+        posts: /^mp-/.test(c.id) ? [{ externalId: c.id + "-1", ts: new Date(t - 3600e3).toISOString(), text: "x" }] : [] })) };
+    };
+    const mpTick = (m, on = true) => tick({ fm: async () => [], collect: mpCollect, store: mps, wa: mkWa(), now: t + m * 60e3, force: true, matchpulse: on });
+    await mpTick(0);
+    ok(mpReads.length === 1 && mpReads[0].length === 9 && mpRows.includes(4) && mps.ledger.mp.read.ok === 9, "MatchPulse's 9 channels are read and its report row (4) is written", JSON.stringify(mpRows));
+    await mpTick(5); await mpTick(20);
+    ok(mpReads.length === 1, "…not again inside 30 min");
+    const r4 = mpRows.filter(x => x === 4).length;
+    await mpTick(31);
+    ok(mpReads.length === 2 && mpRows.filter(x => x === 4).length === r4, "30 min later it is read again; nothing new → the row is not rewritten");
+    await mpTick(62);
+    ok(mpRows.filter(x => x === 4).length === r4 + 1, "…but once an hour it is, so the report's 'checked' time stays honest");
+    const mpItem = require("../pipeline/health.js").healthOf(mps.ledger, t + 63 * 60e3, {}).groups[0].items.find(i => i.id === "mp");
+    ok(mpItem && mpItem.state === "ok" && /9\/9/.test(mpItem.detail), "the Admin page shows the MatchPulse refresh", mpItem && mpItem.detail);
+    const before = mpReads.length;
+    await mpTick(200, false);
+    ok(mpReads.length === before, "the tests' own ticks (matchpulse off) never read MatchPulse");
 
     /* the website's log keeps a short copy of a long report; the message itself is whole */
     const longest = Math.max(...sm.ledger.alerts.map(a => a.text.length)), sentLongest = Math.max(...wm.out.map(t => t.length));

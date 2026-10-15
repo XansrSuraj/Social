@@ -44,9 +44,17 @@ Live page: **`#/live`** on the site. Code: `pipeline/` + `api/pipeline.js`. Test
    | ↻ superseded | a failed/skipped attempt the content team **sent again** (same card, same language, ≥ 20 s later) | — (a note in that send's drop report) |
    | · not checked | sent before the pipeline was watching | — |
 
-5. **Report** — a read that brings a post the daily-check report hasn't had is merged into it
-   (conditionally — a browser's own save is never overwritten), so `#/report` stays current with nobody
-   pressing Run. A read with nothing new leaves the shared row alone.
+5. **Report** — kept current with nobody pressing Run (15 Oct 2026):
+   - a post a read brings that the report hasn't had waits in the ledger (`reportPending`) and is merged within
+     5 minutes, whether or not its channel is read again;
+   - when a drop settles, every channel read that minute is merged at once — nothing new or not — so the
+     report shows that drop's ✓ and ✗ straight away (a channel's "read at" moves on);
+   - a quiet stretch (probes reading, nothing new, nothing settling) never rewrites the row;
+   - the merge is written onto the pipeline's own copy of the row (compare-and-set), so it normally costs
+     Supabase no read; a browser's or a Run's write in between is read and kept;
+   - **MatchPulse** has no FM feed, so its 9 channels are read every 30 min (free readers) and its report
+     (row 4) merged when something is new, or once an hour anyway. The Admin page shows it as
+     "MatchPulse report refresh".
 6. **Alerts — only problems** (since 15 Oct 2026). Who hears what (`pipeline/tick.js`, step 9):
 
    | | Teams (the content team's channel) | Phone push (ntfy) — the admin | The website |

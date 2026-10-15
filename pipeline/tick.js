@@ -51,6 +51,11 @@ const DROP_SPAN_MIN = 20;         // the same card going out within 20 min (ever
 /* sending stops this long into a tick (whatever is left goes next tick): api/pipeline.js may run 120 s, and a
    tick cut off after sending but before saving would send it all again */
 const SEND_BUDGET_MS = 85e3;
+/* the daily-check reports: what a read brought is merged within this long (and at once when a drop settles);
+   MatchPulse — no FM feed to say when it posts — has its channels read this often */
+const MERGE_GAP_MS = 5 * 60e3, MP_EVERY_MS = 30 * 60e3, MP_REFRESH_MS = 60 * 60e3;
+const DIRECTORY = require("../directory.js");
+const REPORT_IDS = new Set(DIRECTORY.sportsfc.channels.map(c => c.id));
 const PROBE_MIN = 30;             // every reader is read at least this often — the Health page stays live
 const PROBES_PER_TICK = 3;        // …a few per tick, stalest first, so a tick stays short
 const BACKFILL_QUIET_H = 3;       // on the very first tick, stay quiet about anything older than this
@@ -138,7 +143,7 @@ function fresh(led, now) {
   return led;
 }
 
-async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(), owner = "tick", force = false }) {
+async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(), owner = "tick", force = false, matchpulse = false }) {
   const t0 = Date.now();
   const lock = await store.lockLedger(owner, { minGapMs: force ? 0 : MIN_TICK_GAP_MS, now });
   if (!lock) return { ok: true, skipped: "another tick is running" };
@@ -435,36 +440,34 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
       list.sort((a, b) => a.when - b.when).map(e => ist(e.when)).join(", ") + `) — the channel couldn't be read: ${list[0].readNote || "unknown"}`, last);
   }
 
-  /* ── 6. keep the daily-check report current ──
-     Only a read that brings a post the report hasn't had is merged: a merge reads and rewrites the whole
-     shared report row (~0.5 MB), and the health probes read 3 channels every minute. */
+  /* ── 6. keep the daily-check report current (the merge itself is step 7b, once drops are settled) ──
+     A post a read brings that the report hasn't had (not in the reader's seenIds) waits in led.reportPending
+     until it is merged — whether or not its channel is read again. (15 Oct 2026: posts read at 09:39 waited
+     for the next 30-min probe of their channel, then for the 15-min gap again, and reached the report only
+     at ~10:40, so it looked "not updated" until someone pressed Run.) */
   const seen = id => new Set((led.readers[id] || {}).seenIds || []);
-  const okReads = Object.values(byCh).filter(r => r.ok && (r.posts || []).some(p => p && p.externalId && !seen(r.channelId).has(p.externalId)));
-  /* …and at most every 15 min: a post read now is still on its channel at the next read, and is merged then.
-     led.reportSync is what the Health / Admin page judges: new posts waiting since when, a merge failing
-     since when — not the age of the last merge (a quiet night has nothing to merge, and that is fine). */
-  const rs = led.reportSync = led.reportSync || {};
-  if (okReads.length && !rs.pendingSince) rs.pendingSince = now;
-  if (okReads.length && now - ((led.lastReportMerge || {}).at || 0) >= 15 * 60e3) {
-    try {
-      const m = await store.mergeIntoReport(okReads, now);
-      led.lastReportMerge = { at: now, added: m.added, channels: okReads.length };
-      for (const r of okReads) if (led.readers[r.channelId]) led.readers[r.channelId].seenIds = (r.posts || []).map(p => p.externalId).filter(Boolean).slice(0, 40);
-      led.reportSync = { pendingSince: null, failingSince: null, lastError: null };
-    } catch (e) {
-      rs.failingSince = rs.failingSince || now; rs.lastError = String(e.message || e).slice(0, 200);
-      errors.push("report merge: " + String(e.message || e));
-    }
+  const pend = led.reportPending = led.reportPending || {};
+  for (const r of Object.values(byCh)) {
+    if (!r.ok || !REPORT_IDS.has(r.channelId)) continue;
+    const s = seen(r.channelId);
+    const fresh = (r.posts || []).filter(p => p && p.externalId && !s.has(p.externalId));
+    if (!fresh.length) continue;
+    const had = pend[r.channelId] || { posts: [], since: now };
+    const byId = new Map(had.posts.map(p => [p.externalId, p]));
+    for (const p of fresh) byId.set(p.externalId, p);
+    pend[r.channelId] = { posts: [...byId.values()].slice(-60), note: r.note || "", source: r.source || "", at: now, since: had.since };
   }
 
   /* ── 7. drop reports: once every delivery of a drop is settled — once per drop, ever, and only a current one ── */
   const members = placeDrops(led);
+  const settledNow = [];
   for (const [key, list] of Object.entries(members)) {
     const drop = led.drops[key];
     if (drop.summarySent) continue;
     if (!list.every(e => SETTLED.has(e.status))) continue;
     if (list.some(e => e.mode === "verify" && e.fmState === "sent" && sinceSent(e) < WINDOW_MIN)) continue;
     drop.summarySent = now;
+    settledNow.push(key);
     if (!current(drop.last)) { drop.stale = true; continue; }     // never a report about an earlier day
     /* the full drop report (pipeline/report.js): every channel per language, when it landed, how fast,
        what wasn't checked and why, every problem with its reason — and a first attempt the content team
@@ -476,6 +479,61 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
       (d.notSent ? `not sent — FM/CMS failed on ${d.problems.length} channel${d.problems.length === 1 ? "" : "s"}`
         : d.problems.length ? `${d.problems.length} problem${d.problems.length === 1 ? "" : "s"}` : `all delivered (${d.ok}/${d.checked})`);
     raise(`slot:${key}`, "slot", dropText(d), drop.last, { report: d, title });
+  }
+
+  /* ── 7b. the merge: what is waiting, at most every MERGE_GAP_MS — and at once when a drop has just settled,
+     with every channel read this tick, nothing new or not: its "read at" moves on, which is what lets the
+     report show that drop's ✓ and ✗ straight away. Written from this instance's copy of the row
+     (pipeline/store.js), so a merge normally costs Supabase no read. led.reportSync is what the Admin page
+     judges: new posts waiting since when, a merge failing since when. */
+  const rs = led.reportSync = led.reportSync || {};
+  const pendIds = Object.keys(pend);
+  rs.pendingSince = pendIds.length ? Math.min(...pendIds.map(id => pend[id].since || now)) : (rs.failingSince ? rs.pendingSince : null);
+  const readOk = Object.values(byCh).filter(r => r.ok && REPORT_IDS.has(r.channelId));
+  const sinceMerge = now - ((led.lastReportMerge || {}).at || 0);
+  if ((pendIds.length && sinceMerge >= MERGE_GAP_MS) || (settledNow.length && readOk.length)) {
+    /* what was read earlier first, then this tick's reads — a fresh read's own account of a channel wins */
+    const results = [...pendIds.map(id => ({ channelId: id, ok: true, posts: pend[id].posts, note: pend[id].note, source: pend[id].source, at: pend[id].at })), ...readOk];
+    try {
+      const m = await store.mergeIntoReport(results, now);
+      led.lastReportMerge = { at: now, added: m.added, channels: new Set(results.map(r => r.channelId)).size };
+      for (const r of results) {
+        const h = led.readers[r.channelId];
+        if (!h) continue;
+        const ids = [...(r.posts || []).map(p => p && p.externalId).filter(Boolean), ...(h.seenIds || [])];
+        h.seenIds = [...new Set(ids)].slice(0, 80);
+      }
+      led.reportPending = {};
+      led.reportSync = { pendingSince: null, failingSince: null, lastError: null };
+    } catch (e) {
+      rs.failingSince = rs.failingSince || now; rs.lastError = String(e.message || e).slice(0, 200);
+      errors.push("report merge: " + String(e.message || e));
+    }
+  }
+
+  /* ── 7c. MatchPulse's report: no FM feed tells the pipeline when MatchPulse posts, so its channels
+     (directory.js) are read every MP_EVERY_MS with the free readers, and merged into its report row when a
+     read brings something new — or every MP_REFRESH_MS anyway, so its "checked" time stays honest. */
+  if (matchpulse && now - ((led.mp || {}).lastReadAt || 0) >= MP_EVERY_MS) {
+    const mp = led.mp = led.mp || {};
+    mp.lastReadAt = now;
+    try {
+      const out = await collect(DIRECTORY.matchpulse.channels, { hours: 30, noPaid: true, fresh: true });
+      const res = out.results || [], okR = res.filter(r => r.ok);
+      mp.read = { at: now, ok: okR.length, of: res.length,
+                  failed: res.filter(r => !r.ok).map(r => `${r.channelId}: ${cut(String(r.note || "no reason"), 100)}`) };
+      const seenMp = mp.seen = mp.seen || {};
+      const anyNew = okR.some(r => (r.posts || []).some(p => p && p.externalId && !(seenMp[r.channelId] || []).includes(p.externalId)));
+      if (okR.length && (anyNew || now - (mp.lastMergeAt || 0) >= MP_REFRESH_MS)) {
+        await store.mergeIntoReport(okR, now, { row: DIRECTORY.matchpulse.row });
+        mp.lastMergeAt = now;
+        for (const r of okR) seenMp[r.channelId] = (r.posts || []).map(p => p && p.externalId).filter(Boolean).slice(0, 60);
+      }
+      mp.lastError = null;
+    } catch (e) {
+      mp.lastError = cut(String(e.message || e), 200);
+      errors.push("matchpulse: " + String(e.message || e));
+    }
   }
 
   /* ── 8. the day's summary (after 23:00 IST, once a day): what reached the channels, what needs attention ── */

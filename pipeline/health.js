@@ -57,6 +57,16 @@ function healthOf(led, now, outputs = {}) {
           : "up to date — nothing new to merge yet",
         lastOkAt: m ? m.at : null };
     })(),
+    /* MatchPulse has no FM feed: the pipeline reads its channels every 30 min to keep its report current */
+    (() => {
+      const mp = led.mp || {}, r = mp.read, age = mp.lastReadAt ? now - mp.lastReadAt : null;
+      return { id: "mp", name: "MatchPulse report refresh",
+        state: age == null ? "off" : mp.lastError ? "bad" : age > 75 * 60e3 ? "warn" : r && r.ok < r.of ? "warn" : "ok",
+        detail: age == null ? "starts with the next check" : mp.lastError ? `the last refresh failed ${ago(now, mp.lastReadAt)} — ${mp.lastError}`
+          : `channels read ${ago(now, mp.lastReadAt)}${r ? ` (${r.ok}/${r.of})` : ""}${r && r.failed && r.failed.length ? ` — ${r.failed.join(" · ").slice(0, 160)}` : ""}` +
+            (mp.lastMergeAt ? ` · report updated ${ago(now, mp.lastMergeAt)}` : "") + " · every 30 min",
+        lastOkAt: mp.lastMergeAt || null };
+    })(),
   ] });
 
   /* ── FM Deliveries ── */

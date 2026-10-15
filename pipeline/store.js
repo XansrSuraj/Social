@@ -161,22 +161,31 @@ function mergeInto(report, results, nowMs, opts = {}) {
     r.meta[res.channelId] = opts.manual
       ? { ok: true, note: res.note || "", source: res.source || "", browserRequired: false, unsupported: false, dead: false, at: nowMs,
           cost: res.cost && !res.cost.cached ? res.cost.usd : null, cached: !!(res.cost && res.cost.cached), partialRead: !!res.partialRead, ...seen }
+      /* at: when the channel was read — res.at for posts the pipeline read earlier and merges now */
       : { ok: true, note: res.note || "", source: res.source || "", browserRequired: false,
-          unsupported: false, dead: false, at: nowMs, cost: null, cached: false, partialRead: !!res.partialRead, auto: true, ...seen };
+          unsupported: false, dead: false, at: res.at || nowMs, cost: null, cached: false, partialRead: !!res.partialRead, auto: true, ...seen };
   }
   if (opts.manual) r.lastRun = opts.lastRun || new Date(nowMs).toISOString();
   else r.autoAt = new Date(nowMs).toISOString();
   return { report: r, added };
 }
 /* opts.row: the brand's report row (SportsFC 3, MatchPulse 4 — directory.js); opts.manual: see mergeInto */
+/* The report row is ~0.7 MB and Supabase's free plan counts every byte it sends: the merge is written onto
+   this instance's copy of the row when it still is the latest (compare-and-set on updated_at), so a merge
+   normally reads nothing — the row is read only when someone else wrote it meanwhile (a Run, the admin). */
+const reportMem = {};                              // row → { data, updatedAt }
 async function mergeIntoReport(results, nowMs, opts = {}) {
   const row = opts.row || REPORT_ROW;
   if (!opts.manual && !results.some(r => r.ok)) return { added: 0 };
   for (let i = 0; i < 4; i++) {
-    const { data, updatedAt } = await readRow(row);
-    const { report, added } = mergeInto(data, results, nowMs, opts);
-    try { await writeRow(row, report, updatedAt); return { added }; }
-    catch (e) { if (!(e instanceof Conflict)) throw e; await new Promise(r => setTimeout(r, 400 + i * 600)); }
+    const base = i === 0 && reportMem[row] ? reportMem[row] : await readRow(row);
+    const { report, added } = mergeInto(clone(base.data), results, nowMs, opts);
+    try { const ts = await writeRow(row, report, base.updatedAt); reportMem[row] = { data: report, updatedAt: ts }; return { added }; }
+    catch (e) {
+      delete reportMem[row];
+      if (!(e instanceof Conflict)) throw e;
+      if (i > 0) await new Promise(r => setTimeout(r, 400 + i * 600));
+    }
   }
   throw new Error("the report kept changing under the merge — will try again next tick");
 }
