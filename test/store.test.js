@@ -18,7 +18,11 @@ global.fetch = async (url, opts = {}) => {
   const u = new URL(url), method = opts.method || "GET";
   const id = Number((u.searchParams.get("id") || "").replace("eq.", "")) || null;
   const select = u.searchParams.get("select");
-  const pick = row => (select ? Object.fromEntries(select.split(",").map(k => [k, row[k]])) : row);
+  /* select= columns, and JSON fields as PostgREST takes them: alias:data->field / alias:data->>field */
+  const pick = row => (select ? Object.fromEntries(select.split(",").map(k => {
+    const m = k.match(/^(\w+):data->>?(\w+)$/);
+    return m ? [m[1], row.data && row.data[m[2]] !== undefined ? row.data[m[2]] : null] : [k, row[k]];
+  })) : row);
   const json = (body, status = 200) => { const text = JSON.stringify(body); log.push({ method, id, select, bytes: text.length }); return new Response(text, { status, headers: { "content-type": "application/json" } }); };
   if (method === "GET") return json(rows[id] ? [pick(rows[id])] : []);
   /* like PostgREST: half an emoji (a lone surrogate) is "Empty or invalid json" */
@@ -87,6 +91,33 @@ process.env.ADMIN_PASSWORD = "test-admin-password-123";
   s1.deliveries.c0.caption = "changed by a caller";
   ok((await store.readLedger()).deliveries.c0.caption !== "changed by a caller", "…and hands out a copy, so a caller can never change it");
 
+  console.log("\n── a tick that can't run costs a few bytes, not the ledger (15 Oct 2026 review)");
+  {
+    const fresh = () => { delete require.cache[require.resolve("../pipeline/store.js")]; return require("../pipeline/store.js"); };
+    const fullReads = () => log.filter(l => l.method === "GET" && l.id === 5 && /data,updated_at/.test(l.select || "")).length;
+    /* another instance holds the lock */
+    rows[5] = { id: 5, data: { ...big, lock: { owner: "other", until: Date.now() + 60e3 }, lastTickAt: Date.now() - 90e3 }, updated_at: stamp() };
+    let b0 = fullReads(), n0 = log.length;
+    const held = await Promise.all(Array.from({ length: 20 }, () => fresh().lockLedger("x", { minGapMs: 40e3 })));
+    const bytes = log.slice(n0).reduce((t, l) => t + l.bytes, 0);
+    ok(held.every(x => x === null) && fullReads() === b0 && bytes < 20 * 300, "20 calls while another tick holds the lock: all told so, the ledger never read", bytes + " bytes in all");
+    /* the last tick was 10 s ago */
+    rows[5] = { id: 5, data: { ...big, lock: null, lastTickAt: Date.now() - 10e3 }, updated_at: stamp() };
+    b0 = fullReads();
+    const soon = await fresh().lockLedger("x", { minGapMs: 40e3 });
+    ok(soon && soon.tooSoon && fullReads() === b0, "10 s after the last tick: 'too soon', the ledger never read");
+    /* free and due: it runs, as before */
+    rows[5].data.lastTickAt = Date.now() - 70e3; rows[5].updated_at = stamp();
+    const go = await fresh().lockLedger("x", { minGapMs: 40e3 });
+    ok(go && go.ledger && go.ledger.lock && go.ledger.lock.owner === "x", "70 s after it, with no lock: the tick runs");
+    /* status reads arriving together share one read */
+    const st = fresh(); b0 = fullReads();
+    const many = await Promise.all(Array.from({ length: 25 }, () => st.readLedger()));
+    ok(fullReads() === b0 + 1 && many.every(m => m.deliveries && m.deliveries.c0), "25 status reads at once: one read of the ledger", (fullReads() - b0) + " reads");
+    many[0].deliveries.c0.caption = "changed";
+    ok((await st.readLedger()).deliveries.c0.caption !== "changed", "…each gets its own copy");
+  }
+
   console.log("\n── the shared report (api/report.js)");
   const report = require("../api/report.js");
   const call = (method, query = {}, body, headers = {}) => new Promise(resolve => {
@@ -109,7 +140,7 @@ process.env.ADMIN_PASSWORD = "test-admin-password-123";
   ok(anon.status === 401 && !rows[3].data.wiped, "a save without the admin signed in is refused — nobody can replace or empty the report", anon.status);
   const { token } = require("../admin-auth.js").issue();
   const put = await call("PUT", {}, { data: { posts: {}, x: 1 }, baseUpdatedAt: changed.body.updatedAt }, { authorization: "Bearer " + token });
-  const back = log.slice(n1).filter(l => l.method === "POST");
+  const back = log.slice(n1).filter(l => l.method === "POST" || l.method === "PATCH");   // a conditional PATCH since 15 Oct
   ok(put.status === 200 && put.body.saved && back.length === 1 && back[0].bytes < 80 && back[0].select === "updated_at", "a save gets back only the stored time, not the report",
      back.map(l => l.bytes + " bytes").join(","));
 

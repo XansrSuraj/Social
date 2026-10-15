@@ -1875,7 +1875,17 @@ async function tiktokReachable() {
 
 /* ═══════════════════ message API for the popup ═══════════════════ */
 
+/* Who may drive a read with this browser's own logged-in sessions: the extension's popup, or the dashboard's
+   own page — never any other site (15 Oct 2026 review: the bridge used to run on every *.vercel.app page, so
+   anyone's deployment could ask it to read private accounts this browser follows). */
+const DASHBOARDS = [/^https:\/\/aiko-social-distribution-check\.vercel\.app\//, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//];
+const trusted = sender => !sender.tab ? sender.id === chrome.runtime.id : DASHBOARDS.some(re => re.test(String(sender.url || sender.tab.url || "")));
+
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
+  if (msg && (msg.type === "collect" || msg.type === "readLocalDirectory") && !trusted(sender || {})) {
+    reply({ ok: false, error: "not the dashboard" });
+    return false;
+  }
   if (msg && msg.type === "collect") {
     /* Two different listeners, two different transports, and getting this wrong is invisible.
        chrome.runtime.sendMessage reaches the extension's OWN pages — the popup — and never a

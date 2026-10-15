@@ -40,16 +40,38 @@ module.exports = async (req, res) => {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 9000);
   try {
-    const r = await fetch(raw, { signal: ctl.signal, redirect: "follow",
-                                 headers: { "User-Agent": UA, Accept: "image/avif,image/webp,image/*,*/*;q=0.8" } });
+    /* redirects followed by hand, each hop checked against the list BEFORE it is requested — never a request
+       to an address off the list, even blind (15 Oct 2026 review) */
+    let url = raw, r;
+    for (let hop = 0; ; hop++) {
+      r = await fetch(url, { signal: ctl.signal, redirect: "manual",
+                             headers: { "User-Agent": UA, Accept: "image/avif,image/webp,image/*,*/*;q=0.8" } });
+      const loc = r.status >= 300 && r.status < 400 && r.headers.get("location");
+      if (!loc) break;
+      let next = ""; try { next = new URL(loc, url).toString(); } catch (e) {}
+      if (hop >= 3 || !allowed(next)) { res.statusCode = 404; res.setHeader("Cache-Control", "public, max-age=300"); return res.end("Image not available."); }
+      url = next;
+    }
     const type = String(r.headers.get("content-type") || "");
-    if (!allowed(r.url || raw) || r.status !== 200 || !/^image\//i.test(type)) {
+    if (!allowed(r.url || url) || r.status !== 200 || !/^image\//i.test(type)) {
       res.statusCode = r.status === 200 ? 415 : (r.status === 403 || r.status === 404 || r.status === 410 ? 404 : 502);
       res.setHeader("Cache-Control", "public, max-age=300");
       return res.end("Image not available.");
     }
     if (Number(r.headers.get("content-length")) > MAX_BYTES) { res.statusCode = 413; return res.end("Too large."); }
-    const buf = Buffer.from(await r.arrayBuffer());
+    /* read with a cap as it arrives — an answer with no content-length is never buffered past MAX_BYTES */
+    let buf;
+    if (r.body && typeof r.body.getReader === "function") {
+      const reader = r.body.getReader(), parts = []; let n = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        n += value.length;
+        if (n > MAX_BYTES) { ctl.abort(); res.statusCode = 413; return res.end("Too large."); }
+        parts.push(Buffer.from(value));
+      }
+      buf = Buffer.concat(parts);
+    } else buf = Buffer.from(await r.arrayBuffer());
     if (buf.length > MAX_BYTES) { res.statusCode = 413; return res.end("Too large."); }
     res.statusCode = 200;
     res.setHeader("Content-Type", type);

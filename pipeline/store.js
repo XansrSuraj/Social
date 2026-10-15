@@ -18,9 +18,9 @@ const path = require("path");
 const SB_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY || "";
 const TABLE = "orghub_state";
-const LEDGER_ROW = 5, REPORT_ROW = 3, MATCHPULSE_ROW = 4;
+const LEDGER_ROW = 5, REPORT_ROW = 3, MATCHPULSE_ROW = 4, CLAIMS_ROW = 6;
 const FILES = { [LEDGER_ROW]: path.join(__dirname, "..", ".pipeline.json"), [REPORT_ROW]: path.join(__dirname, "..", ".report-local.json"),
-                [MATCHPULSE_ROW]: path.join(__dirname, "..", ".report-local-matchpulse.json") };
+                [MATCHPULSE_ROW]: path.join(__dirname, "..", ".report-local-matchpulse.json"), [CLAIMS_ROW]: path.join(__dirname, "..", ".claims-local.json") };
 
 const configured = () => !!(SB_URL && SB_KEY);
 /* Every string made well-formed before it is sent: a text cut through the middle of an emoji leaves half a
@@ -78,12 +78,31 @@ const LOCK_MS = 150000;
 const clone = o => (o == null ? o : JSON.parse(JSON.stringify(o)));
 let mem = null;                                   // { data, updatedAt, at } — this instance's last known copy
 const remember = (data, updatedAt) => { mem = { data: clone(data), updatedAt, at: Date.now() }; };
-async function lockLedger(owner) {
+/* Anyone may call op=tick (cron-job.org does, every minute), so a call that can't run — the lock is held, or
+   the last tick was under opts.minGapMs ago — must cost almost nothing: decided from this instance's copy
+   when it can be (a copy saying "too soon" is never wrong — the real last tick can only be later), else from
+   the lock and the last tick's time alone (a few bytes, not the ~0.3 MB row). Returns the lock, null (another
+   tick holds it) or { tooSoon: true }. (15 Oct 2026 review: a loop of calls read the whole ledger each time.) */
+async function peekLedger() {
+  if (!configured()) { const { data, updatedAt } = await readRow(LEDGER_ROW); const d = data || {}; return { updatedAt, lock: d.lock || null, last: d.lastTickAt || null }; }
+  const r = await fetch(`${SB_URL}/rest/v1/${TABLE}?id=eq.${LEDGER_ROW}&select=updated_at,lock:data->lock,last:data->lastTickAt`, { headers: sbHeaders(), signal: AbortSignal.timeout(15000) });
+  if (!r.ok) throw new Error(`store read failed (${r.status})`);
+  const rows = await r.json();
+  const row = rows && rows[0];
+  return row ? { updatedAt: row.updated_at, lock: row.lock || null, last: row.last || null } : { updatedAt: null, lock: null, last: null };
+}
+async function lockLedger(owner, opts = {}) {
+  const now = opts.now || Date.now(), gap = opts.minGapMs || 0;
+  const tooSoon = last => !!(gap && last && now - last < gap);
+  if (mem && mem.data && tooSoon(mem.data.lastTickAt)) return { tooSoon: true };
   if (mem && !(mem.data && mem.data.lock && mem.data.lock.until > Date.now())) {
     const mine = { ...clone(mem.data || {}), lock: { owner, until: Date.now() + LOCK_MS } };
     try { const ts = await writeRow(LEDGER_ROW, mine, mem.updatedAt); remember(mine, ts); return { ledger: mine, updatedAt: ts }; }
     catch (e) { if (!(e instanceof Conflict)) throw e; mem = null; }    // changed elsewhere — read it below
   }
+  const p = await peekLedger();
+  if (p.lock && p.lock.until > Date.now()) return null;                // another tick is running
+  if (tooSoon(p.last)) return { tooSoon: true };
   const { data, updatedAt } = await readRow(LEDGER_ROW);
   const led = data || {};
   if (led.lock && led.lock.until > Date.now()) { remember(led, updatedAt); return null; }   // another tick is running
@@ -98,11 +117,12 @@ async function saveLedger(ledger, updatedAt, release) {
 }
 /* the status endpoint (Live and Health pages, every minute): this instance's copy if it is under a
    minute old — the pipeline itself only changes once a minute — else one read */
+let reading = null;                               // one read shared by status calls arriving together
 async function readLedger() {
   if (mem && Date.now() - mem.at < 60e3) return clone(mem.data) || {};
-  const { data, updatedAt } = await readRow(LEDGER_ROW);
-  remember(data || {}, updatedAt);
-  return data || {};
+  if (!reading) reading = readRow(LEDGER_ROW).then(({ data, updatedAt }) => { remember(data || {}, updatedAt); }).finally(() => { reading = null; });
+  await reading;
+  return clone(mem && mem.data) || {};
 }
 
 /* ── the daily-check report: merge freshly read posts, never clobber a browser's save ──
@@ -110,6 +130,7 @@ async function readLedger() {
    nothing) and the content team's "Run everything" (api/collect.js, teamRun: { manual, lastRun } —
    like a press in the browser, every channel's result is recorded, failures too, and the run time). */
 const POST_KEEP_DAYS = 14;
+const newestOf = list => { let t = -Infinity; for (const p of list || []) { const x = Date.parse(p && p.ts); if (x > t) t = x; } return isFinite(t) ? new Date(t).toISOString() : null; };
 function mergeInto(report, results, nowMs, opts = {}) {
   const r = report || {};
   r.posts = r.posts || {}; r.meta = r.meta || {};
@@ -135,11 +156,13 @@ function mergeInto(report, results, nowMs, opts = {}) {
     const keepFrom = nowMs - POST_KEEP_DAYS * 86400e3;
     r.posts[res.channelId] = [...byId.values()].filter(p => !(Date.parse(p.ts) < keepFrom))
       .sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts)).slice(0, 400);
+    /* n / newest: what this read itself returned — the report tells "posted nothing in the window" from "not read" by them */
+    const seen = { n: (res.posts || []).length, newest: newestOf(res.posts) };
     r.meta[res.channelId] = opts.manual
       ? { ok: true, note: res.note || "", source: res.source || "", browserRequired: false, unsupported: false, dead: false, at: nowMs,
-          cost: res.cost && !res.cost.cached ? res.cost.usd : null, cached: !!(res.cost && res.cost.cached), partialRead: !!res.partialRead }
+          cost: res.cost && !res.cost.cached ? res.cost.usd : null, cached: !!(res.cost && res.cost.cached), partialRead: !!res.partialRead, ...seen }
       : { ok: true, note: res.note || "", source: res.source || "", browserRequired: false,
-          unsupported: false, dead: false, at: nowMs, cost: null, cached: false, partialRead: !!res.partialRead, auto: true };
+          unsupported: false, dead: false, at: nowMs, cost: null, cached: false, partialRead: !!res.partialRead, auto: true, ...seen };
   }
   if (opts.manual) r.lastRun = opts.lastRun || new Date(nowMs).toISOString();
   else r.autoAt = new Date(nowMs).toISOString();
@@ -167,5 +190,20 @@ async function lastRunOf(row) {
   return rows && rows[0] && rows[0].lastRun || null;
 }
 
-module.exports = { lockLedger, saveLedger, readLedger, mergeIntoReport, mergeInto, lastRunOf, Conflict, configured, readRow, writeRow,
-                   LEDGER_ROW, REPORT_ROW, MATCHPULSE_ROW };
+/* "Is anyone else doing this right now?" across every instance — row 6, a few timestamps: { key: at }.
+   claim(key, gapMs) succeeds for exactly one caller per gap, however many press at once (compare-and-set on
+   updated_at; the losers are told when it was taken). The content team's Run uses it (api/collect.js). */
+async function claim(key, gapMs, now = Date.now()) {
+  for (let i = 0; i < 3; i++) {
+    const { data, updatedAt } = await readRow(CLAIMS_ROW);
+    const d = data || {};
+    if (d[key] && now - d[key] < gapMs) return { ok: false, at: d[key] };
+    const next = { ...d, [key]: now };
+    try { await writeRow(CLAIMS_ROW, next, updatedAt); return { ok: true, at: now }; }
+    catch (e) { if (!(e instanceof Conflict)) throw e; }
+  }
+  return { ok: false, at: now };                  // pressed at the same moment as others — one of them has it
+}
+
+module.exports = { lockLedger, saveLedger, readLedger, mergeIntoReport, mergeInto, lastRunOf, claim, Conflict, configured, readRow, writeRow,
+                   LEDGER_ROW, REPORT_ROW, MATCHPULSE_ROW, CLAIMS_ROW };

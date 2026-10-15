@@ -3,6 +3,7 @@ import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Copy, History, I
   RefreshCw, RotateCcw, Terminal, Video } from "lucide-react";
 import { BrandIcon, useApp } from "../app/core.jsx";
 import { authFetch } from "../app/admin.js";
+import { webUrl } from "../app/viewmodel.js";
 
 /* FM Deliveries — a read-only viewer over the CMS's FM Deliveries feed, through this site's own proxy
    (api/fm-deliveries.js keeps the x-api-key server-side). Every filter the feed accepts, the four outcome
@@ -110,11 +111,11 @@ function FmRow({ row, isOpen, att, onFlip, onAttempts, onCopy }) {
               ["setId", row.setId], ["collection", row.collection], ["template.id", row.template && row.template.id], ["template.kind", row.template && row.template.kind],
               ["captionSource", row.captionSource], ["fmStatus", row.fmStatus], ["publishedBy", row.publishedBy], ["competitionId", row.match && row.match.competitionId]]
               .map(([k, v]) => <div key={k}><span className="label">{k}</span><span className="fm-v">{v || "—"}</span></div>)}
-            <div><span className="label">match</span><span className="fm-v">{row.match && row.match.url ? <a href={row.match.url} target="_blank" rel="noopener noreferrer">{row.match.matchId || "open"} ↗</a> : "—"}</span></div>
+            <div><span className="label">match</span><span className="fm-v">{row.match && webUrl(row.match.url) ? <a href={webUrl(row.match.url)} target="_blank" rel="noopener noreferrer">{row.match.matchId || "open"} ↗</a> : "—"}</span></div>
             <div><span className="label">cdnUrl</span><span className="fm-v">{row.cdnUrl ? <a href={row.cdnUrl} target="_blank" rel="noopener noreferrer">open ↗</a> : "—"}</span></div>
           </div>
           <div className="fm-actions">
-            {row.asset && row.asset.url && <a className="btn btn-line btn-sm" href={row.asset.url} target="_blank" rel="noopener noreferrer"><Video />Open {row.asset.kind || "asset"}</a>}
+            {row.asset && webUrl(row.asset.url) && <a className="btn btn-line btn-sm" href={webUrl(row.asset.url)} target="_blank" rel="noopener noreferrer"><Video />Open {row.asset.kind || "asset"}</a>}
             <button className="btn btn-line btn-sm" onClick={() => onCopy(row.cardId)}><Copy />Copy cardId</button>
             {!att && <button className="btn btn-line btn-sm" onClick={() => onAttempts(row)}><History />Load attempts</button>}
           </div>
@@ -165,7 +166,7 @@ export default function Fm() {
     const res = await apiGet("/api/fm-deliveries", query());
     if (my !== seq.current) return;
     setLoading(false);
-    if (res.status === 401) { logout(); return; }        // the admin session ran out — back to the sign-in
+    if (res.status === 401 && res.body && res.body.admin === false) { logout(); return; }   // our session ran out (not FM's own 401) — back to the sign-in
     if (!res.ok) { setError({ status: res.status, message: res.error }); setD({ rows: [], pageOutcomes: null, totalPages: 1, total: 0, hasNext: false }); return; }
     const b = res.body || {};
     let rows = Array.isArray(b.deliveries) ? b.deliveries : [];

@@ -222,8 +222,13 @@ it, even a caption-less one matched on time alone.
 - `GET /api/pipeline?op=test-alert` — admin only: one test alert on every configured channel (at most one per 10 min)
 - `GET /api/pipeline?op=report&at=16:30[&day=2026-10-09]` — admin only: send that drop's full report
   again (at most once a minute)
-- Optional `PIPELINE_KEY` env var: when set, `op=tick` needs `?key=…` (or the admin's session, or
-  Vercel's cron) — add it to the cron-job.org URL and as the GitHub secret `PIPELINE_KEY`, or the clocks stop.
+- Optional `PIPELINE_KEY` env var: when set, `op=tick` needs it as `?key=…` or the `x-pipeline-key` header
+  (or the admin's session, or Vercel's cron) — add it to the cron-job.org URL and as the GitHub secret
+  `PIPELINE_KEY`, or the clocks stop. Compared in constant time. Without the admin's session a tick answers
+  only `{ ok, ran | skipped }` — its error list is the admin's (the Admin page).
+- Sending has a budget: 85 s into a tick, whatever Teams / WhatsApp messages are left wait for the next
+  tick, so a slow Teams can never hold a tick past the function's 120 s (cut off after sending but before
+  saving, it would send everything again).
 
 ## Honest limits
 

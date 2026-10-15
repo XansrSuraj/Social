@@ -390,9 +390,10 @@ stop depending on the extension.
   gitignored `.env` locally). The browser only calls this site's own `/api/*`.
 - **Admin sign-in** (`admin-auth.js`, `api/auth.js`). `POST /api/auth {password}` → a session token
   (`admin.<expiry>.<HMAC-SHA256>`, 12 h), sent as `Authorization: Bearer …`. The HMAC key is derived
-  from `ADMIN_PASSWORD`, so changing the password ends every session. Wrong passwords: 700 ms delay,
-  and 8 misses from one address lock it out for 15 min. No password set → nobody is admin (503).
-  The password itself is only ever sent to `/api/auth`.
+  from `ADMIN_PASSWORD` with scrypt (slow on purpose, so a leaked token can't be used to guess the
+  password offline), so changing the password ends every session. Wrong passwords: 700 ms delay, and 8
+  misses from one address lock it out for 15 min; JSON bodies only (no other website can post a guess).
+  No password set → nobody is admin (503). The password itself is only ever sent to `/api/auth`.
 - **What needs the admin** — enforced on the server, not by hiding buttons: `/api/fm-deliveries*`
   (captions, asset URLs, editors' emails), `/api/apify-usage`, `/api/health` (and the free-route
   probe), `/api/collect` for any channels a caller names (it can spend on Apify),
@@ -400,8 +401,18 @@ stop depending on the extension.
 - **The content team's Run** — `POST /api/collect {brand, run: true}`, open to anyone: it reads only that
   brand's own channels from `directory.js` (nothing the caller sends), so it can't be pointed at another
   account or the Apify credit; the server writes the result into the brand's report itself (the
-  browser never writes it); one Run per brand per 3 minutes (a press inside that shows the one just
-  run), 12 an hour from one address, answered inside 100 s whatever is slow. `directory.js` must list
+  browser never writes it); ONE Run per brand per 10 minutes across every instance however many press
+  at once (claimed first in a tiny row, `orghub_state` id 6 — `pipeline/store.js` claim; a press inside
+  that shows the one just run), 12 presses an hour from one address, JSON only, answered inside 100 s
+  whatever is slow.
+- **Supabase egress can't be run up from outside.** `/api/report` checks the row's `updated_at` (a few
+  bytes) before every read and serves this instance's copy while it matches, one shared full read for
+  requests arriving together; `/api/pipeline` status reads share one ledger read; a tick that can't run
+  (locked, or under 40 s since the last) learns it from the lock and the last tick's time alone. The
+  report's writes are one conditional PATCH (`updated_at = base`), so nothing written in between is lost,
+  and a write with no base may only create the row, never replace it.
+- **The extension** (1.13.1) answers only the dashboard's own page (and localhost) and its popup — not
+  every `*.vercel.app` site. Reload it at chrome://extensions after updating the folder. `directory.js` must list
   the same channels as `SPORTSFC` / `MATCHPULSE` in `src/engine/engine.js` — `test/teamrun.test.js`
   fails if they differ. `/api/pipeline` (status) answers everyone with the public view —
   per post: channel, time, result and why in plain words — and the admin with everything (health,

@@ -1,6 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
 import { BrandIcon } from "../../app/core.jsx";
 import { Thumb } from "./Drops.jsx";
+import { webUrl } from "../../app/viewmodel.js";
 
 export default function Channels({ E, vm }) {
   const { rep, checks, logPosts } = vm;
@@ -65,7 +66,7 @@ export default function Channels({ E, vm }) {
                           {stat(p.views, "views")}{stat(p.likes, "likes")}{stat(p.reactions, "reactions")}
                           {stat(p.comments, "comments")}{stat(p.reposts, "reposts")}
                           {p.duration != null && <span>{E.dur(p.duration)}</span>}
-                          {p.permalink && <a href={p.permalink} target="_blank" rel="noopener noreferrer" style={{ color: "var(--red)", display: "inline-flex" }}>
+                          {webUrl(p.permalink) && <a href={webUrl(p.permalink)} target="_blank" rel="noopener noreferrer" style={{ color: "var(--red)", display: "inline-flex" }}>
                             <ArrowUpRight style={{ width: 15, height: 15 }} /></a>}
                         </div>
                         <div className="pli-t">{t.slice(0, 220)}{t.length > 220 ? "…" : ""}</div>

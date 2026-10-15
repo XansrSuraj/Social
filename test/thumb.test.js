@@ -47,6 +47,11 @@ const img = (url, type, bytes) => ({ status: 200, url, headers: { get: k => ({ "
   console.log("\n── what comes back is checked too");
   r = await call(IG, () => img("https://evil.example.com/x.jpg"));
   check(r.status !== 200, "a redirect off the list is not passed on", String(r.status));
+  r = await call(IG, u => (u === IG ? { status: 302, url: IG, headers: { get: k => (k.toLowerCase() === "location" ? "https://evil.example.com/x.jpg" : null) } } : img(u)));
+  check(r.status === 404 && r.asked.length === 1, "a redirect to an address off the list is never requested", `${r.status} · asked ${r.asked.join(" ")}`);
+  const IG2 = "https://scontent-yyz1-2.cdninstagram.com/v/t51/b.jpg";
+  r = await call(IG, u => (u === IG ? { status: 301, url: IG, headers: { get: k => (k.toLowerCase() === "location" ? IG2 : null) } } : img(u)));
+  check(r.status === 200 && r.asked[1] === IG2, "a redirect within the list is followed");
   r = await call(IG, u => img(u, "text/html"));
   check(r.status === 415, "a non-image answer is not passed on", String(r.status));
   r = await call(IG, u => img(u, "image/jpeg", 5 * 1024 * 1024));

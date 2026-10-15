@@ -49,9 +49,10 @@ function makeCollectServer(fetchStub, checks, { token = "test-session", pulls = 
   const authHdr = () => (token ? { Authorization: "Bearer " + token } : {});
   const ORG = { id: "sportsfc" };
   const pullReport = async () => { pulls.push(1); };
-  const fn = new Function("location", "toast", "dcChannels", "checks", "mergePosts", "saveChecks", "fetch", "Date", "authHdr", "adminToken", "ORG", "pullReport",
+  const newestOf = list => { let t = -Infinity; for (const p of list || []) { const x = Date.parse(p && p.ts); if (x > t) t = x; } return isFinite(t) ? new Date(t).toISOString() : null; };
+  const fn = new Function("location", "toast", "dcChannels", "checks", "mergePosts", "saveChecks", "fetch", "Date", "authHdr", "adminToken", "ORG", "pullReport", "newestOf",
     src + "\n; return collectServer;");
-  return fn(location, toast, dcChannels, checks, mergePosts, saveChecks, fetchStub, Date, authHdr, adminToken, ORG, pullReport);
+  return fn(location, toast, dcChannels, checks, mergePosts, saveChecks, fetchStub, Date, authHdr, adminToken, ORG, pullReport, newestOf);
 }
 
 (async () => {

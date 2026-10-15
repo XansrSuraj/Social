@@ -17,7 +17,7 @@ function tipOf(E, c) {
   return base + ask;
 }
 
-export default function Summary({ E, vm, toast }) {
+export default function Summary({ E, vm, toast, admin }) {
   const { rep, checks, chanOf, nameOf } = vm;
   if (!rep.slots.length && !rep.rows.some(r => r.mode !== "none"))
     return <div className="card empty"><b>Nothing collected in this window yet.</b><br />Press Run everything above.</div>;
@@ -26,7 +26,10 @@ export default function Summary({ E, vm, toast }) {
   const cols = rep.slots.length + 3;
 
   /* the cells a person answers: unanswered → went out → did not go out → unanswered */
-  const toggle = (id, at) => E.update(c => {
+  /* a hand answer changes the report everyone sees, so it is the admin's to give — signed out, it would only
+     live in this browser and be undone at the next sync */
+  const mine = () => { if (!admin) toast("Ticking by hand is the admin's — it changes the report for everyone", "info"); return !!admin; };
+  const toggle = (id, at) => mine() && E.update(c => {
     c.confirms = c.confirms || {}; c.confirms[id] = c.confirms[id] || {};
     const cur = c.confirms[id][at];
     if (cur === undefined) c.confirms[id][at] = true;
@@ -34,11 +37,12 @@ export default function Summary({ E, vm, toast }) {
     else delete c.confirms[id][at];
   });
   const confirmAll = r => {
+    if (!mine()) return;
     const own = rep.slots.filter(s => !s.region || s.region === r.region);
     E.update(c => { c.confirms = c.confirms || {}; c.confirms[r.id] = c.confirms[r.id] || {}; for (const s of own) c.confirms[r.id][s.at] = true; });
     toast(`${own.length} drop(s) confirmed on ${nameOf(r.id)}`, "check-check");
   };
-  const clearAll = id => E.update(c => { delete (c.confirms || {})[id]; });
+  const clearAll = id => mine() && E.update(c => { delete (c.confirms || {})[id]; });
 
   const total = r => {
     const meta = checks.meta[r.id] || {};
@@ -60,6 +64,7 @@ export default function Summary({ E, vm, toast }) {
   const manualRows = rep.rows.filter(r => r.mode !== "timeline");
   const day = E.contentDate(rep.to, checks.tz);
   const setCount = (id, raw) => {
+    if (!mine()) return;
     const v = String(raw).trim();
     E.update(c => {
       c.counts[day] = c.counts[day] || {};
@@ -217,7 +222,7 @@ export default function Summary({ E, vm, toast }) {
                   <span className="chn" style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 600 }}>
                     <BrandIcon platform={r.platform} style={{ width: 15, height: 15, color: "var(--muted)" }} />{r.name}</span>
                   <input type="number" min="0" inputMode="numeric" placeholder="–" defaultValue={val}
-                    className={r.suggested ? "guess" : ""} disabled={!!meta.unsupported} aria-label={"Posts in window on " + r.name}
+                    className={r.suggested ? "guess" : ""} disabled={!!meta.unsupported || !admin} aria-label={"Posts in window on " + r.name}
                     title={r.suggested ? "read off the page — this is a guess until you confirm it" : undefined}
                     onBlur={e => { if (e.target.value !== val) setCount(r.id, e.target.value); }}
                     onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }} />

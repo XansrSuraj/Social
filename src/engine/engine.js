@@ -18,7 +18,7 @@ export function createEngine(env = {}) {
 const toast = (msg, ic) => { if (env.toast) env.toast(msg, ic); };
 const render = () => { if (env.onChange) env.onChange(); };
 let dcRedraw = render;                        // "a channel arrived mid-run — repaint"
-const cloud = { mode:"local", configured:false, updatedAt:null };
+const cloud = { mode:"local", configured:false, updatedAt:null, known:false };   // known: api/data has answered once
 /* the admin session (src/app/admin.js keeps it): sent with the admin-only calls — reading the channels,
    writing the shared report, Apify spend. Without it this browser only reads. */
 const adminToken = () => { try{ const s = JSON.parse(localStorage.getItem("orghub.admin") || "null"); return s && s.token && s.expiresAt > Date.now() ? s.token : ""; }catch(e){ return ""; } };
@@ -118,6 +118,7 @@ async function pull(){
   cloud.configured = !!j.configured;
   cloud.mode = j.configured ? "cloud" : "local";
   cloud.updatedAt = j.updatedAt || null;
+  cloud.known = true;
 }
 
 /* ═══════════════════ daily check ═══════════════════
@@ -188,9 +189,14 @@ const saveLocalChecksOnly = () => { try{ localStorage.setItem(CKEY, JSON.stringi
    run: "14 read, 6 new", then the old picture. Now the two are merged — every post from both, each
    channel's newer read, the later run time, this device's hand answers over the row's — and pushed
    again on top of the new row. */
+/* A push that fails for a passing reason (offline, the store down, a fourth 409 in a row) leaves the change
+   dirty and sync() sends it again every minute; one the server refuses for good (signed out, too big, bad
+   shape) is dropped from the queue, so the tab goes back to following the shared report (15 Oct review: a
+   single failed push used to freeze the tab's view of the report until the next local save). */
+let wiping = false;                  // a Delete on its way to the row: its emptiness wins the 409 merge
 function pushReport(attempt = 0){
   if(cloud.mode !== "cloud") return;
-  if(!adminToken()){ reportDirty = false; return; }   // a visitor's view settings stay in their browser; only the admin writes the shared row
+  if(!adminToken()){ reportDirty = false; wiping = false; return; }   // only the admin writes the shared row
   clearTimeout(reportPushT);
   reportPushT = setTimeout(async () => {
     try{
@@ -204,19 +210,24 @@ function pushReport(attempt = 0){
         if(attempt < 3 && await mergeShared()){ render(); pushReport(attempt + 1); }
         return;
       }
-      if(j && j.ok && j.updatedAt){ reportUpdatedAt = j.updatedAt; reportDirty = false; }
-    }catch(e){ /* stays in localStorage; the next save will try again */ }
+      if(j && j.ok && j.updatedAt){ reportUpdatedAt = j.updatedAt; reportDirty = false; wiping = false; return; }
+      if(r.status >= 400 && r.status < 500){ reportDirty = false; wiping = false; }
+    }catch(e){ /* stays dirty; sync() sends it again within a minute */ }
   }, attempt ? 300 : 400);
 }
-/* the shared row read again and this device's unsaved changes laid over it (see pushReport) */
+/* the shared row read again and this device's unsaved changes laid over it (see pushReport).
+   The row's other writers — the pipeline and the content team's Run (pipeline/store.js mergeInto) — only
+   ever write posts, meta, lastRun and autoAt, so those four are merged; everything else is this device's
+   to say (a settings change, the Apify price of a check), and it wins. A Delete wins outright. */
 async function mergeShared(){
   try{
     const r = await fetch(REPORT_URL, { cache:"no-store" });
     const j = await r.json();
     if(!(j && j.ok && j.data && typeof j.data === "object")) return false;
     const theirs = withoutView(j.data), mine = checks;
-    const out = { ...mine, ...theirs };
-    for(const k of VIEW_KEYS) if(k in mine) out[k] = mine[k];
+    reportUpdatedAt = j.updatedAt || null;
+    if(wiping) return true;                       // the Delete is pushed again over the newer row, as it is
+    const out = { ...theirs, ...mine };
     out.posts = { ...(theirs.posts || {}) };
     for(const [id, list] of Object.entries(mine.posts || {})){
       const byId = new Map((out.posts[id] || []).map(p => [p.externalId, p]));
@@ -232,16 +243,10 @@ async function mergeShared(){
     }
     out.meta = { ...(theirs.meta || {}) };
     for(const [id, m] of Object.entries(mine.meta || {})) if(!out.meta[id] || (m && m.at || 0) > (out.meta[id].at || 0)) out.meta[id] = m;
-    out.confirms = { ...(theirs.confirms || {}) };
-    for(const [id, c] of Object.entries(mine.confirms || {})) out.confirms[id] = { ...(out.confirms[id] || {}), ...c };
-    out.counts = { ...(theirs.counts || {}) };
-    for(const [d, c] of Object.entries(mine.counts || {})) out.counts[d] = { ...(out.counts[d] || {}), ...c };
-    out.captions = { ...(theirs.captions || {}), ...(mine.captions || {}) };
     out.ytIds = { ...(theirs.ytIds || {}), ...(mine.ytIds || {}) };
     out.lastRun = [theirs.lastRun, mine.lastRun].filter(Boolean).sort().pop() || null;
     out.autoAt = [theirs.autoAt, mine.autoAt].filter(Boolean).sort().pop() || null;
     checks = out;
-    reportUpdatedAt = j.updatedAt || null;
     saveLocalChecksOnly();
     return true;
   }catch(e){ return false; }
@@ -251,7 +256,10 @@ async function mergeShared(){
    so a tab left open overnight shows the new day, not yesterday's report. Never while this device has
    changes still on their way to the row. */
 async function sync(){
-  if(cloud.mode !== "cloud" || reportDirty) { render(); return; }
+  /* api/data didn't answer at page load: ask again, rather than staying "this browser only" for good */
+  if(!cloud.known){ try{ await pull(); if(cloud.mode === "cloud") await pullReport(); }catch(e){} }
+  if(cloud.mode !== "cloud") { render(); return; }
+  if(reportDirty){ pushReport(); render(); return; }   // a change still on its way: send it again
   /* "has it changed since the copy I hold?" costs a few bytes; only a changed report is read in full */
   if(reportUpdatedAt){
     try{
@@ -273,6 +281,7 @@ async function sync(){
 /* The whole store travels in one shared report row (capped at 2 MB server-side) and no window looks
    back more than a week, so posts older than this are dropped rather than kept for ever. */
 const POST_KEEP_DAYS = 14;
+const newestOf = list => { let t = -Infinity; for(const p of list || []){ const x = Date.parse(p && p.ts); if(x > t) t = x; } return isFinite(t) ? new Date(t).toISOString() : null; };
 function mergePosts(channelId, incoming){
   const have = checks.posts[channelId] || [];
   const byId = new Map(have.map(p => [p.externalId, p]));
@@ -728,6 +737,12 @@ function reconcile(channels, opt){
      today against a stale snapshot and cross off every drop newer than it — inventing misses on a
      channel we simply could not read. A channel we could not read must read "unknown", never "✗". */
   const readFailed = c => { const m = (checks.meta || {})[c.id]; return !!(m && m.ok === false); };
+  /* Its latest read worked, came back with posts, and even the newest of them is older than the window: the
+     channel posted nothing in it — every drop there is a miss, not "no data" (15 Oct review: a channel that
+     missed the day's only drop read "unknown"). Only the read's own answer counts — never stored history,
+     which can't tell "nothing posted" from "nothing returned" — and never a read cut short. */
+  const quietInWindow = c => { const m = (checks.meta || {})[c.id];
+    return !!(m && m.ok === true && !m.partialRead && m.n > 0 && m.newest && Date.parse(m.newest) < from); };
   const posts = {};
   for(const c of channels)
     posts[c.id] = readFailed(c) ? [] : dedupePosts((checks.posts[c.id] || []).filter(p => p.ts && inWindow(p.ts)));
@@ -793,7 +808,7 @@ function reconcile(channels, opt){
                              did not is assumed delivered (content goes out to every channel at
                              once). It never needs a hand-tick — the whole point of the phone
                              pipeline is that nothing here is manual. */
-    : (posts[c.id].length ? "timeline" : (countFor(c.id) ? "count"
+    : (posts[c.id].length || quietInWindow(c) ? "timeline" : (countFor(c.id) ? "count"
        : (confirmsFor(c.id).some(Boolean) ? "confirm" : "none")));
   const countOf = c => {
     const m = modeOf(c);
@@ -1399,6 +1414,10 @@ async function collectServer(o){
     toast(parts[0].skipped, "info");
     return false;
   }
+  if(team && parts[0] && parts[0].error){              // refused (too many presses) or not reached: the reason, as it is
+    toast(parts[0].error, "triangle-alert");
+    return false;
+  }
 
   let added = 0, ok = 0, browser = 0, unreached = 0, collectedAt = null;
   let spent = 0, runs = 0, cachedN = 0, unsettled = 0;
@@ -1417,13 +1436,17 @@ async function collectServer(o){
         dead:!!res.dead, at:Date.now(),
         cost:cost && !cost.cached ? cost.usd : null, cached:!!(cost && cost.cached),
         /* the name reconcile() reads: an Apify run cut off by its time budget proves no absence */
-        partialRead:!!res.partialRead };
+        partialRead:!!res.partialRead,
+        /* what the read itself returned — reconcile() needs it to tell "posted nothing in the window" from "not read" */
+        n:(res.posts || []).length, newest:newestOf(res.posts) };
       if(res.resolved && res.resolved.ytChannelId) checks.ytIds[res.channelId] = res.resolved.ytChannelId;
       if(res.ok){ ok++; added += mergePosts(res.channelId, res.posts); }
       else if(res.browserRequired) browser++;
     }
   }
-  checks.lastRun = collectedAt || new Date().toISOString();
+  /* a press where nothing came back is not a check — "Last checked: just now" would be a lie (and would hold
+     the content team's Run off for minutes) */
+  if(collectedAt) checks.lastRun = collectedAt;
 
   /* What this press spent on Apify — the sum of each run's own billed figure, never an estimate.
      A press where every Apify channel ran fresh (nothing served from the 15-minute cache, no request
@@ -1441,7 +1464,7 @@ async function collectServer(o){
   saveChecks();
   if(team){
     /* the server saved it for everyone; read the shared report back so this browser shows exactly that */
-    const notSaved = parts[0] && parts[0].saved === false;
+    const notSaved = !(parts[0] && parts[0].saved === true);
     if(!notSaved) await pullReport();
     toast(`${ok} channel(s) read, ${added} new post(s)`
           + (unreached ? " · the check couldn't be reached — try again in a minute" : "")
@@ -1471,7 +1494,7 @@ let extReady = false;                       // set when the bridge announces its
    matters more than it looks: the extension lives in the browser, not in this deployment, so a fix
    shipped here does nothing until that copy is reloaded — and "is the new code actually loaded?"
    was otherwise unanswerable from the report. EXT_WANT is the version this build expects. */
-const EXT_WANT = "1.13.0";
+const EXT_WANT = "1.13.1";
 /* The channels read through Apify server-side — and by the extension only when that read fails
    (credit used up, token not set). ONE list, used both to decide what to ask the extension for and
    to describe the split in the panel; keeping two copies is what once let the panel claim X was a
@@ -1555,7 +1578,7 @@ const extBudget = channels => 45000 +
 
 function askExtension(channels, timeoutMs){
   return new Promise(resolve => {
-    const id = "r" + (++extSeq);
+    const id = ORG.id + ":r" + (++extSeq);          // each brand's engine listens too — ids must not collide
     const timer = setTimeout(() => {
       /* Give up WAITING, but never stop listening. The waiter used to be deleted here, so when the
          extension finally answered — carrying every channel it had read, Facebook included — the
@@ -1588,6 +1611,10 @@ function absorbBrowserRun(){
 
 function absorbRun(run){
   if(!run || !Array.isArray(run.results)) return 0;
+  /* every brand's engine hears the extension: file only this brand's channels (15 Oct review — SportsFC's
+     Facebook posts were landing in MatchPulse's report, and stamping its last run) */
+  const ours = new Set(((ORG && ORG.socials) || []).map(s => s.id));
+  if(ours.size){ run = { ...run, results:run.results.filter(r => r && ours.has(r.channelId)) }; if(!run.results.length) return 0; }
   let added = 0, counted = 0;
   const today = contentDate(run.collectedAt || new Date().toISOString(), checks.tz);
   for(const res of run.results){
@@ -1913,6 +1940,8 @@ function downloadReportCard(rep, o, wo){
 /* ── what the React app uses ── */
 /* change the report (a control, a hand-confirmed cell, a typed count), save it, redraw */
 function update(fn){ fn(checks); saveChecks(); render(); }
+/* what this device looks at (region tab, window, date) — kept here, never written to the shared report */
+function updateView(fn){ fn(checks); saveLocalChecksOnly(); render(); }
 /* Delete report: posts, counts and notes go; answers a person gave (confirms) and pinned ids stay */
 function resetReport(){
   checks = { posts:{}, counts:{}, captions:{}, meta:{}, ytIds:checks.ytIds,
@@ -1920,6 +1949,7 @@ function resetReport(){
              window:checks.window, date:checks.date, maxPer:checks.maxPer, lastRun:null,
              regionView:checks.regionView, apifyLast:checks.apifyLast, apifyCheckUsd:checks.apifyCheckUsd };
   try{ localStorage.removeItem(BRUN); }catch(e){}
+  wiping = true;
   saveChecks(); render();
 }
 function pendingBrowserRuns(){
@@ -1940,6 +1970,6 @@ return {
   reconcile, mergeReports, detectLang, normLang, contentDate, hhmm, hhmmss, fmtWhen, fmtGap, dayRange,
   windowOpt, tzLabel, TZS, WINDOWS, CELL, compact, num2, dur, clean, thumbSrc,
   collectServer, runEverything, absorbBrowserRun, refreshApifyUsage, downloadReportCard,
-  saveChecks, update, resetReport, pendingBrowserRuns, boot, sync,
+  saveChecks, update, updateView, resetReport, pendingBrowserRuns, boot, sync,
 };
 }

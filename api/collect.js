@@ -1763,31 +1763,46 @@ async function collectOne(ch, cutoff, pushedAll) {
    · one request for the whole brand (one report write, not one per channel), finished by DEADLINE_MS
      so the answer always comes back inside the function's 120 s: a channel still being read by then
      is reported as such, never left to sink the rest;
-   · not again within 3 minutes of the last Run of that brand (the press shows the one just run), and
-     at most 12 an hour from one address. */
-const TEAM_GAP_MS = 3 * 60e3, TEAM_PER_HOUR = 12, DEADLINE_MS = 100000;
+   · ONE Run per brand per 10 minutes across every instance, however many press at once — claimed in a
+     tiny row before anything is read (pipeline/store.js claim); a press inside that shows the one just
+     run. That also bounds what a flood of presses could cost: each Run reads and rewrites the ~0.7 MB
+     report row, and Supabase's free plan counts every byte (15 Oct 2026 review);
+   · at most 12 presses an hour from one address, counted the moment they arrive;
+   · JSON only — a plain-text POST is one any other website could make its visitors' browsers send. */
+const TEAM_GAP_MS = 10 * 60e3, TEAM_PER_HOUR = 12, DEADLINE_MS = 100000;
 const teamPresses = new Map();                     // address → press times (this instance)
 async function teamRun(req, res, brandId) {
   const DIRECTORY = require("../directory.js"), store = require("../pipeline/store.js");
   const brand = DIRECTORY[brandId];
+  if (!/^application\/json\b/i.test(String((req.headers && req.headers["content-type"]) || ""))) return res.status(415).json({ ok: false, error: "Send JSON." });
   const ip = String((req.headers && (req.headers["x-real-ip"] || req.headers["x-forwarded-for"])) || (req.socket && req.socket.remoteAddress) || "?").split(",")[0].trim();
   const now = Date.now();
   const mine = (teamPresses.get(ip) || []).filter(t => now - t < 3600e3);
   if (mine.length >= TEAM_PER_HOUR) return res.status(429).json({ ok: false, error: "That's a lot of checks from here this hour — the pipeline checks every channel every minute anyway. Try again later." });
+  mine.push(now); teamPresses.set(ip, mine);         // counted before any wait, so presses fired together all count
+  if (teamPresses.size > 5000) for (const [k, v] of teamPresses) if (!v.some(t => now - t < 3600e3)) teamPresses.delete(k);
+
+  const recent = (at, verb) => {
+    const ago = Math.max(1, Math.round((now - at) / 60e3)), left = Math.max(1, Math.ceil((at + TEAM_GAP_MS - now) / 60e3));
+    return res.status(200).json({ ok: true, skipped: `A check of ${brand.name} ${verb} ${ago} min ago — that's what you're seeing. You can run it again in ${left} min.`, results: [] });
+  };
   try {
     const last = await store.lastRunOf(brand.row);
-    const since = last ? now - Date.parse(last) : Infinity;
-    if (since < TEAM_GAP_MS) return res.status(200).json({ ok: true, skipped: `A check of ${brand.name} finished ${Math.max(1, Math.round(since / 60e3))} min ago — that's what you're seeing. Run again in a few minutes.`, lastRun: last, results: [] });
-  } catch (e) { /* can't tell when the last one was — run anyway */ }
-  mine.push(now); teamPresses.set(ip, mine);
-  if (teamPresses.size > 5000) for (const [k, v] of teamPresses) if (!v.some(t => now - t < 3600e3)) teamPresses.delete(k);
+    if (last && now - Date.parse(last) < TEAM_GAP_MS) return recent(Date.parse(last), "finished");
+  } catch (e) { /* can't tell when the last one finished — the claim below still holds the line */ }
+  try {
+    const c = await store.claim("teamRun:" + brandId, TEAM_GAP_MS, now);
+    if (!c.ok) return recent(c.at, "was started");
+  } catch (e) {
+    return res.status(503).json({ ok: false, error: "Couldn't start the check just now — try again in a minute." });
+  }
 
   const hours = 192;
   const out = await collectChannels(brand.channels, { hours, deadlineMs: DEADLINE_MS });
   const collectedAt = new Date().toISOString();
   let saved = true, saveError = null;
   try { await store.mergeIntoReport(out.results, Date.now(), { row: brand.row, manual: true, lastRun: collectedAt }); }
-  catch (e) { saved = false; saveError = String(e.message || e); }
+  catch (e) { saved = false; saveError = "the report store didn't take it"; console.error("teamRun save:", e && e.message || e); }
   return res.status(200).json({ ok: true, team: true, brand: brandId, collectedAt, hours, days: Math.round(hours / 24), saved, saveError, ...out });
 }
 

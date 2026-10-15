@@ -41,12 +41,13 @@ async function sendOne(text) {
 
 /* Send every message in the outbox, oldest first; returns what is left (failed ones, with a try
    count — a message that has failed 6 times is dropped so one bad message cannot block the rest). */
-async function flush(outbox, { send = sendOne, gapMs = 3000, now = Date.now() } = {}) {
+async function flush(outbox, { send = sendOne, gapMs = 3000, now = Date.now(), deadline = 0 } = {}) {
   const left = [], log = [];
   /* not set up: keep the messages (they expire after 3 h) and log nothing — the status says it is off */
   if (!configured() && send === sendOne) return { left: outbox, log: [] };
   let first = true;
   for (const m of outbox) {
+    if (deadline && Date.now() > deadline) { left.push(m); continue; }   // out of time this tick: the next one sends it
     try {
       for (const part of chunks(m.text)) {
         if (!first) await new Promise(r => setTimeout(r, gapMs));

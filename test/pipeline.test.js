@@ -595,6 +595,15 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
     process.env.PIPELINE_NOTIFY = "all";
   }
 
+  console.log("\n── a slow Teams can't hold a tick past its limit (15 Oct 2026 review)");
+  {
+    const sent = [], wait = ms => new Promise(r => setTimeout(r, ms));
+    const out = await require("../pipeline/teams.js").flush([{ kind: "missing", payload: 1 }, { kind: "missing", payload: 2 }, { kind: "digest", payload: 3 }],
+      { send: async p => { sent.push(p); await wait(40); }, deadline: Date.now() + 10 });
+    ok(sent.length === 1 && out.left.length === 2 && out.left.every(m => !m.tries) && out.log.length === 1,
+      "past the send budget the rest wait for the next tick — not sent, not counted as failed", `sent ${sent.length}, left ${out.left.length}`);
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

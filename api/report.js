@@ -45,11 +45,39 @@ function sbHeaders(extra) {
 }
 
 /* one row per brand: SportsFC keeps row 3, MatchPulse has row 4. Only known brands are accepted —
-   an unknown name can never pick an arbitrary row of the shared table. */
+   an unknown name can never pick an arbitrary row of the shared table (own keys only: "__proto__" is not a brand). */
 const BRAND_ROWS = { sportsfc: 3, matchpulse: 4 };
+const rowOf = b => (Object.prototype.hasOwnProperty.call(BRAND_ROWS, b) ? BRAND_ROWS[b] : null);
+
+/* Supabase's free plan counts every byte it sends (5 GB a month) and the report is ~0.7 MB, so it is never
+   read in full when it hasn't changed: every read first asks for the row's updated_at (a few bytes); this
+   instance keeps the last full copy and serves it while that stamp still matches, and requests arriving
+   together share one full read. A reader can't make Supabase send the report more often than it changes. */
+const copy = {};                                   // row → { data, updatedAt }
+const reading = {};                                // row → the full read in flight
+const sameInstant = (x, y) => { const a = new Date(x).getTime(), b = new Date(y).getTime(); return Number.isFinite(a) && a === b; };
+async function stampOf(row) {
+  const c = await fetch(`${SB_URL}/rest/v1/${TABLE}?id=eq.${row}&select=updated_at`, { headers: sbHeaders() });
+  if (!c.ok) throw new Error(`Supabase read failed (${c.status})`);
+  const rows = await c.json();
+  return Array.isArray(rows) && rows[0] ? rows[0].updated_at : null;
+}
+function fullRead(row) {
+  if (!reading[row]) reading[row] = (async () => {
+    const r = await fetch(`${SB_URL}/rest/v1/${TABLE}?id=eq.${row}&select=data,updated_at`, { headers: sbHeaders() });
+    if (!r.ok) throw new Error(`Supabase read failed (${r.status})`);
+    const rows = await r.json();
+    const got = Array.isArray(rows) && rows[0] ? { data: rows[0].data, updatedAt: rows[0].updated_at } : { data: null, updatedAt: null };
+    if (got.updatedAt) copy[row] = got;
+    return got;
+  })().finally(() => { delete reading[row]; });
+  return reading[row];
+}
+/* every string well-formed before it is sent — half an emoji makes Supabase refuse the whole row (14 Oct 2026) */
+const wellFormed = v => JSON.stringify(v, (k, x) => (typeof x === "string" && x.toWellFormed ? x.toWellFormed() : x));
 
 module.exports = async (req, res) => {
-  const ROW_ID = BRAND_ROWS[(req.query && req.query.brand) || "sportsfc"];
+  const ROW_ID = rowOf((req.query && req.query.brand) || "sportsfc");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET");
   res.setHeader("Cache-Control", "no-store, max-age=0");
@@ -69,30 +97,13 @@ module.exports = async (req, res) => {
   try {
     /* ---------------- read ---------------- */
     if (req.method === "GET") {
-      /* ?since=<updatedAt the browser holds>: if the row is still that version, say so without sending the
-         ~0.5 MB report again (Supabase's free plan counts every byte it sends — an open tab checks every minute) */
+      const cur = await stampOf(ROW_ID);
+      /* ?since=<updatedAt the browser holds>: still that version → say so, send nothing more */
       const since = req.query && req.query.since;
-      if (since) {
-        const c = await fetch(`${SB_URL}/rest/v1/${TABLE}?id=eq.${ROW_ID}&select=updated_at`, { headers: sbHeaders() });
-        if (c.ok) {
-          const rows = await c.json();
-          const cur = Array.isArray(rows) && rows[0] ? rows[0].updated_at : null;
-          const a = new Date(cur).getTime(), b = new Date(since).getTime();
-          if (cur && Number.isFinite(a) && a === b) return res.status(200).json({ ok: true, mode: "cloud", configured: true, unchanged: true, updatedAt: cur });
-        }
-      }
-      const r = await fetch(
-        `${SB_URL}/rest/v1/${TABLE}?id=eq.${ROW_ID}&select=data,updated_at`,
-        { headers: sbHeaders() }
-      );
-      if (!r.ok) throw new Error(`Supabase read failed (${r.status}): ${await r.text()}`);
-      const rows = await r.json();
-      const row = Array.isArray(rows) ? rows[0] : null;
-      return res.status(200).json({
-        ok: true, mode: "cloud", configured: true,
-        data: row ? row.data : null,
-        updatedAt: row ? row.updated_at : null,
-      });
+      if (since && cur && sameInstant(cur, since)) return res.status(200).json({ ok: true, mode: "cloud", configured: true, unchanged: true, updatedAt: cur });
+      const hit = copy[ROW_ID] && cur && sameInstant(copy[ROW_ID].updatedAt, cur) ? copy[ROW_ID] : null;
+      const got = hit || (cur ? await fullRead(ROW_ID) : { data: null, updatedAt: null });
+      return res.status(200).json({ ok: true, mode: "cloud", configured: true, data: got.data, updatedAt: got.updatedAt });
     }
 
     /* ---------------- write ---------------- */
@@ -106,50 +117,47 @@ module.exports = async (req, res) => {
       if (!body || typeof body.data !== "object" || body.data === null || Array.isArray(body.data)) {
         return res.status(400).json({ ok: false, error: "Expected a JSON body of the form { data: {...} }." });
       }
-      const serialized = JSON.stringify(body.data);
+      const serialized = wellFormed(body.data);
       if (Buffer.byteLength(serialized, "utf8") > MAX_BYTES) {
         return res.status(413).json({ ok: false, error: "Report is too large to store." });
       }
 
-      /* optimistic concurrency, byte-for-byte the same instant comparison api/data.js uses:
-         Postgres returns "…+00:00", Date#toISOString returns "…Z" — compare moments, not text. */
-      if (body.baseUpdatedAt !== undefined && body.baseUpdatedAt) {
-        const cur = await fetch(
-          `${SB_URL}/rest/v1/${TABLE}?id=eq.${ROW_ID}&select=updated_at`,
-          { headers: sbHeaders() }
-        );
-        if (cur.ok) {
-          const rows = await cur.json();
-          const server = rows && rows[0] ? rows[0].updated_at : null;
-          if (server) {
-            const a = new Date(server).getTime(), b = new Date(body.baseUpdatedAt).getTime();
-            if (Number.isFinite(a) && Number.isFinite(b) && a !== b) {
-              return res.status(409).json({
-                ok: false, conflict: true, updatedAt: server,
-                error: "The report was updated on another device. Reload to get the latest.",
-              });
-            }
-          }
-        }
-      }
-
+      /* Optimistic concurrency in ONE conditional write: the row is replaced only if it is still the
+         version the browser read (updated_at = base), so the pipeline's merge or the content team's Run
+         landing in between is never lost — the browser is told 409, merges the newer row in and sends
+         again. A write with no base (the browser never managed to read the row) may only create the row,
+         never replace one (15 Oct 2026 review: a failed read at page load let a stale local copy
+         overwrite the shared report). */
+      const conflict = () => res.status(409).json({ ok: false, conflict: true,
+        error: "The report was updated meanwhile — merging the newer one in." });
       const now = new Date().toISOString();
-      /* select=updated_at: the answer is the stored time only, not the whole report sent back */
-      const w = await fetch(`${SB_URL}/rest/v1/${TABLE}?select=updated_at`, {
-        method: "POST",
-        headers: sbHeaders({ Prefer: "resolution=merge-duplicates,return=representation" }),
-        body: JSON.stringify([{ id: ROW_ID, data: body.data, updated_at: now }]),
-      });
-      if (!w.ok) throw new Error(`Supabase write failed (${w.status}): ${await w.text()}`);
-
+      const row = `{"data":${serialized},"updated_at":${JSON.stringify(now)}}`;
+      const base = body.baseUpdatedAt || null;
       let stored = now;
-      try { const back = await w.json(); if (Array.isArray(back) && back[0] && back[0].updated_at) stored = back[0].updated_at; }
-      catch (e) {}
+      if (base) {
+        const w = await fetch(`${SB_URL}/rest/v1/${TABLE}?id=eq.${ROW_ID}&updated_at=eq.${encodeURIComponent(base)}&select=updated_at`, {
+          method: "PATCH", headers: sbHeaders({ Prefer: "return=representation" }), body: row });
+        if (!w.ok) throw new Error(`Supabase write failed (${w.status}): ${(await w.text()).slice(0, 200)}`);
+        const back = await w.json().catch(() => null);
+        if (!Array.isArray(back) || !back.length) return conflict();
+        if (back[0].updated_at) stored = back[0].updated_at;
+      } else {
+        if (await stampOf(ROW_ID)) return conflict();
+        const w = await fetch(`${SB_URL}/rest/v1/${TABLE}?select=updated_at`, {
+          method: "POST", headers: sbHeaders({ Prefer: "return=representation" }), body: `[{"id":${ROW_ID},${row.slice(1)}]` });
+        if (w.status === 409) return conflict();
+        if (!w.ok) throw new Error(`Supabase write failed (${w.status}): ${(await w.text()).slice(0, 200)}`);
+        const back = await w.json().catch(() => null);
+        if (Array.isArray(back) && back[0] && back[0].updated_at) stored = back[0].updated_at;
+      }
+      copy[ROW_ID] = { data: body.data, updatedAt: stored };
       return res.status(200).json({ ok: true, mode: "cloud", saved: true, updatedAt: stored });
     }
 
     return res.status(405).json({ ok: false, error: "Method not allowed." });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: String((err && err.message) || err) });
+    /* the store's own error text stays in the function log, not in an answer anyone can read */
+    console.error("api/report:", (err && err.message) || err);
+    return res.status(500).json({ ok: false, error: "The report store isn't answering — try again in a minute." });
   }
 };

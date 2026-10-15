@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { createEngine } from "../engine/engine.js";
-import { adminToken, authState, forget, signIn } from "./admin.js";
+import { adminToken, adminExpiry, authState, forget, signIn } from "./admin.js";
 import { siYoutube, siTelegram, siX, siFacebook, siInstagram, siTiktok } from "simple-icons";
 import { AtSign, Bell, Check, CheckCheck, CircleAlert, Copy, Download, Info, Loader2, Trash2, TriangleAlert } from "lucide-react";
 
@@ -27,6 +27,14 @@ export function EngineProvider({ children }) {
   useEffect(() => { authState().then(s => { setAdmin(s.admin); setAdminReady(s.ready); }); }, []);
   const login = useCallback(async pw => { await signIn(pw); setAdmin(true); setAdminReady(true); }, []);
   const logout = useCallback(() => { forget(); setAdmin(false); }, []);
+  /* a session ends after 12 h — the admin's buttons go with it, rather than staying and failing */
+  useEffect(() => {
+    if (!admin) return;
+    const left = adminExpiry() - Date.now();
+    if (left <= 0) { setAdmin(false); return; }
+    const t = setTimeout(() => setAdmin(!!adminToken()), Math.min(left + 1000, 2 ** 31 - 1));
+    return () => clearTimeout(t);
+  }, [admin]);
   const engines = useRef({});
   const route = useRoute();
   const brand = brandOf(route);
@@ -46,9 +54,12 @@ export function EngineProvider({ children }) {
   /* keep an open tab current (engine.js, sync): the shared report every minute while visible, and at
      once when the tab comes back — never mid-check */
   const busy = useRef(false);
+  const seen = useRef(new Set());
   busy.current = !!running[brand.id];
   useEffect(() => {
     const tick = () => { if (!document.hidden && !busy.current && E.sync) E.sync(); };
+    if (seen.current.has(brand.id)) tick();             // back on a brand opened earlier: catch up now, not in a minute
+    else seen.current.add(brand.id);                    // (the first visit is boot()'s — reading twice would cost egress)
     const t = setInterval(tick, 60000);
     document.addEventListener("visibilitychange", tick);
     return () => { clearInterval(t); document.removeEventListener("visibilitychange", tick); };

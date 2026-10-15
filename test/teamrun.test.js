@@ -49,7 +49,7 @@ const call = (handler, { method = "POST", headers = {}, body, ip = "1.2.3.4" } =
   const res = { headers: {}, statusCode: 200, setHeader(k, v) { this.headers[k.toLowerCase()] = v; }, status(c) { this.statusCode = c; return this; },
     json(b) { resolve({ status: this.statusCode, body: b, headers: this.headers }); return this; },
     end(b) { resolve({ status: this.statusCode, body: b, headers: this.headers }); } };
-  Promise.resolve(handler({ method, query: {}, headers: { "x-real-ip": ip, ...headers }, body, socket: { remoteAddress: ip } }, res))
+  Promise.resolve(handler({ method, query: {}, headers: { "x-real-ip": ip, "content-type": "application/json", ...headers }, body, socket: { remoteAddress: ip } }, res))
     .catch(e => resolve({ status: 599, body: String(e && e.stack || e) }));
 });
 
@@ -90,8 +90,16 @@ const call = (handler, { method = "POST", headers = {}, body, ip = "1.2.3.4" } =
   console.log("\n── pressed again straight away");
   const before = JSON.stringify(rows[3]), n = outside.length;
   const r2 = await call(collect, { body: { brand: "sportsfc", run: true } });
-  ok(r2.status === 200 && /finished 1 min ago/.test(r2.body.skipped || "") && outside.length === n && JSON.stringify(rows[3]) === before,
-    "inside 3 minutes: the one just run is shown — nothing read, nothing written", r2.body.skipped);
+  ok(r2.status === 200 && /finished 1 min ago.*again in 10 min/.test(r2.body.skipped || "") && outside.length === n && JSON.stringify(rows[3]) === before,
+    "inside 10 minutes: the one just run is shown — nothing read, nothing written", r2.body.skipped);
+
+  console.log("\n── 20 presses at the same moment, from 20 addresses");
+  delete rows[6]; rows[3].data.lastRun = "2026-10-01T00:00:00Z";
+  const burst = await Promise.all(Array.from({ length: 20 }, (_, i) => call(collect, { body: { brand: "sportsfc", run: true }, ip: "10.0.0." + i })));
+  const ran = burst.filter(r => r.body && r.body.team), held = burst.filter(r => r.body && /was started \d+ min ago/.test(r.body.skipped || ""));
+  ok(ran.length === 1 && held.length === 19, "exactly one Run happens; the other 19 are shown it", `ran ${ran.length}, held ${held.length}`);
+  const plain = await call(collect, { body: JSON.stringify({ brand: "sportsfc", run: true }), headers: { "content-type": "text/plain" }, ip: "11.0.0.1" });
+  ok(plain.status === 415, "a plain-text press (what another website could send) is refused", plain.status);
 
   console.log("\n── MatchPulse");
   const r3 = await call(collect, { body: { brand: "matchpulse", run: true }, ip: "5.5.5.5" });
@@ -108,13 +116,14 @@ const call = (handler, { method = "POST", headers = {}, body, ip = "1.2.3.4" } =
   console.log("\n── at most 12 Runs an hour from one address");
   let last = null;
   for (let i = 0; i < 13; i++) {
-    rows[3].data.lastRun = "2026-10-01T00:00:00Z";                // as if the last Run was long ago
+    rows[3].data.lastRun = "2026-10-01T00:00:00Z"; delete rows[6];   // as if the last Run was long ago
     last = await call(collect, { body: { brand: "sportsfc", run: true }, ip: "9.9.9.9" });
     if (i === 11) ok(last.status === 200 && last.body.team, "the 12th is run", last.status);
   }
   ok(last.status === 429, "the 13th is refused, politely", last.body && last.body.error);
+  delete rows[6]; rows[3].data.lastRun = "2026-10-01T00:00:00Z";
   const other = await call(collect, { body: { brand: "sportsfc", run: true }, ip: "8.8.8.8" });
-  ok(other.status === 200, "…another address is not affected");
+  ok(other.status === 200 && other.body.team, "…another address is not affected");
 
   console.log("\n── a channel that never answers can't hold the Run past its deadline");
   const realFetch = global.fetch;

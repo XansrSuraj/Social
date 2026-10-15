@@ -60,11 +60,14 @@ async function post(payload) {
   if (r.status >= 300) throw new Error(`Teams ${r.status}: ${(await r.text()).slice(0, 160)}`);
 }
 
-/* Send each queued card; a failed one stays queued (6 tries, then dropped) — same rule as WhatsApp. */
-async function flush(queue, { send = post } = {}) {
+/* Send each queued card; a failed one stays queued (6 tries, then dropped) — same rule as WhatsApp.
+   deadline: past it, the rest wait for the next tick untouched — a slow Teams must never hold a tick past
+   the function's limit, where it would be cut off after sending but before saving, and send it all again. */
+async function flush(queue, { send = post, deadline = 0 } = {}) {
   if (TEAMS_OFF) return { left: [], log: [] };            // switched off: the queue is dropped, nothing sent
   const left = [], log = [];
   for (const m of queue) {
+    if (deadline && Date.now() > deadline) { left.push(m); continue; }
     try { await send(m.payload); log.push({ at: Date.now(), ok: true, via: "teams", kind: m.kind }); }
     catch (e) {
       log.push({ at: Date.now(), ok: false, via: "teams", kind: m.kind, error: String(e.message || e).slice(0, 200) });

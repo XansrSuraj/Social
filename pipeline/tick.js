@@ -48,6 +48,9 @@ const FAIL_HOLD_MIN = 5;
 const RESEND_GAP_MS = 20000;
 const FRESH_H = 6;                // nothing older than this, and not from today (IST), is ever notified
 const DROP_SPAN_MIN = 20;         // the same card going out within 20 min (every language, every channel) is one drop
+/* sending stops this long into a tick (whatever is left goes next tick): api/pipeline.js may run 120 s, and a
+   tick cut off after sending but before saving would send it all again */
+const SEND_BUDGET_MS = 85e3;
 const PROBE_MIN = 30;             // every reader is read at least this often — the Health page stays live
 const PROBES_PER_TICK = 3;        // …a few per tick, stalest first, so a tick stays short
 const BACKFILL_QUIET_H = 3;       // on the very first tick, stay quiet about anything older than this
@@ -137,8 +140,9 @@ function fresh(led, now) {
 
 async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(), owner = "tick", force = false }) {
   const t0 = Date.now();
-  const lock = await store.lockLedger(owner);
+  const lock = await store.lockLedger(owner, { minGapMs: force ? 0 : MIN_TICK_GAP_MS, now });
   if (!lock) return { ok: true, skipped: "another tick is running" };
+  if (lock.tooSoon) return { ok: true, skipped: "too soon after the last tick" };
   const led = fresh(lock.ledger, now);
   try {
     return await run(led, lock);
@@ -535,7 +539,7 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
   led.teamsOutbox = (led.teamsOutbox || []).filter(m => now - m.at < 3 * 3600e3);
   if (led.teamsOutbox.length) {
     try {
-      const { left, log } = await teams.flush(led.teamsOutbox);
+      const { left, log } = await teams.flush(led.teamsOutbox, { deadline: t0 + SEND_BUDGET_MS });
       led.teamsOutbox = left;
       led.waLog = [...log, ...led.waLog].slice(0, 60);
     } catch (e) { errors.push("teams: " + String(e.message || e)); }
@@ -545,7 +549,7 @@ async function tick({ fm, collect, store, wa, teams = realTeams, now = Date.now(
   led.outbox = led.outbox.filter(m => !m.at || now - m.at < 3 * 3600e3);
   if (led.outbox.length) {
     try {
-      const { left, log } = await wa.flush(led.outbox, { now });
+      const { left, log } = await wa.flush(led.outbox, { now, deadline: t0 + SEND_BUDGET_MS });
       led.outbox = left;
       led.waLog = [...log, ...led.waLog].slice(0, 60);
     } catch (e) { errors.push("whatsapp: " + String(e.message || e)); }

@@ -42,12 +42,15 @@ async function fmDeliveries({ since }) {
   return [...byId.values()];
 }
 
+/* PIPELINE_KEY as ?key= (cron-job.org) or the x-pipeline-key header (kept out of request logs); Vercel's own
+   cron sends CRON_SECRET. Compared in constant time. */
 const authorised = req => {
   const key = process.env.PIPELINE_KEY;
   if (!key) return true;
-  const q = (req.query && req.query.key) || "";
-  const cron = process.env.CRON_SECRET && req.headers && req.headers.authorization === "Bearer " + process.env.CRON_SECRET;
-  return q === key || !!cron;
+  const h = req.headers || {};
+  const given = String(h["x-pipeline-key"] || (req.query && req.query.key) || "");
+  const cron = !!process.env.CRON_SECRET && auth.safeEqual(String(h.authorization || ""), "Bearer " + process.env.CRON_SECRET);
+  return auth.safeEqual(given, key) || cron;
 };
 
 /* what the content team sees: per delivery, where it went and whether it got there — no reader internals,
@@ -85,7 +88,9 @@ module.exports = async (req, res) => {
         waitUntil(run.catch(e => console.error("pipeline tick failed:", e)));
         return res.status(202).json({ ok: true, started: true });
       }
-      return res.status(200).json(await run);
+      /* the tick's own report (errors from FM, Supabase, Teams…) is the admin's; a clock just learns it ran */
+      const out = await run;
+      return res.status(200).json(admin ? out : { ok: !!out.ok, ...(out.skipped ? { skipped: out.skipped } : { ran: true, checked: out.checked }) });
     }
 
     if (op === "test-alert") {
@@ -181,6 +186,8 @@ module.exports = async (req, res) => {
         .map(([k, v]) => ({ fm: k, mode: v.mode, soft: !!v.soft, account: v.read ? v.read.url : null, why: v.why || null })),
     });
   } catch (e) {
-    return res.status(500).json({ ok: false, error: String((e && e.message) || e) });
+    console.error("api/pipeline:", (e && e.message) || e);
+    /* the raw error is the admin's (it can name the store, FM, Teams); everyone else gets plain words */
+    return res.status(500).json({ ok: false, error: auth.isAdmin(req) ? String((e && e.message) || e) : "The pipeline isn't answering — try again in a minute." });
   }
 };

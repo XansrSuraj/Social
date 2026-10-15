@@ -18,6 +18,9 @@ module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store, max-age=0");
   if (req.method === "GET") return res.status(200).json({ ok: true, ready: auth.ready(), admin: auth.isAdmin(req) });
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Use POST." });
+  /* JSON only: a plain-text or form POST is one any other website can make its visitors' browsers send
+     (no preflight), which would let it guess passwords from their addresses */
+  if (!/^application\/json\b/i.test(String((req.headers && req.headers["content-type"]) || ""))) return res.status(415).json({ ok: false, error: "Send JSON." });
   if (!auth.ready()) return res.status(503).json({ ok: false, error: "Admin is not set up on this deployment — set ADMIN_PASSWORD (10+ characters) on Vercel and redeploy." });
 
   const ip = ipOf(req), now = Date.now();

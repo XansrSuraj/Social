@@ -10,6 +10,11 @@ export function adminToken() {
   } catch (e) { /* storage blocked — not signed in */ }
   return "";
 }
+/* when this browser's session ends (0 = none) */
+export function adminExpiry() {
+  try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); return s && s.token && s.expiresAt ? Number(s.expiresAt) : 0; }
+  catch (e) { return 0; }
+}
 export const authHeaders = () => { const t = adminToken(); return t ? { Authorization: "Bearer " + t } : {}; };
 export const authFetch = (url, opts = {}) => fetch(url, { cache: "no-store", ...opts, headers: { ...(opts.headers || {}), ...authHeaders() } });
 

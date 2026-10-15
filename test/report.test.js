@@ -53,16 +53,30 @@ const check = (good, label, extra) => {
   process.env.SUPABASE_URL = "https://stub.supabase.co";
   process.env.SUPABASE_SERVICE_KEY = "svc";
 
+  /* PostgREST, as api/report.js uses it: a stamp read (select=updated_at), a full read, a conditional
+     PATCH (…&updated_at=eq.<base> — no row back when it changed meanwhile) and an insert (409 if it exists) */
   let store = { data: { lastRun: "earlier" }, updated_at: "2026-08-21T10:00:00.000+00:00" };
+  let fullReads = 0;
+  const same = (x, y) => new Date(x).getTime() === new Date(y).getTime();
+  const answer = (status, body) => ({ ok: status < 400, status, json: async () => body, text: async () => JSON.stringify(body) });
   global.fetch = async (url, opts) => {
-    const u = String(url);
-    if ((opts || {}).method === "POST") {
+    const u = new URL(String(url)), method = (opts || {}).method || "GET";
+    if (method === "POST") {
+      if (store) return answer(409, {});
       const sent = JSON.parse(opts.body)[0];
       store = { data: sent.data, updated_at: sent.updated_at };
-      return { ok: true, status: 200, json: async () => [store], text: async () => "" };
+      return answer(201, [{ updated_at: store.updated_at }]);
     }
-    // a read (GET row)
-    return { ok: true, status: 200, json: async () => (store ? [store] : []), text: async () => "" };
+    if (method === "PATCH") {
+      const base = (u.searchParams.get("updated_at") || "").replace(/^eq\./, "");
+      if (!store || !same(store.updated_at, base)) return answer(200, []);
+      const sent = JSON.parse(opts.body);
+      store = { data: sent.data, updated_at: sent.updated_at };
+      return answer(200, [{ updated_at: store.updated_at }]);
+    }
+    if (u.searchParams.get("select") === "updated_at") return answer(200, store ? [{ updated_at: store.updated_at }] : []);
+    fullReads++;
+    return answer(200, store ? [store] : []);
   };
 
   console.log("\n── with cloud storage, the report has one shared home");
@@ -70,10 +84,33 @@ const check = (good, label, extra) => {
   check(r.status === 200 && r.body.mode === "cloud" && r.body.data.lastRun === "earlier",
     "GET returns the stored report", JSON.stringify(r.body));
 
-  r = await call("PUT", { data: { lastRun: "now", counts: { "2026-08-21": {} } } });
+  r = await call("PUT", { data: { lastRun: "now", counts: { "2026-08-21": {} } }, baseUpdatedAt: store.updated_at });
   check(r.status === 200 && r.body.saved === true && r.body.updatedAt,
-    "a good write is stored and reports its instant", JSON.stringify(r.body));
+    "a good write (based on the version it read) is stored and reports its instant", JSON.stringify(r.body));
   check(store.data.lastRun === "now", "and the row actually changed", JSON.stringify(store.data));
+
+  console.log("\n── a browser that never read the row can't replace it (15 Oct 2026 review)");
+  const kept = store.data.lastRun;
+  r = await call("PUT", { data: { lastRun: "stale local copy" } });
+  check(r.status === 409 && r.body.conflict && store.data.lastRun === kept, "a write with no base is refused while the row exists — 409, so the browser merges first", JSON.stringify(r.body));
+  const saved = store; store = null;
+  r = await call("PUT", { data: { lastRun: "first ever" } });
+  check(r.status === 200 && store && store.data.lastRun === "first ever", "…but it may create the row when there is none");
+  store = saved;
+
+  console.log("\n── reads don't make Supabase send the ~0.7 MB report more often than it changes");
+  const mod = load(), once = (q) => new Promise(resolve => mod({ method: "GET", query: q || {}, headers: {} },
+    { setHeader() {}, status(c) { this._c = c; return this; }, end() { resolve({ status: this._c || 200 }); }, json(p) { resolve({ status: this._c || 200, body: p }); } }));
+  fullReads = 0;
+  const burst = await Promise.all(Array.from({ length: 20 }, () => once()));
+  check(burst.every(x => x.status === 200 && x.body.data.lastRun === store.data.lastRun) && fullReads === 1, "20 reads at once: one full read, shared", "full reads " + fullReads);
+  await once(); await once();
+  check(fullReads === 1, "and later reads of an unchanged row are served from this instance's copy", "full reads " + fullReads);
+  store = { data: { lastRun: "changed elsewhere" }, updated_at: "2026-08-21T13:00:00.000+00:00" };
+  const fresh = await once();
+  check(fresh.body.data.lastRun === "changed elsewhere" && fullReads === 2, "a row changed elsewhere is read again at once — never served stale");
+  const unchanged = await once({ since: store.updated_at });
+  check(unchanged.body.unchanged === true && !("data" in unchanged.body), "?since= the current version: 'unchanged', nothing more");
 
   console.log("\n── what must never reach the row");
   r = await call("PUT", { data: "not an object" });
@@ -84,7 +121,7 @@ const check = (good, label, extra) => {
   check(r.status === 413, "an oversized body is refused", String(r.status));
 
   console.log("\n── a stale write does not clobber a newer one");
-  store = { data: { lastRun: "server-newer" }, updated_at: "2026-08-21T12:00:00.000+00:00" };
+  store = { data: { lastRun: "server-newer" }, updated_at: "2026-08-21T14:00:00.000+00:00" };
   r = await call("PUT", { data: { lastRun: "mine" }, baseUpdatedAt: "2026-08-21T10:00:00.000Z" });
   check(r.status === 409 && r.body.conflict, "a write based on an old version is refused with 409", JSON.stringify(r.body));
   check(store.data.lastRun === "server-newer", "and the newer report is left intact", JSON.stringify(store.data));
@@ -93,18 +130,19 @@ const check = (good, label, extra) => {
   const rowsSeen = [];
   const prevFetch = global.fetch;
   global.fetch = async (url, opts) => {
-    if ((opts || {}).method === "POST") rowsSeen.push(JSON.parse(opts.body)[0].id);
-    else { const m = String(url).match(/id=eq\.(\d+)/); if (m) rowsSeen.push(Number(m[1])); }
+    const m = String(url).match(/id=eq\.(\d+)/); if (m) rowsSeen.push(Number(m[1]));
     return prevFetch(url, opts);
   };
-  await call("PUT", { data: { lastRun: "sfc" } });
+  await call("PUT", { data: { lastRun: "sfc" }, baseUpdatedAt: store.updated_at });
   check(rowsSeen.pop() === 3, "SportsFC writes row 3, as it always has");
-  await call("PUT", { data: { lastRun: "mp" } }, {}, { brand: "matchpulse" });
+  await call("PUT", { data: { lastRun: "mp" }, baseUpdatedAt: store.updated_at }, {}, { brand: "matchpulse" });
   check(rowsSeen.pop() === 4, "MatchPulse writes its own row 4");
   await call("GET", null, {}, { brand: "matchpulse" });
   check(rowsSeen.pop() === 4, "and reads it back from row 4");
   r = await call("GET", null, {}, { brand: "1" });
   check(r.status === 400, "an unknown brand cannot pick some other row of the table", String(r.status));
+  r = await call("GET", null, {}, { brand: "__proto__" });
+  check(r.status === 400, "…nor a name every object has (__proto__)", String(r.status));
   global.fetch = prevFetch;
 
   console.log("\n── the write is the admin's only (since 14 Oct 2026 — it was open to anyone)");
@@ -115,7 +153,7 @@ const check = (good, label, extra) => {
   check(r.status === 401 && store.data.lastRun === before, "a write from someone not signed in is refused, and the row is untouched", String(r.status));
   r = await raw("PUT", { data: { lastRun: "anyone" } }, { "x-admin-key": process.env.ADMIN_PASSWORD });
   check(r.status === 401, "…even with the password itself in a header — only a signed-in session writes", String(r.status));
-  r = await raw("PUT", { data: { lastRun: "admin" } }, { authorization: "Bearer " + require("../admin-auth.js").issue().token });
+  r = await raw("PUT", { data: { lastRun: "admin" }, baseUpdatedAt: store.updated_at }, { authorization: "Bearer " + require("../admin-auth.js").issue().token });
   check(r.status === 200 && store.data.lastRun === "admin", "a signed-in admin writes", String(r.status));
 
   global.fetch = realFetch;

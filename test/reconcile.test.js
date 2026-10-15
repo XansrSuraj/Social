@@ -1682,6 +1682,41 @@ console.log("\n── a reader that admits it saw only part of the window crosse
   }
 }
 
+/* ═══════════════════ a channel that posted nothing in the window ═══════════════════
+   15 Oct 2026 review: a channel read fine a minute ago whose newest post is from yesterday missed every
+   drop of the window — it used to read "no data" (mode none) and the verdict could say "All clear". Only
+   the read's own answer (meta.n / meta.newest) may prove it; stored history, an empty read or a read cut
+   short must still read unknown. */
+console.log("\n── a channel read fine that posted nothing in the window: crossed, not 'no data'");
+{
+  const CC = [
+    { id: "ytv", platform: "youtube",  name: "YouTube · vn",  lang: "vi" },
+    { id: "tgv", platform: "telegram", name: "Telegram · vn", lang: "vi" },
+    { id: "ttv", platform: "tiktok",   name: "TikTok · vn",   lang: "vi" },
+  ];
+  const runQ = ttMeta => {
+    const c = M.checks();
+    c.posts = {}; c.counts = {}; c.meta = {}; c.confirms = {};
+    Object.assign(c, { tz: 7, win: 15, hours: 24, maxPer: 9 });
+    c.posts = {
+      ytv: [P("y1", 300, VN_TEXT), P("y2", 120, VN_TEXT)],
+      tgv: [P("t1", 301, VN_TEXT), P("t2", 121, VN_TEXT)],
+      ttv: [P("k0", 30 * 60, VN_TEXT)],                    // its newest post: 30 h ago
+    };
+    c.meta = { ytv: { ok: true, at: Date.now() }, tgv: { ok: true, at: Date.now() }, ttv: { ok: true, at: Date.now(), ...ttMeta } };
+    return row(M.reconcile(CC, { tz: 7, win: 15, mode: "roll", hours: 24, maxPerPeriod: 9 }), "ttv");
+  };
+  const quiet = runQ({ n: 6, newest: ago(30 * 60) });
+  ok(quiet.mode === "timeline" && quiet.cells.length === 2 && quiet.cells.every(cl => cl.state === "miss") && quiet.status === "short",
+    "its read came back with posts, all older than the window: both drops are crossed", `${quiet.mode} ${quiet.status} ${quiet.cells.map(cl => cl.state).join(",")}`);
+  const old = runQ({});
+  ok(old.mode === "none" && old.cells.every(cl => cl.state !== "miss"), "a read that didn't say what it returned (older data): still unknown, nothing crossed", old.mode);
+  const empty = runQ({ n: 0, newest: null });
+  ok(empty.mode === "none", "a read that returned nothing proves nothing: unknown", empty.mode);
+  const cut = runQ({ n: 6, newest: ago(30 * 60), partialRead: true });
+  ok(cut.mode === "none" || cut.cells.every(cl => cl.state !== "miss"), "a read cut short proves nothing: no crosses", cut.mode);
+}
+
 /* ═══════════════════ where the caption allowance ends ═══════════════════
    Five words may differ and the drop still counts; six may not. A boundary that is never asserted
    is a boundary that drifts, and this one decides whether a real post reads as delivered or a

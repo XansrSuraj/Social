@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Activity, ArrowUpRight, BellRing, Loader2, Play, Radio, RefreshCw } from "lucide-react";
 import { BrandIcon, useApp } from "../app/core.jsx";
 import { authFetch } from "../app/admin.js";
+import { webUrl } from "../app/viewmodel.js";
 
 /* The FM → channels pipeline, live: every card FM sent, and what became of it on each channel.
    Everyone (the content team) sees each drop — went out where, and why not where it didn't. The admin also
@@ -124,7 +125,7 @@ export default function Live() {
           {admin && <HealthStrip h={s.health} />}
 
           <div className="tabs">
-            {days.map(d => <button key={d} className={`tab${d === day ? " on" : ""}`} onClick={() => setDay(d)}>{d === istDay(Date.now()) ? "Today" : d}</button>)}
+            {days.map(d => <button key={d} className={`tab${d === day ? " on" : ""}`} onClick={() => setDay(d === istDay(Date.now()) ? null : d)}>{d === istDay(Date.now()) ? "Today" : d}</button>)}
 
           </div>
 
@@ -155,8 +156,8 @@ export default function Live() {
                                       (e.why ? ` — ${e.why}` : e.readNote ? ` — ${e.readNote}` : "") + (e.capProblem ? ` — ⚠ ${e.capProblem}` : "");
                           const inner = <><BrandIcon platform={ICON[e.channel] || e.channel} /><span className={`cl ${st.cls}`}>{st.g}</span>
                             {e.lag != null && <span className="live-lag">+{Math.max(0, Math.round(e.lag))}m</span>}{e.capProblem && <span className="live-warn">⚠</span>}</>;
-                          return e.postUrl
-                            ? <a key={e.cardId} className="live-chip" href={e.postUrl} target="_blank" rel="noopener noreferrer" title={tip}>{inner}</a>
+                          return webUrl(e.postUrl)
+                            ? <a key={e.cardId} className="live-chip" href={webUrl(e.postUrl)} target="_blank" rel="noopener noreferrer" title={tip}>{inner}</a>
                             : <span key={e.cardId} className="live-chip" title={tip}>{inner}</span>;
                         })}
                       </div>

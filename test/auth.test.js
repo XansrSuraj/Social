@@ -10,6 +10,7 @@ delete process.env.SUPABASE_URL; delete process.env.SUPABASE_SERVICE_KEY; delete
 delete process.env.ADMIN_PASSWORD;
 
 const call = (handler, { method = "GET", query = {}, headers = {}, body } = {}) => new Promise(resolve => {
+  if (method === "POST") headers = { "content-type": "application/json", ...headers };
   const res = { headers: {}, statusCode: 200, setHeader(k, v) { this.headers[k.toLowerCase()] = v; }, status(c) { this.statusCode = c; return this; },
     json(b) { resolve({ status: this.statusCode, body: b, headers: this.headers }); return this; },
     end(b) { resolve({ status: this.statusCode, body: b, headers: this.headers }); } };
@@ -40,6 +41,8 @@ const call = (handler, { method = "GET", query = {}, headers = {}, body } = {}) 
   ok(!A.verify(forged), "a made-up token is worthless");
   for (let i = 0; i < 8; i++) await call(authApi, { method: "POST", body: { password: "nope" + i }, headers: { "x-test-ip": "6.6.6.6" } });
   const locked = await call(authApi, { method: "POST", body: { password: "a-long-test-password-42" }, headers: { "x-test-ip": "6.6.6.6" } });
+  const plain = await call(authApi, { method: "POST", body: "{\"password\":\"a-long-test-password-42\"}", headers: { "content-type": "text/plain", "x-test-ip": "7.7.7.7" } });
+  ok(plain.status === 415 && !plain.body.token, "a text/plain sign-in (what another website could send) is refused, even with the right password", plain.status);
   ok(locked.status === 429, "8 wrong guesses from one address: refused for 15 minutes, even the right password", locked.status);
 
   console.log("\n── every admin endpoint refuses a caller who isn't signed in");

@@ -123,6 +123,7 @@ module.exports = async (req, res) => {
 
     return res.status(405).json({ ok: false, error: "Method not allowed." });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: String(err.message || err) });
+    console.error("api/data:", (err && err.message) || err);         // the store's own error text stays in the function log
+    return res.status(500).json({ ok: false, error: "The settings store isn't answering — try again in a minute." });
   }
 };

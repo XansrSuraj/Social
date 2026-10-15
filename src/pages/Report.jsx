@@ -50,7 +50,7 @@ export default function Report() {
         </div>
       </section>
 
-      <Controls E={E} vm={vm} />
+      <Controls E={E} vm={vm} admin={admin} />
 
       <section className="section tight" style={{ paddingTop: 28 }}>
         <div className="wrap">
@@ -68,7 +68,7 @@ export default function Report() {
           </div>
 
           <div className="panel" key={tab}>
-            {tab === "sum" && <Summary E={E} vm={vm} toast={toast} />}
+            {tab === "sum" && <Summary E={E} vm={vm} toast={toast} admin={admin} />}
             {tab === "drops" && <Drops E={E} vm={vm} />}
             {tab === "content" && <Content E={E} vm={vm} />}
             {tab === "log" && <PostLog E={E} vm={vm} />}
@@ -83,9 +83,14 @@ export default function Report() {
 }
 
 /* ── the sticky controls: which region, which stretch of time, how it is judged ── */
-function Controls({ E, vm }) {
+function Controls({ E, vm, admin }) {
   const { o, checks, view } = vm;
+  /* what this device looks at (region, window, date) is its own — saved here, never written to the shared
+     report; how the report is judged (timezone, drop window, flag) is the same for everyone, so only the
+     admin changes it (a signed-out change would only live in this browser and be undone at the next sync) */
   const set = (key, num) => e => { const v = e.target.value; E.update(c => { c[key] = num ? Number(v) : v; }); };
+  const view_ = key => e => { const v = e.target.value; E.updateView(c => { c[key] = v; }); };
+  const shared = admin ? {} : { disabled: true, title: "The same for everyone — the admin sets it" };
   const today = E.contentDate(new Date().toISOString(), Number(checks.tz) || 0);
   return (
     <div className="rp-bar">
@@ -93,29 +98,29 @@ function Controls({ E, vm }) {
         <div className="seg" role="group" aria-label="Region">
           {[["all", "All regions", o.socials.length],
             ...E.REGIONS.map(([v, l]) => [v, l, o.socials.filter(s => E.regionOf(s) === v).length])].map(([v, l, n]) => (
-            <button key={v} className={view === v ? "on" : ""} onClick={() => E.update(c => { c.regionView = v; })}
+            <button key={v} className={view === v ? "on" : ""} onClick={() => E.updateView(c => { c.regionView = v; })}
               title="Each region is always judged on its own schedule of drops">{l} · {n}</button>
           ))}
         </div>
         <span className="bar-sep" />
         <label className="fld"><span>Window</span>
-          <select value={String(checks.window || "today")} onChange={set("window")}>
+          <select value={String(checks.window || "today")} onChange={view_("window")}>
             {E.WINDOWS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select></label>
         {String(checks.window) === "date" && (
           <label className="fld"><span>Date</span>
-            <input type="date" value={checks.date || today} max={today} onChange={set("date")} /></label>
+            <input type="date" value={checks.date || today} max={today} onChange={view_("date")} /></label>
         )}
         <label className="fld"><span>Timezone</span>
-          <select value={Number(checks.tz) || 0} onChange={set("tz", true)}>
+          <select value={Number(checks.tz) || 0} onChange={set("tz", true)} {...shared}>
             {E.TZS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select></label>
         <label className="fld"><span>Same drop within</span>
-          <select value={checks.win} onChange={set("win", true)}>
+          <select value={checks.win} onChange={set("win", true)} {...shared}>
             {[5, 10, 15, 30, 60].map(v => <option key={v} value={v}>±{v} min</option>)}
           </select></label>
         <label className="fld"><span>Flag above</span>
-          <select value={checks.maxPer || 4} onChange={set("maxPer", true)}>
+          <select value={checks.maxPer || 4} onChange={set("maxPer", true)} {...shared}>
             {[2, 3, 4, 5, 6, 8].map(v => <option key={v} value={v}>max {v}</option>)}
           </select></label>
       </div>

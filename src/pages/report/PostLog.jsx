@@ -1,4 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
+import { webUrl } from "../../app/viewmodel.js";
 
 /* every post, exact time, everything the platform gave — a table on a desk, cards on a phone */
 export default function PostLog({ E, vm }) {
@@ -32,7 +33,7 @@ export default function PostLog({ E, vm }) {
                     <td className="cap" title={t}>
                       {p.viaCaption && <span className="tg ok" title="paired with the caption that matched this drop">≈{Math.round((p.score || 0) * 100)}% </span>}{" "}
                       {t.slice(0, 90)}{t.length > 90 ? "…" : ""}</td>
-                    <td className="wide">{p.permalink && <a href={p.permalink} target="_blank" rel="noopener noreferrer" title="open the post"
+                    <td className="wide">{webUrl(p.permalink) && <a href={webUrl(p.permalink)} target="_blank" rel="noopener noreferrer" title="open the post"
                       style={{ color: "var(--red)", display: "inline-flex" }}><ArrowUpRight style={{ width: 17, height: 17 }} /></a>}</td>
                   </tr>
                 );

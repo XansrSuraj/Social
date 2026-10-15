@@ -15,7 +15,15 @@ const crypto = require("crypto");
 const PASS = () => String(process.env.ADMIN_PASSWORD || "");
 const ready = () => PASS().length >= 10;
 const TTL_MS = 12 * 3600e3;
-const signKey = () => crypto.createHash("sha256").update("orghub-admin-session:" + PASS()).digest();
+/* The signing key is stretched from the password with scrypt (a deliberately slow hash), once per instance:
+   with a plain hash, anyone holding one old token could guess the password offline at GPU speed and skip the
+   sign-in's rate limit (15 Oct 2026 review). Changing the password still ends every session. */
+let keyMemo = { pass: null, key: null };
+const signKey = () => {
+  const p = PASS();
+  if (keyMemo.pass !== p) keyMemo = { pass: p, key: crypto.scryptSync(p, "orghub-admin-session:v2", 32, { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }) };
+  return keyMemo.key;
+};
 const sign = payload => crypto.createHmac("sha256", signKey()).update(payload).digest("base64url");
 
 function safeEqual(a, b) {

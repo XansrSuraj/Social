@@ -23,14 +23,14 @@ function App() {
   const ADMIN_ONLY = { "/admin": "the admin dashboard", "/health": "the admin dashboard", "/fm": "FM Deliveries" };
   const page = PAGES[route];
   useEffect(() => { document.title = page ? `${page[1]} — SportsFC` : `${brand.name} — Daily check`; }, [brand.name, route]); // eslint-disable-line react-hooks/exhaustive-deps
-  const Gate = () => <Login what={ADMIN_ONLY[route]} />;
-  const Page = ADMIN_ONLY[route] && !admin ? Gate : page ? page[0] : isReport ? Report : Home;
+  const gated = !!ADMIN_ONLY[route] && !admin;
+  const Page = page ? page[0] : isReport ? Report : Home;
   /* key on the brand: switching brands starts the page fresh (tabs, filters) rather than carrying
      one brand's view state into the other */
   return (
     <>
       <Nav route={route} />
-      <main key={brand.id}><Page /></main>
+      <main key={brand.id}>{gated ? <Login what={ADMIN_ONLY[route]} /> : <Page />}</main>
       <Footer />
     </>
   );
