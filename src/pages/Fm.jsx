@@ -14,7 +14,7 @@ import { webUrl } from "../app/viewmodel.js";
    also accepts "portuguese". */
 
 const ENVS = ["prod", "test", "dev"];
-const LANGS = [["english", "English"], ["vietnamese", "Vietnamese"], ["portuguese-br", "Portuguese (Brazil)"]];
+const LANGS = [["english", "English"], ["vietnamese", "Vietnamese"], ["portuguese-br", "Portuguese (Brazil)"], ["spanish-mx", "Spanish (Mexico)"]];
 const NARRATION = ["english", "vietnamese", "portuguese", "hindi", "thai"];
 const CHANNELS = ["youtube", "telegram", "telegram_direct", "x", "facebook", "instagram", "tiktok", "viber", "whatsapp", "whatsapp_direct"];
 const FALLBACK = { states: ["queued", "sending", "sent", "failed", "unknown", "skipped"], outcomes: ["delivered", "failed", "pending", "unconfirmed"] };

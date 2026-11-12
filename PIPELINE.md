@@ -205,6 +205,7 @@ slow or down.
 |---|---|---|
 | Viber (all 3 languages) | nothing can read Viber | FM's "sent" is taken as delivered (agreed exception) |
 | X EN, X PT, TikTok EN, TikTok PT, Telegram PT, Telegram bot EN, Telegram bot PT | **the accounts don't exist yet** — FM sends, distribution drops it (2026-10-05) | ignored everywhere: no ledger entry, no alert, not on the Live page |
+| X MX, TikTok MX, Telegram MX, Telegram bot MX | FM sends `spanish-mx` here, but no Mexico account was given to the dashboard (2026-11-12 — only Facebook, Instagram and YouTube `sportsfc.mx` / `@Sfc-mx`) | same as above; add `read` + mode `verify` in `pipeline/channels.js` when the account is known |
 
 When one of those accounts is created: put it in `pipeline/channels.js` (mode `"verify"` with a `read`
 entry) **and** in `SPORTSFC` in `src/engine/engine.js` — `test/pipeline.test.js` fails if they differ.

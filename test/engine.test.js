@@ -28,16 +28,18 @@ globalThis.window = globalThis;
 
   console.log("── channels");
   const all = E.dcChannels(E.SPORTSFC);
-  ok(all.length === 14, "14 channels across every region", String(all.length));
+  ok(all.length === 17, "17 channels across every region", String(all.length));
   ok(!all.some(c => /viber/i.test(c.platform + c.id + c.url)), "no Viber channel left");
   ok(!/viber/i.test(JSON.stringify(E.DEF_PLATFORMS)), "no Viber platform left");
   ok(E.dcChannels(E.SPORTSFC, "br").length === 3, "Brazil has its 3 channels");
   ok(E.dcChannels(E.SPORTSFC, "br").every(c => c.lang === "pt"), "Brazil's channels are Portuguese");
+  ok(E.dcChannels(E.SPORTSFC, "mx").length === 3, "Mexico has its 3 channels");
+  ok(E.dcChannels(E.SPORTSFC, "mx").every(c => c.lang === "es"), "Mexico's channels are Spanish");
 
   console.log("── report");
   const ropt = { tz: 7, win: 15, maxPerPeriod: 4, ...E.windowOpt() };
   const merged = E.mergeReports(E.REGIONS.map(([id, name]) => ({ region: id, name, rep: E.reconcile(E.dcChannels(E.SPORTSFC, id), ropt) })));
-  ok(merged.rows.length === 14 && merged.slots.length === 0, "an empty store builds an empty report, every channel listed");
+  ok(merged.rows.length === 17 && merged.slots.length === 0, "an empty store builds an empty report, every channel listed");
 
   const now = Date.now(), at = m => new Date(now - m * 60e3).toISOString();
   E.update(c => {

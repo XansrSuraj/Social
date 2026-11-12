@@ -97,6 +97,24 @@ for (const t of PT) {
   ok(d.lang === "pt", `pt: "${t.slice(0, 44)}…"`, d.lang || "(none)");
 }
 ok(M.normLang("portuguese") === "pt" && M.normLang("Brazil") === "pt", "a channel noted Portuguese / Brazil is pt");
+/* Spanish (the Mexico region, 2026-11-12) — real captions from sportsfc.mx. They share de, que, para,
+   contra with Portuguese, and the same drop's Portuguese caption must stay Portuguese. */
+const ES = [
+  "https://sfc.my/r/2ZhwFWbT España tiene la ventaja 🔥 UEFA Nations League, 12/11/2026. Prácticamente nada separa a ambos en los datos.",
+  "https://sfc.my/r/DuAaMXMX ¿Quién ganará el duelo ofensivo? UEFA Nations League, 12/11/2026. Jugadores clave:",
+  "Francia supera ligeramente a Italia en ataque en este duelo de la UEFA Nations League: va arriba en goles anotados",
+  "Muy parejo 👀 Los datos casi no separan a Italia y Francia, y ambos llegan a este duelo de la UEFA Nations League",
+  "El ataque se encuentra con la defensa Lo que Inglaterra genera al frente se empareja casi por completo con lo que Croacia bloquea",
+];
+for (const t of ES) {
+  const d = M.detectLang(t);
+  ok(d.lang === "es", `es: "${t.slice(0, 44)}…"`, d.lang || "(none)");
+}
+ok(M.detectLang("O ataque encontra a defesa O que a Inglaterra gera no ataque se alinha quase exatamente com o que a Croácia bloqueia").lang === "pt",
+   "the same drop's Portuguese caption stays Portuguese");
+ok(M.detectLang("Real Madrid and Barcelona meet in La Liga tonight, who will win the match for the fans?").lang === "en",
+   "an English caption naming La Liga stays English");
+ok(M.normLang("spanish") === "es" && M.normLang("Mexico") === "es" && M.normLang("spanish-mx") === "es", "a channel noted Spanish / Mexico is es");
 /* the two existing languages must not drift toward Portuguese */
 ok(M.detectLang("Tây Ban Nha có thể khuất phục được Séc? Ai sẽ là người làm chủ trận đấu?").lang === "vi",
   "a Vietnamese caption stays Vietnamese");

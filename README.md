@@ -5,8 +5,8 @@ recent posts, groups the ones that landed within minutes of each other into a si
 shows — drop by drop — which channel got it, which is **missing** it, and which got it **late**.
 
 There is nothing to configure in the browser. The channels it watches are fixed in code (the
-SportsFC set: YouTube, Telegram, X, Facebook, Instagram and TikTok — Vietnamese, English and
-Brazilian Portuguese), so the site is exactly this: an overview of the channels it watches, and the
+SportsFC set: YouTube, Telegram, X, Facebook, Instagram and TikTok — Vietnamese, English,
+Brazilian Portuguese and Mexican Spanish), so the site is exactly this: an overview of the channels it watches, and the
 report a run produces.
 Adding a channel is a one-line code change, not a UI.
 
@@ -19,7 +19,7 @@ overview, report and saved history, and never mixes with the other:
 
 | Brand | Pages | Channels | Regions (each judged on its own drops) |
 |---|---|---|---|
-| SportsFC | `#/`, `#/report` | 14 | Vietnam & English · Brazil |
+| SportsFC | `#/`, `#/report` | 17 | Vietnam & English · Brazil · Mexico |
 | MatchPulse | `#/matchpulse`, `#/matchpulse/report` | 9 | Hindi · English |
 
 A brand is one entry in `BRANDS` in `src/engine/engine.js` (its channels, regions and default
@@ -47,7 +47,7 @@ MatchPulse row 4).
   are read free from public pages, with Apify as the fallback; every Apify run reports its own billed
   cost and the report shows the credit left. Anything pushed in to `/api/ingest` wins over
   reconstructing a feed (on the website's daily check — the automatic pipeline always reads live)
-- **Every region on one screen** — Vietnam & English and Brazil are collected in one press and
+- **Every region on one screen** — Vietnam & English, Brazil and Mexico are collected in one press and
   each judged on its own schedule of drops
 - **Responsive** from a phone to a wide desk: the matrix scrolls inside its card with the channel
   column pinned, the post log turns into cards, the nav folds into a menu. Respects
@@ -310,7 +310,7 @@ ones that never went out. It does not touch the daily check, its state, or `orgh
 
 **Language:** the feed's `language` filter matches `fmLanguageKey`, and FM files Portuguese as
 **`portuguese-br`** — `language=portuguese` found nothing (9 Oct). The page offers FM's own keys, and
-the proxy maps the everyday names (`portuguese`, `pt`, `pt-br` → `portuguese-br`; `en`, `vi`/`vn`)
+the proxy maps the everyday names (`portuguese`, `pt`, `pt-br` → `portuguese-br`; `spanish`, `es`, `mx` → `spanish-mx`; `en`, `vi`/`vn`)
 and echoes the key it used in the `X-FM-Language` header.
 
 It talks to the feed through two proxy routes (`api/fm-deliveries.js`, `api/fm-deliveries-meta.js`,

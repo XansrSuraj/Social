@@ -22,6 +22,7 @@ const PASSTHROUGH = [
   "cardId", "setId", "matchId", "attempts", "limit", "page",
 ];
 const LANGUAGE_KEY = { portuguese: "portuguese-br", pt: "portuguese-br", "pt-br": "portuguese-br", brazilian: "portuguese-br",
+                       spanish: "spanish-mx", es: "spanish-mx", mx: "spanish-mx", "es-mx": "spanish-mx", mexico: "spanish-mx",
                        en: "english", vi: "vietnamese", vn: "vietnamese" };
 const fmLanguage = v => String(v).split(",").map(x => x.trim()).filter(Boolean)
   .map(x => LANGUAGE_KEY[x.toLowerCase()] || x).join(",");

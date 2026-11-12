@@ -13,7 +13,7 @@ const { xPostedLength } = require("./rules.js");
 const { FM_CHANNELS } = require("./channels.js");
 
 const SHORT = { youtube: "YouTube", telegram: "Telegram", telegram_direct: "Telegram bot", x: "X", facebook: "Facebook", instagram: "Instagram", tiktok: "TikTok", viber: "Viber" };
-const LANGS = [["vietnamese", "🇻🇳", "Vietnamese"], ["english", "🇬🇧", "English"], ["portuguese", "🇧🇷", "Portuguese"], ["hindi", "🇮🇳", "Hindi"]];
+const LANGS = [["vietnamese", "🇻🇳", "Vietnamese"], ["english", "🇬🇧", "English"], ["portuguese", "🇧🇷", "Portuguese"], ["spanish-mx", "🇲🇽", "Spanish (Mexico)"], ["hindi", "🇮🇳", "Hindi"]];
 /* what needs attention: a problem (❌) — or, on Instagram, a post to check by hand (⚠️): Instagram puts an 18+
    wall on single posts by itself and nothing logged-out can see those, so "not found" there may be either */
 const BAD = ["missing", "not_visible", "reader_failed", "fm_failed", "fm_unconfirmed", "fm_stuck"];

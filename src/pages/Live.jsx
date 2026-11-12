@@ -32,7 +32,7 @@ const STATUS = {
 const ICON = { telegram_direct: "tgbot" };
 /* scraper health — shown on this page only, never sent as a notification (pipeline/tick.js, INTERNAL) */
 const READER_KINDS = new Set(["reader_down", "reader_up", "reader_failed"]);
-const LANG = { vietnamese: "VN", english: "EN", portuguese: "PT", hindi: "HI" };
+const LANG = { vietnamese: "VN", english: "EN", portuguese: "PT", "spanish-mx": "MX", hindi: "HI" };
 const ist = ms => new Date(ms + 5.5 * 3600e3).toISOString().slice(11, 16);
 const istDay = ms => new Date(ms + 5.5 * 3600e3).toISOString().slice(0, 10);
 const ago = ms => { if (!ms) return "never"; const m = Math.round((Date.now() - ms) / 60e3); return m < 1 ? "just now" : m < 60 ? m + " min ago" : Math.round(m / 60) + " h ago"; };

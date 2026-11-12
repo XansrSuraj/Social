@@ -48,7 +48,7 @@ A local tick reads the real FM feed and the real channels, and writes only local
 On production, read-only:
 
 - `GET /api/pipeline` — the public view anyone gets (what the content team's Live page shows).
-- `#/admin` (signed in) — every part: clock, FM, all 14 readers, alert channels, errors, what was sent.
+- `#/admin` (signed in) — every part: clock, FM, all 17 readers, alert channels, errors, what was sent.
 - Never call `?op=tick`, `?op=test-alert` or `?op=report` on production just to look — they run or send.
 
 ## Before a release

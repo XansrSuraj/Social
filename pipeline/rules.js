@@ -52,7 +52,7 @@ const captionProblem = (channel, caption) => (CAPTION_RULES[channel] ? CAPTION_R
    (shared words / the shorter caption's words) tolerates a platform clipping a long caption or
    appending "see more"; on 2026-10-04 every real match scored 100% and different cards ~10–30%. */
 const words = s => new Set(String(s || "").toLowerCase()
-  .replace(/(…|\.\.\.)?\s*(see more|xem thêm|ver mais|more)\s*$/i, " ")     // a platform's own clip marker
+  .replace(/(…|\.\.\.)?\s*(see more|xem thêm|ver mais|ver más|more)\s*$/i, " ")     // a platform's own clip marker
   .replace(/https?:\/\/\S+/g, " ").replace(/[#@][\p{L}\p{N}_.]+/gu, " ")
   /* a bare domain too: FM writes "SPORTSFC.FANS", the post shows "https://SPORTSFC.FANS" (dropped above)
      — counted on one side only it costs a short caption its match */

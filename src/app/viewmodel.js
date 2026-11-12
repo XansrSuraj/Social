@@ -79,7 +79,7 @@ export function buildReport(E) {
 /* a link taken from a scraped page is used only if it is a web address — never javascript: or data: */
 export const webUrl = u => (/^https?:\/\//i.test(String(u || "").trim()) ? String(u).trim() : undefined);
 
-export const LANG_NAME = { vi: "Vietnamese", en: "English", pt: "Portuguese", hi: "Hindi", th: "Thai", zh: "Chinese" };
+export const LANG_NAME = { vi: "Vietnamese", en: "English", pt: "Portuguese", es: "Spanish", hi: "Hindi", th: "Thai", zh: "Chinese" };
 
 /* Instagram's own page summary leads with 'N likes, N comments - handle on DATE: "' — the platform's
    wrapper, not the caption */

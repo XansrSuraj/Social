@@ -472,12 +472,12 @@ const find = (ch, lang, card) => D.find(d => d.channel === ch && d.language === 
     let t = at("2026-10-04T15:30:00Z");
     for (let i = 0; i < 6; i++, t += 60e3) await tick({ fm: async () => [], collect: colH, store: sh, wa: wh, now: t, force: true });
     const read = Object.entries(sh.ledger.readers).filter(([, h]) => h.lastReadAt);
-    ok(read.length === 14 && colH.calls.every(c => c.ids.length <= 3), "with nothing due, every one of the 14 readers is still read — 3 per tick, stalest first",
+    ok(read.length === 17 && colH.calls.every(c => c.ids.length <= 3), "with nothing due, every one of the 17 readers is still read — 3 per tick, stalest first",
        `${read.length} read, ${colH.calls.map(c => c.ids.length).join("/")} per tick`);
     const H = healthOf(sh.ledger, t, { teams: true, push: true, whatsapp: false });
     const R = H.groups.find(g => g.id === "readers").items;
     const fbBr = R.find(i => i.id === "fb-br"), ytVn = R.find(i => i.id === "yt-vn"), igFans = R.find(i => i.id === "ig-fans");
-    ok(R.length === 14 && ytVn.state === "ok" && /posts in 30 h/.test(ytVn.detail) && fbBr.state !== "ok" && igFans.state === "ok",
+    ok(R.length === 17 && ytVn.state === "ok" && /posts in 30 h/.test(ytVn.detail) && fbBr.state !== "ok" && igFans.state === "ok",
        "the Health page lists every reader: working (Instagram EN too), failing with why", `${fbBr.state}: ${fbBr.detail.slice(0, 60)}`);
     ok(H.groups.find(g => g.id === "pipeline").items[0].state === "ok" && H.groups.find(g => g.id === "fm").items[0].state === "ok" &&
        H.groups.find(g => g.id === "alerts").items.find(i => i.id === "whatsapp").state === "off" && H.overall === "degraded",

@@ -75,10 +75,17 @@ const SPORTSFC = {
     { id:"ig-br",   platform:"instagram", url:"https://www.instagram.com/sportsfc.br", handle:"sportsfc.br", note:"portuguese", region:"br" },
     { id:"yt-br",   platform:"youtube",   url:"https://www.youtube.com/@sfc-br",       handle:"@sfc-br",     note:"portuguese", region:"br",
       ytChannelId:"UCR6OeH8jO7RMFDkx0Rfdv0w" },
+    /* Mexico (added 2026-11-12): Spanish, FM language "spanish-mx", on its own clock (its drops land at
+       other minutes than VN/EN and BR), so it is its own REGION like Brazil. ytChannelId read off the
+       channel page. */
+    { id:"fb-mx",   platform:"facebook",  url:"https://www.facebook.com/sportsfc.mx", handle:"sportsfc.mx", note:"spanish", region:"mx" },
+    { id:"ig-mx",   platform:"instagram", url:"https://www.instagram.com/sportsfc.mx", handle:"sportsfc.mx", note:"spanish", region:"mx" },
+    { id:"yt-mx",   platform:"youtube",   url:"https://www.youtube.com/@Sfc-mx",       handle:"@Sfc-mx",     note:"spanish", region:"mx",
+      ytChannelId:"UCX1LbsSKkJdL7Y4NZfFkPWQ" },
     { id:"tg-bot-vn", platform:"tgbot",   url:"https://t.me/SportsfcBot",              handle:"SportsfcBot",   note:"vietnamese" },
   ],
   websites: [], tags: [],
-  regions: [["main", "Vietnam & English"], ["br", "Brazil"]], tz: 7,
+  regions: [["main", "Vietnam & English"], ["br", "Brazil"], ["mx", "Mexico"]], tz: 7,
 };
 
 /* MatchPulse (added 2026-10-04): the same content in Hindi and English, but the two languages go
@@ -310,7 +317,7 @@ function mergePosts(channelId, incoming){
    loosely onto ISO codes — otherwise a misspelling silently splits a language group. */
 const LANGS = [["hi", /hindi|\bhi\b/i], ["vi", /viet|\bvn\b|tiếng|tieng/i], ["th", /thai|\bth\b/i],
                ["zh", /chin|chai|\bcn\b|中文|mandarin/i], ["pt", /portug|brazil|brasil|\bpt\b|\bbr\b/i],
-               ["en", /eng|\ben\b/i]];
+               ["es", /span|espa|mexic|\bes\b|\bmx\b/i], ["en", /eng|\ben\b/i]];
 function normLang(s){
   const t = String(s || "").trim();
   if(!t) return "";
@@ -395,6 +402,11 @@ const EN_WORDS = /\b(the|and|for|with|this|that|your|you|are|our|from|all|new|wa
    would never match around "é" or "já". */
 const PT_WORDS = /(?<!\p{L})(de|da|das|dos|que|não|vai|com|para|uma|um|os|contra|seu|sua|mais|jogo|jogos|melhor|quem|ataque|defesa|vitória|conseguir|ou|é|já|pelo|pela|entre|sobre|ritmo|buscar|seleção|gols|partida|então|isso|esse|essa|ele|ela|muito|hoje|onde|quando|como|também|está|são|vamos|nós|furar|vencer|impor)(?!\p{L})/giu;
 const PT_ONLY = /[çÇ]/g;
+/* Spanish (Mexico, 2026-11-12) shares de, que, para, contra, como… with Portuguese, so those score for
+   Portuguese and only Spanish's own words count here — none of them Portuguese or English ("nada",
+   "ambos", "gol", "por" are left out: Portuguese writes them too). ñ ¿ ¡ are Spanish only. */
+const ES_WORDS = /(?<!\p{L})(el|la|los|las|del|al|y|en|con|una|es|más|muy|tiene|tienen|hay|partido|partidos|jugador|jugadores|clave|ventaja|datos|goles|equipo|equipos|quién|quiénes|cuál|hoy|pero|también|donde|dónde|cuando|cuándo|selección|victoria|mejor|ganar|ganará|duelo|juego|fecha|fútbol|ahora|aquí|hasta|apenas|casi|ligeramente|supera|llegan|parejo|su|sus|lo|ya)(?!\p{L})/giu;
+const ES_ONLY = /[ñÑ¿¡]/g;
 const RX_THAI = /[฀-๿]/;
 const RX_CJK = /[㐀-䶿一-鿿]/;
 const RX_DEVA = /[\u0900-\u097F]/g;     // Devanagari — Hindi
@@ -435,10 +447,14 @@ function detectLang(text){
   const vnScore = vnw * 3 + vnLetters, enScore = enw * 3;
   const why = `${vnw} VN word(s) + ${vnLetters} VN letter(s) (${vnPct}% of the text) vs ${enw} EN word(s)`;
   const ptw = hits(body, PT_WORDS), ptc = hits(body, PT_ONLY);
-  const out = extra => Object.assign({ vnPct, vnLetters, vnw, enw, ptw }, extra);
+  const esw = hits(body, ES_WORDS), esc = hits(body, ES_ONLY);
+  const out = extra => Object.assign({ vnPct, vnLetters, vnw, enw, ptw, esw }, extra);
 
-  /* Portuguese first: its accents would otherwise be counted as Vietnamese tone marks. Only when no
-     Vietnamese-only letter is present, and its own words clearly outweigh both other signals. */
+  /* Spanish, then Portuguese, before Vietnamese: their accents would otherwise be counted as
+     Vietnamese tone marks. Only when no Vietnamese-only letter is present, and the language's own
+     words clearly outweigh every other signal. */
+  if(uniq === 0 && esw >= 2 && esw * 3 + esc > Math.max(ptw * 3 + ptc, vnw * 3, enScore))
+    return out({ lang:"es", why:`${esw} ES word(s) + ${esc} ñ¿¡ vs ${ptw} PT word(s), ${enw} EN word(s), ${vnw} VN word(s)` });
   if(uniq === 0 && ptw >= 2 && ptw * 3 + ptc > Math.max(vnw * 3, enScore))
     return out({ lang:"pt", why:`${ptw} PT word(s) + ${ptc} ç vs ${enw} EN word(s), ${vnw} VN word(s)` });
 
@@ -469,7 +485,7 @@ function normText(s){
   return String(s || "").toLowerCase()
     .replace(/https?:\/\/\S+/g, " ")
     .replace(/[#@][\wÀ-ỹ]+/g, " ")
-    .replace(/(…|\.\.\.)?\s*(see more|xem thêm|more)\s*$/i, " ")
+    .replace(/(…|\.\.\.)?\s*(see more|xem thêm|ver mais|ver más|more)\s*$/i, " ")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
 }
@@ -503,7 +519,7 @@ function capWords(s){
        every truncated caption carried two words the drop could never contain. Harmless while the
        only consumer was a 60% threshold; the moment one unmatched word raises an alert, it would
        have fired on every long Facebook post and taught the reader to ignore the alert. */
-    .replace(/(…|\.\.\.)?\s*(see more|xem thêm|more)\s*$/i, " ")
+    .replace(/(…|\.\.\.)?\s*(see more|xem thêm|ver mais|ver más|more)\s*$/i, " ")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .split(/\s+/).filter(w => w.length >= 2);
 }
@@ -512,7 +528,7 @@ function capWords(s){
    anybody wrote. It cost nothing while a caption only had to clear 60%, but now that every word
    has to match it would cross out captions that genuinely did go out, so a caption showing the
    truncation marker gives up its final token before being compared. */
-const CLIPPED = /(…|\.\.\.)\s*(see more|xem thêm|more)?\s*$/i;
+const CLIPPED = /(…|\.\.\.)\s*(see more|xem thêm|ver mais|ver más|more)?\s*$/i;
 
 function captionOverlap(dropText, channelCaption){
   let capw = capWords(channelCaption);
@@ -564,7 +580,8 @@ const LANG_SLACK = 5;
 /* the words of the other language actually counted, so the allowance is measured, not guessed */
 const offLangWords = d => (d && d.lang === "en" ? (d.enw || 0)
                         : d && d.lang === "vi" ? (d.vnw || 0)
-                        : d && d.lang === "pt" ? (d.ptw || 0) : 0);
+                        : d && d.lang === "pt" ? (d.ptw || 0)
+                        : d && d.lang === "es" ? (d.esw || 0) : 0);
 const langFlagged = d => offLangWords(d) > LANG_SLACK;
 
 /* The one thing that separates two otherwise-identical templated posts is the fixture they name —
@@ -1872,7 +1889,7 @@ function downloadReportCard(rep, o, wo){
     y += 24;
 
     /* channels, grouped by language */
-    const LGNAME = { vi: "Vietnamese", en: "English", th: "Thai", zh: "Chinese", pt: "Portuguese", hi: "Hindi", "—": "Other" };
+    const LGNAME = { vi: "Vietnamese", en: "English", th: "Thai", zh: "Chinese", pt: "Portuguese", es: "Spanish", hi: "Hindi", "—": "Other" };
     for(const lg of rep.langs){
       const group = rows.filter(r => (r.lang || "—") === lg);
       if(!group.length) continue;

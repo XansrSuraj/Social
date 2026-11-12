@@ -47,11 +47,21 @@ const FM_CHANNELS = {
   "tiktok/portuguese":          { mode: "skip", why: "the account isn't created yet — FM sends, distribution drops it" },
   "telegram/portuguese":        { mode: "skip", why: "the account isn't created yet — FM sends, distribution drops it" },
   "telegram_direct/portuguese": { mode: "skip", why: "the account isn't created yet — FM sends, distribution drops it" },
+
+  /* ── Spanish (Mexico) — FM's key is "spanish-mx" (added 2026-11-12) ── */
+  "youtube/spanish-mx":         { mode: "verify", read: { id: "yt-mx", platform: "youtube", url: "https://www.youtube.com/@Sfc-mx", handle: "@Sfc-mx", ytChannelId: "UCX1LbsSKkJdL7Y4NZfFkPWQ" } },
+  "facebook/spanish-mx":        { mode: "verify", read: { id: "fb-mx", platform: "facebook", url: "https://www.facebook.com/sportsfc.mx", handle: "sportsfc.mx" } },
+  "instagram/spanish-mx":       { mode: "verify", read: { id: "ig-mx", platform: "instagram", url: "https://www.instagram.com/sportsfc.mx", handle: "sportsfc.mx" } },
+  "viber/spanish-mx":           { mode: "assume" },
+  "x/spanish-mx":               { mode: "skip", why: "no Mexico account given to the dashboard yet — not checked" },
+  "tiktok/spanish-mx":          { mode: "skip", why: "no Mexico account given to the dashboard yet — not checked" },
+  "telegram/spanish-mx":        { mode: "skip", why: "no Mexico account given to the dashboard yet — not checked" },
+  "telegram_direct/spanish-mx": { mode: "skip", why: "no Mexico account given to the dashboard yet — not checked" },
 };
 
 const PLATFORM_NAME = { youtube: "YouTube", telegram: "Telegram", telegram_direct: "Telegram bot", x: "X", facebook: "Facebook",
   instagram: "Instagram", tiktok: "TikTok", viber: "Viber", threads: "Threads", whatsapp: "WhatsApp" };
-const LANG_SHORT = { vietnamese: "VN", english: "EN", portuguese: "PT", hindi: "HI", thai: "TH" };
+const LANG_SHORT = { vietnamese: "VN", english: "EN", portuguese: "PT", "spanish-mx": "MX", hindi: "HI", thai: "TH" };
 
 /* an FM pair not in the table at all (a platform added in the CMS later) is "unwatched", not an error */
 const routeOf = (channel, language) =>
